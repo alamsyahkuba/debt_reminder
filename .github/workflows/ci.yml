@@ -32,3 +32,49 @@ jobs:
 
       - name: Test
         run: flutter test
+
+  backend:
+    name: Database and Edge Function tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 3.1.0
+
+      - name: Start local database
+        run: supabase db start
+
+      - name: Reset database from migrations
+        run: supabase db reset
+
+      - name: Run database and RLS tests
+        run: supabase test db
+
+      - name: Lint database functions
+        run: supabase db lint
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Check Edge Function formatting
+        working-directory: supabase/functions
+        run: deno fmt --check
+
+      - name: Type-check Edge Functions
+        working-directory: supabase/functions
+        run: deno check _shared/*.ts
+
+      - name: Lint Edge Functions
+        working-directory: supabase/functions
+        run: deno lint
+
+      - name: Test Edge Function helpers
+        working-directory: supabase/functions
+        run: deno test

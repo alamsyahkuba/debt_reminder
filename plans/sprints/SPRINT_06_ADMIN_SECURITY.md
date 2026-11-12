@@ -14,7 +14,13 @@ Implement admin unlock UI and server-authorized admin session.
 - [ ] Protect every mutation endpoint with server verification.
 - [ ] Add audit log for admin operations.
 - [ ] Ensure offline unlock is explicitly local-only.
-- [ ] Tests for invalid/expired session and rate limit.
+- [ ] Implement read-only device enrollment/revocation endpoint and UI.
+- [ ] Generate one-time enrollment code; return device token only once and store
+      only its SHA-256 hash in `read_devices`.
+- [ ] Add device list/status/revoke UI under Settings or Admin.
+- [ ] Record device enrollment/revocation in audit logs.
+- [ ] Tests for invalid/expired session, rate limit, one-time enrollment, and
+      revoked device.
 
 ## Acceptance criteria
 - Client boolean cannot grant admin.
@@ -23,3 +29,8 @@ Implement admin unlock UI and server-authorized admin session.
 - PIN attempts are rate-limited.
 - Admin session can be locked.
 - Offline edits remain queued; reconnect requires valid server session.
+- Admin can enroll a read-only device; token is returned once and only its hash
+  is stored.
+- Admin can revoke a read-only device and revocation takes effect on the next
+  pull.
+- Device enrollment/revocation is audited without logging secrets.

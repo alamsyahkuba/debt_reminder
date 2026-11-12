@@ -34,4 +34,5 @@ Folder ini adalah planning source-of-truth untuk membangun aplikasi Android peng
 - `06_TESTING_AND_ACCEPTANCE.md` — strategi test dan DoD.
 - `07_AGENT_WORKFLOW.md` — instruksi operasional AI Agent.
 - `STATUS.md` — status progres dan keputusan.
+- `DECISIONS.md` — keputusan teknis yang diadopsi selama implementasi.
 - `sprints/` — sprint planning per file.

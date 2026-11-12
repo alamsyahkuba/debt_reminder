@@ -68,6 +68,41 @@ Payments are append-only. Enforce no duplicate `operation_id`. Any correction mu
 - `metadata jsonb` (allowlisted, no secrets)
 - `created_at timestamptz`
 
+### `admin_sessions`
+- `id uuid primary key`
+- `token_hash text not null unique` (SHA-256 hex; token asli tidak disimpan)
+- `device_id text not null`
+- `issued_at timestamptz not null`
+- `expires_at timestamptz not null`
+- `revoked_at timestamptz null`
+- `last_used_at timestamptz null`
+- `created_at timestamptz not null`
+
+### `operation_registry`
+- `operation_id uuid primary key`
+- `actor_type text not null`
+- `operation text not null`
+- `entity_type text not null`
+- `entity_id uuid null`
+- `payload_hash text not null` (SHA-256 hex; payload asli tidak disimpan)
+- `status text not null` (`processing`, `succeeded`, `failed`)
+- `response jsonb null`
+- `error_code text null`
+- `created_at`, `updated_at`, `completed_at timestamptz`
+
+### `read_devices`
+- `id uuid primary key`
+- `name text not null` (label perangkat)
+- `device_id text not null` (identifier perangkat)
+- `token_hash text not null unique` (SHA-256 hex; token asli tidak disimpan)
+- `created_by_session_id uuid null` (sesi admin yang melakukan enrollment)
+- `created_at timestamptz not null`
+- `last_seen_at timestamptz null`
+- `expires_at timestamptz not null`
+- `revoked_at timestamptz null`
+- Hanya satu enrollment aktif per `device_id`; perangkat yang dicabut dapat
+  di-enroll ulang.
+
 ## 2. Local schema
 
 Mirror the business entities in Drift. Include:
@@ -87,6 +122,39 @@ Use migrations and schema versioning. Test migrations from previous versions.
 - Never expose PIN hash, audit details, private notes, or unnecessary customer contact data to anon.
 - RLS enabled on every exposed table.
 - No anon INSERT/UPDATE/DELETE policies.
+
+**Implemented decision (12 November 2026):** owner chose **Option A — no public
+read**. There are no anon/authenticated policies, no public views/RPCs, and the
+anon/authenticated roles have no `USAGE` on schema `public`. All cloud reads and
+writes go through Edge Functions using the service role after session
+verification. Adding public read later requires a new owner decision and a new
+migration.
+
+### Read-only device access (Option A+)
+
+Owner approved admin-enrolled read-only devices on 12 November 2026. This is not
+anonymous public read:
+
+- Admin enrolls a device from an authenticated admin session.
+- The device receives an opaque token once; the server stores only its SHA-256
+  hash in `read_devices`.
+- Every pull verifies `token_hash`, `expires_at`, `revoked_at`, and updates
+  `last_seen_at`.
+- The token grants pull-only access. It cannot mutate data.
+- Admin can revoke a device at any time.
+- anon/authenticated still have no schema or table access.
+
+Fields visible to an enrolled read-only device, per owner decision:
+
+- customer name, phone, and notes;
+- debt title, principal, paid/outstanding totals, status, due date, and notes;
+- group name, description, color, and icon;
+- payment history including amount, paid date, and notes.
+
+Not visible: `admin_settings`, `admin_sessions`, `audit_logs`,
+`operation_registry`, PIN/token material, and other server-only metadata.
+Retention of phone/notes is an explicit owner privacy tradeoff; do not expose
+these fields through any anon path.
 
 ### Admin mutation
 - Admin mutations go through Edge Functions.
@@ -112,11 +180,31 @@ No-login + shared data implies access-control tradeoffs. Before release, owner m
 3. Should public access be read-only and limited to a public-safe view?
 4. Is device-level app lock required?
 
+**Status 12 November 2026:** questions 1–3 resolved by Option A + read-only
+device enrollment: the debt list is not public, no anon fields are exposed, and
+only admin-enrolled devices may pull read-only data. Device-level app lock is
+still pending owner confirmation.
+
+### Implemented database guards
+
+- All business tables have RLS enabled; Edge Functions use `service_role` after
+  admin session or read-only device token verification.
+- `read_devices` has RLS enabled, no anon/authenticated policies, and only
+  service-role grants.
+- `payments` and `audit_logs` reject UPDATE/DELETE through database triggers.
+- `payments.operation_id` and `operation_registry.operation_id` are unique.
+- `version` and `updated_at` are bumped by trigger on mutable tables.
+- `debts.group_id` is `ON DELETE SET NULL` (Unassigned); customer/debt
+  references with history use `ON DELETE RESTRICT`.
+- `debt_groups` has no `parent_id`; group icons use an allowlist.
+
 ## 4. RLS checklist
 - Enable RLS on all exposed tables.
 - Explicit policies only.
 - Anon SELECT only on approved public view/RPC or approved tables.
 - No anon mutation.
 - No direct anon access to `admin_settings` or `audit_logs`.
+- No direct anon access to `read_devices`; only server-side token checks.
+- Read-only device tokens grant pull only, never mutation.
 - Test policies with anon role and authenticated role.
 - Verify service role is not shipped in Flutter.

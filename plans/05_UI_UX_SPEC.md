@@ -73,7 +73,18 @@ Admin menu opens PIN screen. Admin unlock reveals management actions; lock/logou
 - Admin PIN change.
 - Sync now.
 - Pending operations and last sync.
+- Perangkat read-only: daftar perangkat, status aktif/revoked/expired, enroll
+  perangkat baru, dan cabut akses.
 - App version.
+
+### Read-only device enrollment
+- Admin menghasilkan kode enrollment sekali pakai (short-lived) atau QR.
+- Perangkat baru memasukkan kode tersebut, lalu menyimpan token read-only di
+  secure storage.
+- Konfirmasi sebelum mencabut perangkat.
+- Perangkat read-only menampilkan data tanpa aksi admin; jika token revoked/
+  expired, tampilkan status dan tetap izinkan baca cache lokal.
+- Enrollment tidak boleh menampilkan PIN atau token di log.
 
 ## 3. Visual rules
 - Material 3.

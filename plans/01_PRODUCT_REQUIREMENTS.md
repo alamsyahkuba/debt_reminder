@@ -4,10 +4,14 @@
 
 ### User biasa
 - Tidak perlu login.
-- Dapat melihat data yang memang dipublikasikan/diizinkan.
+- Perangkat read-only harus di-enroll oleh admin sebelum dapat menarik data
+  cloud; enrollment bukan login user dan tidak memberikan akses admin.
+- Dapat melihat data yang diizinkan, termasuk nama, telepon, catatan, hutang,
+  group, dan histori pembayaran.
 - Read-only.
 - Tidak dapat membuat, mengedit, menghapus hutang, group, atau pembayaran.
 - Tidak dapat membuka fitur admin tanpa PIN.
+- Token perangkat dapat dicabut admin.
 
 ### Admin tunggal
 - Membuka Drawer → Admin → memasukkan PIN.
@@ -84,6 +88,7 @@
 - Reminder preferences.
 - Sync status/manual sync.
 - Lock admin session.
+- Kelola perangkat read-only: enroll, lihat status, dan cabut akses.
 - App info dan privacy note.
 
 ## 3. Non-functional requirements

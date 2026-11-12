@@ -9,6 +9,20 @@
 - Pull: fetch server changes since cursor/last sync and merge into local DB.
 - UI observes Drift streams.
 
+### Read-only device path (Option A+)
+
+- Admin enrolls a device from an authenticated admin session and receives a
+  one-time enrollment code/token.
+- The device stores its opaque read token in secure storage; the server stores
+  only the token hash.
+- Pull uses a dedicated Edge Function with the device token. It returns only
+  approved read fields (including name, phone, notes, debts, groups, and payment
+  history) with cursor/pagination.
+- Read-only devices have no outbox and cannot call mutation endpoints.
+- Revoked/expired tokens stop cloud pull but do not delete already cached data.
+- Admin can revoke the device at any time; revocation must be checked on every
+  pull, not only at enrollment.
+
 ## 2. Outbox schema
 
 Suggested columns:
@@ -86,3 +100,12 @@ Do not create outbox item outside the entity transaction.
 - Server-side authorization is checked when syncing.
 - If session expired, queue remains intact and user must re-authenticate online.
 - Do not discard local operations after auth failure.
+
+## 10. Read-only device token handling
+
+- Do not reuse the admin token for a read-only device.
+- Store device token in secure storage; never put it in logs or analytics.
+- Send it only to the dedicated read-only pull endpoint.
+- The endpoint must verify revocation, expiry, and token hash on every request.
+- Device token failures must not be retried endlessly; show access revoked/expired
+  and keep local cache readable.

@@ -8,7 +8,9 @@ serta penyimpanan lokal offline-first.
 
 Sprint 00 (Foundation) menyediakan kerangka aplikasi, tema Material 3,
 navigasi, drawer, konfigurasi environment, lint, CI, dan placeholder screen.
-Supabase, database lokal Drift, autentikasi admin, dan CRUD belum aktif.
+Sprint 01 (Cloud schema & security) menyediakan schema Supabase, RLS, sesi
+admin, idempotency, dan fondasi perangkat read-only. Database lokal Drift,
+autentikasi admin di aplikasi, CRUD, dan sync belum aktif.
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/), dengan status terbaru
 di [`plans/STATUS.md`](plans/STATUS.md).
@@ -66,8 +68,36 @@ flutter analyze
 flutter test
 ```
 
-CI GitHub Actions menjalankan ketiga pemeriksaan tersebut pada push ke `main`
-dan setiap pull request.
+## Backend Supabase
+
+Schema, RLS, idempotency registry, dan Edge Function helpers ada di
+[`supabase/`](supabase/README.md).
+
+```bash
+npx --yes supabase@3.1.0 db start
+npx --yes supabase@3.1.0 db reset
+npx --yes supabase@3.1.0 test db
+npx --yes supabase@3.1.0 db lint
+```
+
+Test helper Edge Function membutuhkan Deno 2:
+
+```bash
+cd supabase/functions
+deno fmt --check
+deno check _shared/*.ts
+deno lint
+deno test
+```
+
+Kebijakan cloud v1: **tidak ada public read**. RLS aktif di semua tabel, tanpa
+policy anon/authenticated. Perangkat read-only yang di-enroll admin boleh
+menarik data terbaru dengan token perangkat revocable; perangkat lain hanya
+membaca cache lokal. Detail dan aturan migration ada di
+[`supabase/README.md`](supabase/README.md).
+
+CI GitHub Actions menjalankan pemeriksaan Flutter serta test database/helper
+Edge Function pada push ke `main` dan setiap pull request.
 
 ## Struktur utama
 
