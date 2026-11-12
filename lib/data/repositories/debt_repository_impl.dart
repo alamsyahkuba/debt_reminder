@@ -57,6 +57,18 @@ class DebtRepositoryImpl implements DebtRepository {
   }
 
   @override
+  Stream<List<Debt>> watchByCustomer(
+    String customerId, {
+    bool includeArchived = false,
+  }) {
+    return _debts
+        .watchByCustomer(customerId, includeArchived: includeArchived)
+        .map(
+          (rows) => rows.map((row) => row.toDomain()).toList(growable: false),
+        );
+  }
+
+  @override
   Future<Debt?> findById(String id) async {
     final row = await _debts.findById(id);
     return row?.toDomain();

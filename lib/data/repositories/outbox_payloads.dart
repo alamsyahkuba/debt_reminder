@@ -86,6 +86,17 @@ Map<String, Object?> debtGroupArchivePayload(
   };
 }
 
+Map<String, Object?> debtGroupDeletePayload(
+  DebtGroup group,
+  int expectedVersion,
+) {
+  return <String, Object?>{
+    'id': group.id,
+    'expected_version': expectedVersion,
+    'move_debts_to_unassigned': true,
+  };
+}
+
 Map<String, Object?> debtCreatePayload(Debt debt) {
   return <String, Object?>{
     'id': debt.id,

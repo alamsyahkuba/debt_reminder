@@ -211,6 +211,13 @@ still pending owner confirmation.
 - `debts.group_id` is `ON DELETE SET NULL` (Unassigned); customer/debt
   references with history use `ON DELETE RESTRICT`.
 - `debt_groups` has no `parent_id`; group icons use an allowlist.
+- Local group deletion is transactional: all debts are explicitly moved to
+  Unassigned with version bumps and outbox updates, then the group delete is
+  queued. Debts and payments are never deleted.
+- Customer hard-delete is not exposed; customer archive/restore preserves all
+  debt history.
+- Group/customer summaries are derived from active debts and payments, not
+  stored counters.
 
 ## 4. RLS checklist
 - Enable RLS on all exposed tables.

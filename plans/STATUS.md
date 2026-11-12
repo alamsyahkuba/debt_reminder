@@ -3,15 +3,16 @@
 ## Current phase
 
 Sprint 00 — Foundation, Sprint 01 — Cloud schema & security (including the
-read-only device enrollment foundation), and Sprint 02 — Local database &
-repository are complete. Ready for owner approval before Sprint 03.
+read-only device enrollment foundation), Sprint 02 — Local database &
+repository, and Sprint 03 — Groups & customers are complete. Ready for owner
+approval before Sprint 04.
 
 ## Sprint status
 
 - [x] Sprint 00 — Foundation
 - [x] Sprint 01 — Cloud schema & security
 - [x] Sprint 02 — Local database & repository
-- [ ] Sprint 03 — Groups & customers
+- [x] Sprint 03 — Groups & customers
 - [ ] Sprint 04 — Debt management
 - [ ] Sprint 05 — Payments & dashboard
 - [ ] Sprint 06 — Admin PIN & sessions
@@ -90,6 +91,24 @@ repository are complete. Ready for owner approval before Sprint 03.
   marked synced and do not create outbox entries.
 - Local repository tests cover atomic writes, outbox, reactive reads, version
   conflicts, append-only payments, seeding, and schema creation.
+
+### Sprint 03 — Groups & customers (12 November 2026)
+
+- Group list with color/icon, sort order, debt count, and outstanding summary.
+- Group create/edit form with validation, color/icon choices, and sort order.
+- Group detail with summary, debt list, edit, archive/restore, and delete.
+- Group delete moves all debts to Unassigned in one transaction, preserves
+  payments/history, and queues debt updates before the group delete.
+- Move debt between groups or to Unassigned from group detail.
+- Customer list with local search by name/phone/notes, archived filter, debt
+  count, and outstanding summary.
+- Customer create/edit form and detail with summary and debt history.
+- Customer archive/restore; no hard-delete action is exposed, so history is
+  preserved.
+- Derived group/customer summaries use SQL aggregates over active debts and
+  payments.
+- Empty, loading, error, and local-data/offline states implemented.
+- Repository and widget tests cover create/search/archive/delete/move flows.
 
 ## Files changed
 
@@ -178,6 +197,41 @@ repository are complete. Ready for owner approval before Sprint 03.
 - `plans/sprints/SPRINT_02_LOCAL_DATABASE_REPOSITORY.md`
 - `plans/STATUS.md`
 
+### Sprint 03
+
+- `lib/domain/entities/group_summary.dart`
+- `lib/domain/entities/customer_summary.dart`
+- `lib/domain/repositories/customer_repository.dart`,
+  `lib/domain/repositories/debt_group_repository.dart`,
+  `lib/domain/repositories/debt_repository.dart`
+- `lib/data/local/daos/customer_dao.dart`,
+  `lib/data/local/daos/debt_group_dao.dart`,
+  `lib/data/local/daos/debt_dao.dart`
+- `lib/data/repositories/customer_repository_impl.dart`,
+  `lib/data/repositories/debt_group_repository_impl.dart`,
+  `lib/data/repositories/debt_repository_impl.dart`,
+  `lib/data/repositories/outbox_payloads.dart`
+- `lib/features/debt_groups/application/group_providers.dart`
+- `lib/features/debt_groups/presentation/groups_screen.dart`,
+  `group_form_screen.dart`, `group_detail_screen.dart`, `group_visuals.dart`
+- `lib/features/customers/application/customer_providers.dart`
+- `lib/features/customers/presentation/customers_screen.dart`,
+  `customer_form_screen.dart`, `customer_detail_screen.dart`
+- `lib/features/debts/application/debt_providers.dart`
+- `lib/features/debts/presentation/widgets/debt_list_tile.dart`
+- `lib/shared/widgets/empty_state.dart`, `error_state.dart`,
+  `loading_state.dart`, `local_data_notice.dart`, `metric_card.dart`,
+  `confirm_dialog.dart`
+- `lib/core/utils/date_formatter.dart`
+- `lib/app/navigation.dart`, `lib/app/router.dart`
+- `test/data/repositories/group_customer_management_test.dart`
+- `test/features/group_customer_flow_test.dart`
+- `test/app/app_navigation_test.dart`
+- `plans/DECISIONS.md` (D-011, D-012)
+- `plans/03_DATABASE_AND_SECURITY.md`
+- `plans/sprints/SPRINT_03_GROUPS_CUSTOMERS.md`
+- `plans/STATUS.md`
+
 ## Test evidence
 
 Commands run on 12 November 2026:
@@ -187,7 +241,7 @@ flutter pub get                                              passed
 dart run build_runner build                                  passed
 dart format --output=none --set-exit-if-changed .            passed
 flutter analyze                                              no issues
-flutter test                                                 passed, 24 tests
+flutter test                                                 passed, 34 tests
 flutter build apk --debug                                    passed
 adb install -r build/app/outputs/flutter-apk/app-debug.apk   passed (I2505, Sprint 00)
 
@@ -203,8 +257,9 @@ deno test                                                    passed, 43 tests
 
 On-device verification: Sprint 00 launched on I2505 (Android 16, API 36), the
 Dashboard rendered, the drawer opened, and navigation to Group Hutang worked.
-Sprint 02 verified database bootstrap and seed via widget tests; the debug APK
-builds, but no Android device was connected to launch the Sprint 02 APK.
+Sprint 02 verified database bootstrap and seed via widget tests. Sprint 03
+verified group/customer flows via widget tests. The debug APK builds, but no
+Android device was connected to launch the Sprint 02/03 APK.
 
 Backend verification: a fresh local database was recreated from all five
 migrations; anon/authenticated access failed at schema, table, and function
@@ -214,9 +269,12 @@ token uniqueness constraints passed.
 
 ## Blockers / known limitations
 
-- No active blockers for Sprint 02.
-- No Android device was connected during Sprint 02; APK build and DB bootstrap
-  tests passed, but the Sprint 02 APK has not been launched on device.
+- No active blockers for Sprint 03.
+- No Android device was connected during Sprint 02/03; APK build and widget
+  tests passed, but the latest APK has not been launched on device.
+- Admin PIN gating is not implemented yet. Group/customer management actions are
+  locally accessible until Sprint 06; no cloud mutation path exists yet. Do not
+  distribute the APK as a release before Sprint 06.
 - Cloud Supabase project has not been linked or pushed. No owner-provided cloud
   credentials were used, and `db push` was not run.
 - Edge Functions currently contain shared helpers only; PIN verification,
@@ -249,6 +307,10 @@ token uniqueness constraints passed.
 - Idempotency uses `operation_id` + stable payload hash + registry.
 - Local-first writes use Drift schema v1 with an atomic outbox.
 - Demo seed is opt-in only with `SEED_DEMO_DATA=true` in development.
+- Group delete moves debts to Unassigned; customer history is archive-only.
+- Group/customer summaries are derived from debts and payments.
+- Admin PIN UI gating is deferred to Sprint 06; server authorization remains
+  mandatory for cloud mutations.
 - Environment config uses `--dart-define`; see `plans/DECISIONS.md`.
 
 ## Owner decisions still pending
@@ -265,7 +327,7 @@ devices may pull phone/notes/debt/payment data (12 November 2026).
 
 ## Next step
 
-1. Request owner approval before starting Sprint 03 (Groups & customers).
-2. Sprint 03 will build group/customer screens on top of the Sprint 02
-   repositories, including validation, archive/restore, search, empty/loading/
-   error/offline states, and tests.
+1. Request owner approval before starting Sprint 04 (Debt management).
+2. Sprint 04 will add debt create/edit forms, list/detail, customer/group
+   selectors, Unassigned support, search, filters, sorting, archive, derived
+   paid/outstanding/status, and tests.

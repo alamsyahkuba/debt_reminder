@@ -11,7 +11,9 @@ navigasi, drawer, konfigurasi environment, lint, CI, dan placeholder screen.
 Sprint 01 (Cloud schema & security) menyediakan schema Supabase, RLS, sesi
 admin, idempotency, dan fondasi perangkat read-only. Sprint 02 (Local database
 & repository) menyediakan Drift/SQLite, entity/domain, repository, dan outbox.
-Autentikasi admin di aplikasi, CRUD screen, dan sync belum aktif.
+Sprint 03 (Groups & customers) menyediakan pengelolaan group dan pelanggan
+end-to-end secara lokal, termasuk pencarian, arsip, ringkasan, dan pemindahan
+hutang ke Unassigned. Autentikasi PIN admin dan sync cloud belum aktif.
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/), dengan status terbaru
 di [`plans/STATUS.md`](plans/STATUS.md).
@@ -157,5 +159,8 @@ plans/                 # Spesifikasi dan status sprint
 - Mutasi lokal dan outbox harus berada dalam transaksi SQLite yang sama.
 - Semua operasi admin akan diverifikasi server-side.
 - Nominal uang disimpan sebagai integer rupiah.
+- Group/customer management saat ini dapat diakses secara lokal tanpa PIN;
+  route guard dan sesi admin ditambahkan pada Sprint 06. Jangan distribusikan
+  build ini sebagai release sebelum gate tersebut aktif.
 - Jangan mengedit `lib/data/local/app_database.g.dart` secara manual; ubah
   schema lalu jalankan build_runner.

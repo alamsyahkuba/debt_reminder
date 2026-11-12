@@ -8,6 +8,11 @@ abstract interface class DebtRepository {
     bool includeArchived = false,
   });
 
+  Stream<List<Debt>> watchByCustomer(
+    String customerId, {
+    bool includeArchived = false,
+  });
+
   Future<Debt?> findById(String id);
 
   Future<Debt> create({

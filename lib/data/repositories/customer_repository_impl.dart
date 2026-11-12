@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/customer.dart';
+import '../../domain/entities/customer_summary.dart';
 import '../../domain/repositories/customer_repository.dart';
 import '../../domain/validation/entity_validation.dart';
 import '../local/app_database.dart';
@@ -35,6 +36,21 @@ class CustomerRepositoryImpl implements CustomerRepository {
         .map(
           (rows) => rows.map((row) => row.toDomain()).toList(growable: false),
         );
+  }
+
+  @override
+  Stream<Customer?> watchById(String id) {
+    return _customers.watchById(id).map((row) => row?.toDomain());
+  }
+
+  @override
+  Stream<CustomerSummary> watchSummary(String id) {
+    return _customers.watchSummary(id);
+  }
+
+  @override
+  Stream<Map<String, CustomerSummary>> watchSummaries() {
+    return _customers.watchSummaries();
   }
 
   @override

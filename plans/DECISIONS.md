@@ -177,3 +177,35 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   outbox. Seed tidak berjalan jika database sudah berisi data.
 - **Konsekuensi:** Jangan aktifkan flag ini sebelum menghubungkan aplikasi ke
   cloud nyata. Hapus database lokal jika ingin mengulang seed.
+
+## D-011 — Kebijakan delete group dan customer
+
+- **Tanggal:** 12 November 2026
+- **Status:** Diadopsi untuk Sprint 03
+- **Konteks:** Group perlu bisa dihapus tanpa kehilangan histori hutang.
+  Customer dengan histori tidak boleh hilang diam-diam.
+- **Keputusan:**
+  - Delete group berjalan dalam satu transaksi: semua hutang di group
+    dipindahkan ke Unassigned, versi/sync state-nya diperbarui, outbox update
+    hutang dibuat lebih dulu, lalu group dihapus dan outbox delete group dibuat.
+  - Hutang, pembayaran, dan histori tidak pernah dihapus oleh delete group.
+  - Tidak ada aksi hard-delete customer di UI maupun repository. Customer hanya
+    dapat diarsipkan/dipulihkan.
+  - Ringkasan group/customer dihitung dari hutang dan pembayaran, bukan counter
+    manual.
+- **Konsekuensi:** Delete group menghasilkan beberapa operasi sync dan harus
+  diurutkan oleh sync worker pada Sprint 07. Customer dengan histori tetap
+  tersedia untuk laporan.
+
+## D-012 — Admin PIN gate ditunda sampai Sprint 06
+
+- **Tanggal:** 12 November 2026
+- **Status:** Urutan implementasi Sprint 03–05
+- **Konteks:** Group/customer management dibangun sebelum PIN/session admin.
+  Sprint 03–05 belum memiliki jalur mutasi cloud.
+- **Keputusan:** Aksi pengelolaan lokal pada Sprint 03–05 dapat diakses tanpa
+  PIN. Sprint 06 wajib memasang route guard dan admin session sebelum sync
+  mutation diaktifkan. Server tetap menjadi otoritas untuk semua mutasi cloud.
+- **Konsekuensi:** Build lokal saat ini bukan release-ready; jangan
+  mendistribusikan APK sebelum Sprint 06 selesai. Tidak ada klaim bahwa UI guard
+  adalah otorisasi server.

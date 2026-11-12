@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 
+import '../../../domain/entities/group_summary.dart';
 import '../app_database.dart';
 
 class DebtGroupDao {
@@ -19,10 +20,86 @@ class DebtGroupDao {
     return query.watch();
   }
 
+  Stream<DebtGroupRow?> watchById(String id) {
+    return (_db.select(
+      _db.debtGroups,
+    )..where((table) => table.id.equals(id))).watchSingleOrNull();
+  }
+
+  Stream<Map<String, GroupSummary>> watchSummaries() {
+    final query = _db.customSelect(
+      '''
+      SELECT
+        d.group_id AS group_id,
+        COUNT(d.id) AS debt_count,
+        COALESCE(SUM(d.principal_amount), 0) AS principal_total,
+        COALESCE(SUM(p.paid_total), 0) AS paid_total
+      FROM debts d
+      LEFT JOIN (
+        SELECT debt_id, SUM(amount) AS paid_total
+        FROM payments
+        GROUP BY debt_id
+      ) p ON p.debt_id = d.id
+      WHERE d.is_archived = 0 AND d.group_id IS NOT NULL
+      GROUP BY d.group_id
+      ''',
+      readsFrom: {_db.debts, _db.payments},
+    );
+
+    return query.watch().map((rows) {
+      final summaries = <String, GroupSummary>{};
+
+      for (final row in rows) {
+        final groupId = row.read<String>('group_id');
+        summaries[groupId] = GroupSummary.fromTotals(
+          debtCount: row.read<int>('debt_count'),
+          principalTotal: row.read<int>('principal_total'),
+          paidTotal: row.read<int>('paid_total'),
+        );
+      }
+
+      return summaries;
+    });
+  }
+
+  Stream<GroupSummary> watchSummary(String groupId) {
+    final query = _db.customSelect(
+      '''
+      SELECT
+        COUNT(d.id) AS debt_count,
+        COALESCE(SUM(d.principal_amount), 0) AS principal_total,
+        COALESCE(SUM(p.paid_total), 0) AS paid_total
+      FROM debts d
+      LEFT JOIN (
+        SELECT debt_id, SUM(amount) AS paid_total
+        FROM payments
+        GROUP BY debt_id
+      ) p ON p.debt_id = d.id
+      WHERE d.group_id = ? AND d.is_archived = 0
+      ''',
+      variables: [Variable.withString(groupId)],
+      readsFrom: {_db.debts, _db.payments},
+    );
+
+    return query.watchSingle().map(
+      (row) => GroupSummary.fromTotals(
+        debtCount: row.read<int>('debt_count'),
+        principalTotal: row.read<int>('principal_total'),
+        paidTotal: row.read<int>('paid_total'),
+      ),
+    );
+  }
+
   Future<DebtGroupRow?> findById(String id) {
     return (_db.select(
       _db.debtGroups,
     )..where((table) => table.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<void> deleteById(String id) async {
+    await (_db.delete(
+      _db.debtGroups,
+    )..where((table) => table.id.equals(id))).go();
   }
 
   Future<void> upsert(DebtGroupRow row) async {

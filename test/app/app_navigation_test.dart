@@ -2,6 +2,12 @@ import 'package:debt_reminder/app/app.dart';
 import 'package:debt_reminder/app/navigation.dart';
 import 'package:debt_reminder/app/providers.dart';
 import 'package:debt_reminder/core/config/app_config.dart';
+import 'package:debt_reminder/domain/entities/customer.dart';
+import 'package:debt_reminder/domain/entities/customer_summary.dart';
+import 'package:debt_reminder/domain/entities/debt_group.dart';
+import 'package:debt_reminder/domain/entities/group_summary.dart';
+import 'package:debt_reminder/features/customers/application/customer_providers.dart';
+import 'package:debt_reminder/features/debt_groups/application/group_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,7 +22,21 @@ const AppConfig _testConfig = AppConfig(
 Future<void> _pumpApp(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: [appConfigProvider.overrideWithValue(_testConfig)],
+      overrides: [
+        appConfigProvider.overrideWithValue(_testConfig),
+        groupListProvider.overrideWith(
+          (ref, includeArchived) => Stream<List<DebtGroup>>.value(const []),
+        ),
+        groupSummariesProvider.overrideWith(
+          (ref) => Stream<Map<String, GroupSummary>>.value(const {}),
+        ),
+        customerListProvider.overrideWith(
+          (ref, includeArchived) => Stream<List<Customer>>.value(const []),
+        ),
+        customerSummariesProvider.overrideWith(
+          (ref) => Stream<Map<String, CustomerSummary>>.value(const {}),
+        ),
+      ],
       child: const DebtReminderApp(),
     ),
   );
@@ -45,7 +65,7 @@ void main() {
     expect(find.text('Dashboard'), findsWidgets);
   });
 
-  testWidgets('drawer menavigasi ke seluruh placeholder', (tester) async {
+  testWidgets('drawer menavigasi ke seluruh menu utama', (tester) async {
     await _pumpApp(tester);
 
     const destinations = <String, Key>{

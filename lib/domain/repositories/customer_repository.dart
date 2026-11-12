@@ -1,7 +1,14 @@
 import '../entities/customer.dart';
+import '../entities/customer_summary.dart';
 
 abstract interface class CustomerRepository {
   Stream<List<Customer>> watchAll({bool includeArchived = false});
+
+  Stream<Customer?> watchById(String id);
+
+  Stream<CustomerSummary> watchSummary(String id);
+
+  Stream<Map<String, CustomerSummary>> watchSummaries();
 
   Future<Customer?> findById(String id);
 

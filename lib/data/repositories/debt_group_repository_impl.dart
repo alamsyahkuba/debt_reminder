@@ -1,9 +1,11 @@
 import 'package:uuid/uuid.dart';
 
 import '../../domain/entities/debt_group.dart';
+import '../../domain/entities/group_summary.dart';
 import '../../domain/repositories/debt_group_repository.dart';
 import '../../domain/validation/entity_validation.dart';
 import '../local/app_database.dart';
+import '../local/daos/debt_dao.dart';
 import '../local/daos/debt_group_dao.dart';
 import '../local/daos/sync_queue_dao.dart';
 import 'mappers.dart';
@@ -18,12 +20,14 @@ class DebtGroupRepositoryImpl implements DebtGroupRepository {
     DateTime Function()? now,
   }) : _db = db,
        _groups = DebtGroupDao(db),
+       _debts = DebtDao(db),
        _queue = syncQueueDao ?? SyncQueueDao(db),
        _uuid = uuid ?? const Uuid(),
        _now = now ?? nowUtc;
 
   final AppDatabase _db;
   final DebtGroupDao _groups;
+  final DebtDao _debts;
   final SyncQueueDao _queue;
   final Uuid _uuid;
   final DateTime Function() _now;
@@ -35,6 +39,21 @@ class DebtGroupRepositoryImpl implements DebtGroupRepository {
         .map(
           (rows) => rows.map((row) => row.toDomain()).toList(growable: false),
         );
+  }
+
+  @override
+  Stream<DebtGroup?> watchById(String id) {
+    return _groups.watchById(id).map((row) => row?.toDomain());
+  }
+
+  @override
+  Stream<GroupSummary> watchSummary(String id) {
+    return _groups.watchSummary(id);
+  }
+
+  @override
+  Stream<Map<String, GroupSummary>> watchSummaries() {
+    return _groups.watchSummaries();
   }
 
   @override
@@ -199,6 +218,62 @@ class DebtGroupRepositoryImpl implements DebtGroupRepository {
         createdAt: now,
       );
       return row.toDomain();
+    });
+  }
+
+  @override
+  Future<int> delete({required String id, required int expectedVersion}) {
+    return _db.transaction(() async {
+      final existing = await _groups.findById(id) ?? throwNotFound('Group');
+      ensureExpectedVersion(
+        currentVersion: existing.version,
+        expectedVersion: expectedVersion,
+        entityName: 'Group',
+      );
+
+      final debts = await _debts.listByGroup(id);
+      var timestamp = _now().toUtc();
+
+      for (final debt in debts) {
+        final updated = DebtRow(
+          id: debt.id,
+          customerId: debt.customerId,
+          groupId: null,
+          title: debt.title,
+          principalAmount: debt.principalAmount,
+          dueDate: debt.dueDate,
+          notes: debt.notes,
+          isArchived: debt.isArchived,
+          createdAt: debt.createdAt,
+          updatedAt: timestamp,
+          version: debt.version + 1,
+          syncState: 'pending',
+          serverUpdatedAt: debt.serverUpdatedAt,
+        );
+
+        await _debts.upsert(updated);
+        await _queue.enqueue(
+          operationId: _uuid.v4(),
+          entityType: 'debt',
+          entityId: updated.id,
+          operation: 'update',
+          payload: debtUpdatePayload(updated.toDomain(), debt.version),
+          createdAt: timestamp,
+        );
+        timestamp = timestamp.add(const Duration(microseconds: 1));
+      }
+
+      await _groups.deleteById(id);
+      await _queue.enqueue(
+        operationId: _uuid.v4(),
+        entityType: 'debt_group',
+        entityId: id,
+        operation: 'delete',
+        payload: debtGroupDeletePayload(existing.toDomain(), expectedVersion),
+        createdAt: timestamp,
+      );
+
+      return debts.length;
     });
   }
 }
