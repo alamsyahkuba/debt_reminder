@@ -2,35 +2,6 @@
 -- Money is stored as integer rupiah (bigint), never floating point.
 -- All rows are managed by server-side admin functions; see the security migration.
 
-create table public.customers (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  phone text,
-  notes text,
-  is_archived boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  version bigint not null default 1,
-  constraint customers_name_length
-    check (char_length(btrim(name)) between 1 and 200),
-  constraint customers_phone_length
-    check (phone is null or char_length(phone) <= 40),
-  constraint customers_notes_length
-    check (notes is null or char_length(notes) <= 2000),
-  constraint customers_version_positive check (version >= 1),
-  constraint customers_timestamps_ordered check (updated_at >= created_at)
-);
-
-comment on table public.customers is
-  'Pelanggan pemilik hutang. Akses hanya melalui Edge Function admin.';
-
-create index customers_name_search_idx
-  on public.customers (lower(name))
-  where is_archived = false;
-
-create index customers_sync_idx
-  on public.customers (updated_at, id);
-
 create table public.debt_groups (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -83,8 +54,6 @@ create index debt_groups_sync_idx
 
 create table public.debts (
   id uuid primary key default gen_random_uuid(),
-  customer_id uuid not null
-    references public.customers (id) on delete restrict,
   group_id uuid
     references public.debt_groups (id) on delete set null,
   title text not null,
@@ -107,9 +76,8 @@ create table public.debts (
 );
 
 comment on table public.debts is
-  'Hutang pelanggan. group_id null berarti Unassigned.';
+  'Hutang. group_id null berarti Unassigned.';
 
-create index debts_customer_idx on public.debts (customer_id);
 create index debts_group_idx
   on public.debts (group_id)
   where group_id is not null;
@@ -260,10 +228,6 @@ create index operation_registry_status_idx
 
 create index operation_registry_entity_idx
   on public.operation_registry (entity_type, entity_id);
-
-create trigger customers_set_updated_at_and_version
-before update on public.customers
-for each row execute function private.set_updated_at_and_version();
 
 create trigger debt_groups_set_updated_at_and_version
 before update on public.debt_groups

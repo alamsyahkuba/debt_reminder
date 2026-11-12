@@ -1,16 +1,12 @@
--- Security policy: Option A from the owner decision.
+-- Public read-only security model (revised 12 November 2026).
 --
--- There is NO anonymous or ordinary-user read path in v1. All cloud reads and
--- writes go through admin Edge Functions using the service role after a
--- server-side session check. Therefore:
---   * RLS is enabled everywhere.
---   * No anon/authenticated policies are created.
---   * The anon and authenticated roles lose schema usage and table grants.
---   * Only service_role receives explicit business-table grants.
---
--- Do not add a public view or RPC without an owner decision and a new migration.
+-- * All business fields are public through explicit read-only RPCs.
+-- * Anon gets schema usage and execute on public read RPCs only.
+-- * Anon gets no direct table SELECT/INSERT/UPDATE/DELETE.
+-- * Base tables keep RLS enabled with no anon/authenticated policies.
+-- * Admin mutations use service_role through Edge Functions after session auth.
+-- * Internal tables remain service-role only.
 
-alter table public.customers enable row level security;
 alter table public.debt_groups enable row level security;
 alter table public.debts enable row level security;
 alter table public.payments enable row level security;
@@ -19,14 +15,12 @@ alter table public.audit_logs enable row level security;
 alter table public.admin_sessions enable row level security;
 alter table public.operation_registry enable row level security;
 
-comment on table public.customers is
-  'RLS enabled. Option A: no anon/authenticated access.';
 comment on table public.debt_groups is
-  'RLS enabled. Option A: no anon/authenticated access.';
+  'RLS enabled. Public read via RPC only; no direct anon access.';
 comment on table public.debts is
-  'RLS enabled. Option A: no anon/authenticated access.';
+  'RLS enabled. Public read via RPC only; no direct anon access.';
 comment on table public.payments is
-  'RLS enabled, append-only. Option A: no anon/authenticated access.';
+  'RLS enabled, append-only. Public read via RPC only.';
 comment on table public.admin_settings is
   'RLS enabled. Never accessible to anon/authenticated.';
 comment on table public.audit_logs is
@@ -36,9 +30,8 @@ comment on table public.admin_sessions is
 comment on table public.operation_registry is
   'RLS enabled. Service-role idempotency registry only.';
 
--- Remove Supabase default API exposure for this project. PostgreSQL grants
--- USAGE on schema public to PUBLIC by default, so revoke that too before
--- granting the minimum schema access back to trusted server roles.
+-- Remove Supabase default API exposure, then grant only schema usage to anon
+-- so it can resolve the public read RPCs. No table grants are given to anon.
 revoke all on schema public from public;
 revoke all on schema public from anon;
 revoke all on schema public from authenticated;
@@ -46,6 +39,7 @@ revoke all on schema public from authenticated;
 grant usage on schema public to postgres;
 grant usage on schema public to authenticator;
 grant usage on schema public to service_role;
+grant usage on schema public to anon;
 
 revoke all on all tables in schema public from anon;
 revoke all on all tables in schema public from authenticated;
@@ -68,9 +62,8 @@ alter default privileges for role postgres in schema public
 alter default privileges for role postgres in schema public
   revoke execute on functions from authenticated;
 
--- Business tables. Delete is granted only where the approved archive/delete
--- policy may need it; payments and audit logs are append-only.
-grant select, insert, update, delete on table public.customers to service_role;
+-- Business tables are service-role only at the table level. Public access is
+-- granted separately on the read-only RPCs in the public_read migration.
 grant select, insert, update, delete on table public.debt_groups to service_role;
 grant select, insert, update, delete on table public.debts to service_role;
 grant select, insert on table public.payments to service_role;
@@ -79,5 +72,5 @@ grant select, insert, update on table public.admin_settings to service_role;
 grant select, insert, update, delete on table public.admin_sessions to service_role;
 grant select, insert, update, delete on table public.operation_registry to service_role;
 
--- There are intentionally zero policies on every table. service_role bypasses
--- RLS; anon and authenticated have neither schema usage nor table grants.
+-- Zero anon/authenticated policies are intentional. Anon can only execute the
+-- explicit public read RPCs granted in 20261112120500_public_read.sql.

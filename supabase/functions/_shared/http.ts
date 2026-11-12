@@ -1,5 +1,4 @@
 import { AdminAuthError } from "./auth.ts";
-import { DeviceAuthError } from "./device_auth.ts";
 import { IdempotencyError } from "./idempotency.ts";
 import { ValidationError } from "./validation.ts";
 
@@ -39,7 +38,7 @@ export function errorResponse(
 }
 
 export function handleError(error: unknown): Response {
-  if (error instanceof AdminAuthError || error instanceof DeviceAuthError) {
+  if (error instanceof AdminAuthError) {
     return errorResponse(error.code, error.message, 401);
   }
 

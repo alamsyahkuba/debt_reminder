@@ -1,7 +1,12 @@
 # Supabase — Debt Reminder
 
-Folder ini berisi schema PostgreSQL, RLS, idempotency helpers, dan Edge Function
-shared utilities untuk aplikasi Catatan Hutang.
+Folder ini berisi schema PostgreSQL, RLS, idempotency helpers, public read RPCs,
+dan Edge Function shared utilities untuk aplikasi Catatan Hutang.
+
+> **Status implementasi (Sprint 01R):** cloud schema dan public read RPC sudah
+> dirework. Migration lama customers/read_devices sudah dihapus dan local
+> Supabase sudah di-reset. Aplikasi Flutter masih memakai model customer lokal
+> sampai Sprint 02R/03R selesai. Cloud project belum di-push.
 
 ## Prasyarat
 
@@ -28,39 +33,74 @@ Untuk menghentikan stack lokal:
 npx --yes supabase@3.1.0 stop --no-backup
 ```
 
-## Security model — Option A+
+## Security model target
 
-Keputusan owner: **tidak ada public read**, tetapi perangkat read-only yang
-di-enroll admin boleh menarik data terbaru menggunakan token perangkat.
+Keputusan owner: **semua field bisnis publik, read-only**.
 
-- RLS aktif pada semua tabel bisnis.
-- Tidak ada policy untuk `anon` atau `authenticated`.
-- `anon` dan `authenticated` tidak memiliki `USAGE` pada schema `public`.
-- Tidak ada `SELECT`/`INSERT`/`UPDATE`/`DELETE` grant untuk kedua role itu.
-- Tidak ada public view atau public RPC.
-- `service_role` hanya digunakan di Edge Functions setelah admin session atau
-  device token diverifikasi. Key ini tidak boleh masuk Flutter.
+- RLS aktif pada semua tabel.
+- Publik hanya boleh execute RPC public read-only.
+- Anon tidak mendapat SELECT langsung pada base table.
+- Anon tidak memiliki INSERT/UPDATE/DELETE.
+- Semua mutation admin melalui Edge Function dengan sesi admin server-side.
+- `service_role` hanya digunakan di Edge Function setelah admin session
+  diverifikasi. Key ini tidak boleh masuk Flutter.
+- Data admin, audit, sesi, PIN, token, operation registry, dan sync metadata
+  tetap privat.
 - `api.auto_expose_new_tables = false` agar tabel baru tidak otomatis terekspos.
+- Tidak ada `customers`, `read_devices`, atau device enrollment.
 
-Perangkat read-only:
+## Public read RPCs
 
-- Admin membuat enrollment sekali pakai; perangkat menerima token opaque hanya
-  sekali.
-- Server menyimpan SHA-256 token di `read_devices`, bukan token asli.
-- Setiap pull memeriksa hash, expiry, dan `revoked_at`.
-- Token hanya boleh memanggil endpoint pull; tidak ada mutation.
-- Admin dapat mencabut perangkat kapan saja.
-- Field yang terlihat: nama, telepon, catatan, hutang, group, dan histori
-  pembayaran. Field admin/audit/registry tetap tertutup.
+RPC publik harus read-only, memakai `security definer` dengan `search_path`
+tetap, dan hanya memberikan `execute` kepada `anon`.
 
-Menambahkan public read anon nanti memerlukan keputusan owner baru dan migration
-baru yang eksplisit. Jangan hanya menambah policy `anon`.
+### `public_debt_groups`
+- id
+- name
+- description
+- color
+- icon
+- sort_order
+- is_archived
+- created_at
+- updated_at
 
-## Schema
+### `public_debts`
+- id
+- group_id
+- group_name
+- title
+- principal_amount
+- due_date
+- notes
+- is_archived
+- created_at
+- updated_at
+- paid_amount
+- outstanding_amount
+- status
+
+### `public_payments`
+- id
+- debt_id
+- amount
+- paid_at
+- notes
+- created_at
+
+Aturan:
+
+- Semua field bisnis boleh dibaca publik.
+- `version`, `operation_id`, sync metadata, admin/audit/session fields tidak
+  boleh dikembalikan.
+- RPC tidak boleh melakukan mutation.
+- Archived records dapat dibaca; UI default menyembunyikan arsip dan
+  menyediakan filter histori.
+
+## Schema target
 
 | Tabel | Kegunaan |
 |---|---|
-| `customers` | Pelanggan pemilik hutang |
 | `debt_groups` | Group hutang flat, tanpa `parent_id` |
 | `debts` | Hutang, `group_id` nullable untuk Unassigned |
 | `payments` | Pembayaran append-only dengan `operation_id` unik |
@@ -68,19 +108,19 @@ baru yang eksplisit. Jangan hanya menambah policy `anon`.
 | `audit_logs` | Audit append-only, metadata allowlisted |
 | `admin_sessions` | Sesi admin, menyimpan SHA-256 token |
 | `operation_registry` | Registry idempotensi server-side |
-| `read_devices` | Perangkat read-only ter-enroll, menyimpan SHA-256 token |
 
 Aturan penting:
 
 - Nominal uang memakai `bigint` integer rupiah, bukan floating point.
-- `customers`, `debt_groups`, dan `debts` memiliki `version`; trigger menaikkan
-  `version` dan `updated_at` pada setiap update.
+- `debt_groups` dan `debts` memiliki `version`; trigger menaikkan `version` dan
+  `updated_at` pada setiap update.
 - `payments` dan `audit_logs` menolak UPDATE/DELETE melalui trigger.
-- `payments.debt_id` dan `debts.customer_id` memakai `ON DELETE RESTRICT`.
+- `payments.debt_id` memakai `ON DELETE RESTRICT`.
 - `debts.group_id` memakai `ON DELETE SET NULL`; menghapus group memindahkan
   hutang menjadi Unassigned.
 - `debt_groups.icon` memakai allowlist key, bukan kode widget arbitrary.
 - `debts.principal_amount` dan `payments.amount` dibatasi ke safe integer JS.
+- Tidak ada `customer_id`, `customers`, atau `read_devices`.
 
 ## Idempotency
 
@@ -101,15 +141,18 @@ Alur server:
 
 Lokasi: `supabase/functions/_shared/`.
 
+Target:
+
 - `auth.ts` — verifikasi JWT HS256 admin, umur token maksimal 15 menit,
   pengecekan sesi aktif + device binding, dan SHA-256 token hash.
-- `device_auth.ts` — token opaque perangkat read-only, hash SHA-256, cek
-  expiry/revocation, dan `last_seen_at`.
 - `validation.ts` — validasi UUID, nominal rupiah, versi, tanggal, timestamp,
   allowlist field, dan ukuran JSON body.
 - `idempotency.ts` — wrapper RPC claim/complete/fail dan canonical payload hash.
 - `http.ts` — response JSON dan pemetaan error yang tidak membocorkan detail
   internal.
+
+Device authentication/read-only device token sudah dihapus. Public read tidak
+memerlukan enrollment.
 
 Token admin (diimplementasikan pada Sprint 06):
 
@@ -119,15 +162,6 @@ Token admin (diimplementasikan pada Sprint 06):
 - claim `session_id`, `device_id`, `iat`, `exp`
 - ditandatangani `ADMIN_SESSION_JWT_SECRET` (minimal 32 karakter)
 - token disimpan di client secure storage; server hanya menyimpan hash.
-
-Token perangkat read-only (diimplementasikan pada Sprint 06–07):
-
-- Opaque token berprefix `dr_dev_`, 32 byte acak.
-- Hanya hash SHA-256 yang disimpan di `read_devices.token_hash`.
-- Wajib memiliki `expires_at`; admin dapat mengisi `revoked_at`.
-- Hanya valid untuk endpoint pull read-only.
-- Jangan pernah memakai token ini untuk mutation atau mencampurnya dengan token
-  admin.
 
 Salin `supabase/functions/.env.example` menjadi
 `supabase/functions/.env` untuk development lokal. Jangan commit nilai secret.
@@ -142,25 +176,30 @@ deno lint
 deno test
 ```
 
-## Migration dan deployment
+Test device enrollment sudah dihapus. Test sekarang mencakup public read RPC,
+anon denial, idempotency, dan admin/session foundation.
 
-Migration ada di `supabase/migrations/` dan harus diterapkan berurutan.
-Jangan mengedit migration yang sudah dipakai di environment bersama; buat
-migration baru.
+## Migration, reset, dan deployment
 
-Untuk project cloud, setelah owner menyiapkan project dan kredensial:
+Sprint 01R menggunakan reset, bukan migrasi data pelanggan:
+
+- Baseline migration sudah diganti dengan schema tanpa customers/read_devices.
+- Public read RPC dan RLS read-only sudah ditambahkan.
+- Database lokal Supabase sudah di-reset dan test lulus.
+- Cloud project belum di-reset/di-push; belum ada data produksi.
+
+Setelah rework cloud selesai dan owner menyetujui:
 
 ```bash
 npx --yes supabase@3.1.0 link --project-ref <project-ref>
 npx --yes supabase@3.1.0 db push
 ```
 
-Perintah cloud tidak dijalankan pada Sprint 01. Review RLS dan backup sebelum
-`db push` ke production.
-
-## Out of scope Sprint 01
+## Out of scope saat ini
 
 - PIN verification dan session issuance (Sprint 06).
 - Sync mutation endpoints (Sprint 07).
-- Public read view/RPC (tidak dipakai pada v1).
-- Seed/demo data (Sprint 02).
+- Perangkat read-only dan device enrollment (dihapus).
+- Data pelanggan (dihapus).
+- Seed/demo data produksi.
+- Local Flutter customer/device cleanup (Sprint 02R/03R).

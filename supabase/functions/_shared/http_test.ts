@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 
 import { AdminAuthError } from "./auth.ts";
-import { DeviceAuthError } from "./device_auth.ts";
 import { IdempotencyError } from "./idempotency.ts";
 import { ValidationError } from "./validation.ts";
 import { errorResponse, handleError, jsonResponse } from "./http.ts";
@@ -26,9 +25,6 @@ Deno.test("errorResponse omits details when absent", async () => {
 Deno.test("handleError maps auth, validation, and idempotency errors", async () => {
   const authResponse = handleError(new AdminAuthError("expired_token"));
   assert.equal(authResponse.status, 401);
-
-  const deviceResponse = handleError(new DeviceAuthError("device_revoked"));
-  assert.equal(deviceResponse.status, 401);
 
   const validationResponse = handleError(
     new ValidationError("invalid_amount", "Nominal tidak valid", {

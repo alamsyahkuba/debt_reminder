@@ -1,4 +1,4 @@
-/** Small crypto helpers shared by admin and read-only device tokens. */
+/** Small crypto helpers for opaque tokens and hashes. */
 
 export async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest(

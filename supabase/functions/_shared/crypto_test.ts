@@ -10,10 +10,10 @@ Deno.test("sha256Hex matches a known SHA-256 vector", async () => {
 });
 
 Deno.test("randomToken uses a prefix and 32 random bytes by default", () => {
-  const first = randomToken("dr_dev_");
-  const second = randomToken("dr_dev_");
+  const first = randomToken("dr_test_");
+  const second = randomToken("dr_test_");
 
-  assert.match(first, /^dr_dev_[A-Za-z0-9_-]{43}$/);
+  assert.match(first, /^dr_test_[A-Za-z0-9_-]{43}$/);
   assert.notEqual(first, second);
 });
 

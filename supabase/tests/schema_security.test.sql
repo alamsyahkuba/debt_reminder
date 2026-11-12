@@ -2,15 +2,11 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(54);
+select extensions.plan(53);
 
 -- ---------------------------------------------------------------------------
--- RLS is enabled on every exposed table.
+-- RLS is enabled on every table.
 -- ---------------------------------------------------------------------------
-select extensions.ok(
-  (select relrowsecurity from pg_class where oid = 'public.customers'::regclass),
-  'RLS aktif pada customers'
-);
 select extensions.ok(
   (select relrowsecurity from pg_class where oid = 'public.debt_groups'::regclass),
   'RLS aktif pada debt_groups'
@@ -41,8 +37,28 @@ select extensions.ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Option A: no public read path, no anon/authenticated policies or schema use.
+-- Removed entities and public-read configuration.
 -- ---------------------------------------------------------------------------
+select extensions.ok(
+  to_regclass('public.customers') is null,
+  'Tabel customers sudah dihapus'
+);
+select extensions.ok(
+  to_regclass('public.read_devices') is null,
+  'Tabel read_devices sudah dihapus'
+);
+select extensions.hasnt_column(
+  'public',
+  'debts',
+  'customer_id',
+  'debts tidak memiliki customer_id'
+);
+select extensions.hasnt_column(
+  'public',
+  'debt_groups',
+  'parent_id',
+  'debt_groups tidak memiliki parent_id/subgroup'
+);
 select extensions.is(
   (
     select count(*)::integer
@@ -51,46 +67,31 @@ select extensions.is(
       and roles && array['anon', 'authenticated']::name[]
   ),
   0,
-  'Tidak ada policy anon/authenticated'
-);
-
-select extensions.is(
-  (
-    select count(*)::integer
-    from information_schema.views
-    where table_schema = 'public'
-  ),
-  0,
-  'Tidak ada public view'
-);
-
-select extensions.hasnt_column(
-  'public',
-  'debt_groups',
-  'parent_id',
-  'debt_groups tidak memiliki parent_id/subgroup'
-);
-
-select extensions.ok(
-  not has_schema_privilege('anon', 'public', 'usage'),
-  'anon tidak memiliki usage schema public'
+  'Tidak ada policy anon/authenticated pada base table'
 );
 select extensions.ok(
-  not has_schema_privilege('authenticated', 'public', 'usage'),
-  'authenticated tidak memiliki usage schema public'
+  has_schema_privilege('anon', 'public', 'usage'),
+  'anon memiliki usage schema untuk public RPC'
 );
-
 select extensions.ok(
-  not has_table_privilege('anon', 'public.customers', 'select'),
-  'anon tidak dapat membaca customers'
+  not has_table_privilege('anon', 'public.debt_groups', 'select'),
+  'anon tidak dapat select debt_groups'
+);
+select extensions.ok(
+  not has_table_privilege('anon', 'public.debts', 'select'),
+  'anon tidak dapat select debts'
+);
+select extensions.ok(
+  not has_table_privilege('anon', 'public.payments', 'select'),
+  'anon tidak dapat select payments'
 );
 select extensions.ok(
   not has_table_privilege('anon', 'public.admin_settings', 'select'),
-  'anon tidak dapat membaca admin_settings'
+  'anon tidak dapat select admin_settings'
 );
 select extensions.ok(
   not has_table_privilege('anon', 'public.audit_logs', 'select'),
-  'anon tidak dapat membaca audit_logs'
+  'anon tidak dapat select audit_logs'
 );
 select extensions.ok(
   not has_function_privilege(
@@ -100,10 +101,9 @@ select extensions.ok(
   ),
   'anon tidak dapat memanggil begin_operation'
 );
-
 select extensions.ok(
-  has_table_privilege('service_role', 'public.customers', 'select'),
-  'service_role dapat membaca customers'
+  has_table_privilege('service_role', 'public.debt_groups', 'select'),
+  'service_role dapat membaca debt_groups'
 );
 select extensions.ok(
   has_table_privilege('service_role', 'public.payments', 'insert'),
@@ -119,17 +119,10 @@ select extensions.ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Baseline data, inserted with service_role to prove grants work.
+-- Baseline data, without a customer entity.
 -- ---------------------------------------------------------------------------
 set local role service_role;
 
-select extensions.lives_ok(
-  $sql$
-    insert into public.customers (id, name)
-    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Budi')
-  $sql$,
-  'service_role dapat membuat pelanggan'
-);
 select extensions.lives_ok(
   $sql$
     insert into public.debt_groups (id, name, color, icon, sort_order)
@@ -145,15 +138,15 @@ select extensions.lives_ok(
 );
 select extensions.lives_ok(
   $sql$
-    insert into public.debts (id, customer_id, title, principal_amount)
+    insert into public.debts (id, group_id, title, principal_amount)
     values (
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
       'Hutang sembako',
       1000000
     )
   $sql$,
-  'service_role dapat membuat hutang tanpa group'
+  'service_role dapat membuat hutang tanpa pelanggan'
 );
 select extensions.lives_ok(
   $sql$
@@ -186,8 +179,8 @@ select extensions.throws_ok(
 );
 select extensions.throws_ok(
   $sql$
-    insert into public.debts (customer_id, title, principal_amount)
-    values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Nol', 0)
+    insert into public.debts (title, principal_amount)
+    values ('Nol', 0)
   $sql$,
   '23514',
   null,
@@ -223,15 +216,6 @@ select extensions.throws_ok(
   '23514',
   null,
   'icon group harus dari allowlist'
-);
-select extensions.throws_ok(
-  $sql$
-    insert into public.debts (customer_id, title, principal_amount)
-    values ('99999999-9999-4999-8999-999999999999', 'Yatim', 1000)
-  $sql$,
-  '23503',
-  null,
-  'hutang harus memiliki pelanggan valid'
 );
 
 -- ---------------------------------------------------------------------------
@@ -311,12 +295,6 @@ select extensions.is(
   'hutang menjadi Unassigned saat group dihapus'
 );
 select extensions.throws_ok(
-  $sql$delete from public.customers where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'$sql$,
-  '23503',
-  null,
-  'pelanggan dengan histori hutang tidak dapat dihapus'
-);
-select extensions.throws_ok(
   $sql$delete from public.debts where id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'$sql$,
   '23503',
   null,
@@ -357,33 +335,33 @@ select extensions.throws_ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Real anon/authenticated attempts must fail, not return empty data.
+-- Anon and authenticated attempts.
 -- ---------------------------------------------------------------------------
 set local role anon;
 
 select extensions.throws_ok(
-  $sql$select * from public.customers$sql$,
+  $sql$select * from public.debt_groups$sql$,
   '42501',
   null,
-  'anon tidak dapat select customers'
+  'anon tidak dapat select debt_groups'
 );
 select extensions.throws_ok(
-  $sql$insert into public.customers (name) values ('Anon')$sql$,
+  $sql$insert into public.debt_groups (name) values ('Anon')$sql$,
   '42501',
   null,
-  'anon tidak dapat insert customers'
+  'anon tidak dapat insert debt_groups'
 );
 select extensions.throws_ok(
-  $sql$update public.customers set name = 'Anon'$sql$,
+  $sql$update public.debt_groups set name = 'Anon'$sql$,
   '42501',
   null,
-  'anon tidak dapat update customers'
+  'anon tidak dapat update debt_groups'
 );
 select extensions.throws_ok(
-  $sql$delete from public.customers$sql$,
+  $sql$delete from public.debt_groups$sql$,
   '42501',
   null,
-  'anon tidak dapat delete customers'
+  'anon tidak dapat delete debt_groups'
 );
 select extensions.throws_ok(
   $sql$select * from public.admin_settings$sql$,
@@ -402,13 +380,13 @@ reset role;
 set local role authenticated;
 
 select extensions.throws_ok(
-  $sql$select * from public.customers$sql$,
+  $sql$select * from public.debt_groups$sql$,
   '42501',
   null,
-  'authenticated tidak dapat select customers'
+  'authenticated tidak dapat select debt_groups'
 );
 select extensions.throws_ok(
-  $sql$insert into public.debts (customer_id, title, principal_amount) values ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Auth', 1000)$sql$,
+  $sql$insert into public.debts (title, principal_amount) values ('Auth', 1000)$sql$,
   '42501',
   null,
   'authenticated tidak dapat insert debts'
