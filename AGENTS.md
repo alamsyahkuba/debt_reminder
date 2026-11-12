@@ -1,0 +1,230 @@
+# AGENTS.md — Debt Reminder (OpenCode)
+
+This file defines repository-wide instructions for OpenCode agents working on this project.
+The approved product and technical specifications live in `plans/`. Read them before making changes.
+
+## 1. Mandatory context
+
+Before planning or coding, read these files when present:
+
+1. `plans/README.md`
+2. `plans/00_PROJECT_BRIEF.md`
+3. `plans/01_PRODUCT_REQUIREMENTS.md`
+4. `plans/02_ARCHITECTURE.md`
+5. `plans/03_DATABASE_AND_SECURITY.md`
+6. `plans/04_OFFLINE_SYNC.md`
+7. `plans/05_UI_UX_SPEC.md`
+8. `plans/06_TESTING_AND_ACCEPTANCE.md`
+9. `plans/07_AGENT_WORKFLOW.md`
+10. `plans/STATUS.md`
+11. The active sprint file under `plans/sprints/`
+
+If any required file is missing, do not invent its contents. Report the missing file and ask whether to regenerate it or proceed with an explicitly documented assumption.
+
+## 2. Product decisions — do not change without approval
+
+- Product: Android debt/reminder app built with Flutter and Supabase.
+- One owner and one admin in v1.
+- Ordinary users do not log in.
+- Admin entry: Drawer → Admin → PIN.
+- Cloud data is shared.
+- App is offline-first using Drift/SQLite.
+- Supabase PostgreSQL is the cloud source of truth.
+- UI reads from local database/repositories, not direct Supabase queries.
+- Local mutations are saved atomically with an outbox operation.
+- Sync is idempotent and conflict-aware.
+- Debt groups are simple: **Group → debts**. No nested groups/subgroups.
+- Payments are append-only and must not be silently edited or deleted.
+- Anonymous users are read-only, and only approved public-safe fields may be exposed.
+- All admin mutations must be authorized server-side.
+- Never ship Supabase `service_role` credentials in Flutter or any client artifact.
+
+If a task conflicts with these decisions, stop and ask the project owner. Do not silently reinterpret the product.
+
+## 3. OpenCode operating procedure
+
+### Starting a task
+
+1. Inspect the repository and `git status`; preserve existing user changes.
+2. Read the mandatory context and the active sprint.
+3. Identify the sprint goal, prerequisites, acceptance criteria, and out-of-scope items.
+4. Summarize the intended implementation, affected files, risks, and tests before substantial changes.
+5. If the task is ambiguous, security-sensitive, or changes product scope, ask for clarification before coding.
+
+### Sprint discipline
+
+- Work on **one sprint at a time**.
+- Do not start a later sprint until its dependencies are complete and the owner approves progression.
+- Do not implement unrelated features opportunistically.
+- Keep changes small and reviewable.
+- When a sprint is requested, use its checklist as the task boundary.
+- If the owner explicitly asks for multiple sprints, state the expanded scope and execute in dependency order.
+
+### After a task or sprint
+
+1. Format changed Dart files.
+2. Run relevant tests.
+3. Run `flutter analyze` when Flutter code changes.
+4. Run Supabase migration/function tests when backend changes and local tooling is available.
+5. Report commands actually executed and their real results; never claim tests passed if they were not run.
+6. Update the active sprint checklist.
+7. Update `plans/STATUS.md` with:
+   - completed work,
+   - files changed,
+   - test evidence,
+   - blockers,
+   - known limitations,
+   - next recommended sprint.
+8. Update planning documents if an approved decision changes.
+9. If a new technical decision is needed, create/update `plans/DECISIONS.md` with context, options, decision, and consequences. Ask owner approval for product/security-impacting decisions.
+
+## 4. Flutter implementation rules
+
+- Use the architecture in `plans/02_ARCHITECTURE.md`.
+- Keep UI, application/use-case, domain, and data layers separated.
+- Widgets must not access Supabase directly.
+- Use Riverpod for dependency/state management as specified.
+- Use GoRouter for navigation as specified.
+- Use Drift/SQLite for local persistence and reactive reads.
+- Repository contracts belong in domain; implementations belong in data.
+- Keep domain entities independent of Flutter, Drift, and Supabase models.
+- Use typed models, clear names, and small functions.
+- Avoid unnecessary abstractions and premature optimization.
+- Use Indonesian user-facing copy unless the owner requests another language.
+- Format Rupiah as Indonesian currency; store amounts as integer rupiah (`BIGINT`/integer), never floating-point money.
+- Handle dates/timezones consistently; store timestamps in UTC where appropriate and render in local timezone.
+- Include loading, empty, error, offline, and pending-sync states.
+- Add tests for business logic and critical user flows.
+
+## 5. Database and Supabase security rules
+
+- Follow `plans/03_DATABASE_AND_SECURITY.md`.
+- Enable RLS on every exposed table.
+- Policies must be explicit and least-privilege.
+- Anonymous role must never mutate business data directly.
+- Do not expose `admin_settings`, PIN hashes, audit logs, or private customer fields through public endpoints.
+- Prefer public-safe views/RPCs over unrestricted table access.
+- Admin writes must pass through Edge Functions or another approved server-side boundary.
+- Every admin mutation must verify a valid server-issued admin session/token.
+- Never trust a client flag, local PIN unlock, or UI route guard as server authorization.
+- Validate all input server-side: amounts, IDs, relationships, dates, versions, operation IDs, and allowed fields.
+- Apply rate limits to PIN verification and avoid revealing sensitive verification details.
+- Keep service-role secrets in Supabase server secrets only.
+- Do not log PINs, tokens, secret keys, or unnecessary personal/financial data.
+- Payments must be idempotent and append-only.
+- Use optimistic concurrency/version checks for mutable records.
+- Preserve auditability for sensitive/admin actions.
+
+## 6. Offline-first and sync rules
+
+- All feature reads come from Drift/SQLite.
+- Every local mutation must update the entity and enqueue its outbox operation in the **same SQLite transaction**.
+- Do not send remote requests directly from screens/forms.
+- Keep a stable `operation_id` across retries.
+- Never generate a new idempotency key merely because a request failed.
+- Sync must respect entity dependencies (customer/group → debt → payment).
+- Use retry/backoff for transient failures; do not endlessly retry validation/auth errors.
+- Do not discard pending operations after network or authorization failure.
+- A stale version must produce a conflict, not silent last-write-wins.
+- Do not overwrite unsynced local changes during pull.
+- Use tombstones/archive markers where needed; avoid hard deletion of financial history.
+- Connectivity status is only a hint; the actual request determines network availability.
+- WorkManager is best-effort. Provide foreground/manual sync too.
+- Show pending, syncing, conflict, and failed states to users.
+
+## 7. Group and debt rules
+
+- Groups are flat; never add `parent_id`, subgroup navigation, or recursive group UI unless approved.
+- A debt may have one group or be Unassigned (`group_id = null`).
+- Group archive preserves its debts and history.
+- Group deletion must follow the approved policy and must never delete debts unintentionally.
+- Moving a debt between groups must be auditable/syncable.
+- Group totals must be derived from underlying debts/payments, not manually maintained counters unless a verified cache is used.
+- Debt status and outstanding amount must be derived consistently from principal, payments, and due date.
+- Do not allow invalid/negative amounts.
+- Default policy rejects overpayment unless the owner explicitly changes it.
+
+## 8. Admin session and offline unlock
+
+- Online PIN verification is performed by a server endpoint.
+- Store session/token securely on device and enforce expiry.
+- Lock/logout must clear local session material.
+- Offline unlock is only a local convenience for editing cached data; it does not authorize cloud mutations.
+- When syncing admin operations, server authorization is mandatory.
+- If the admin session expires, preserve the outbox and request re-authentication; never discard local work.
+
+## 9. Notifications
+
+- Use local notifications for v1 reminders.
+- Reconcile schedules at app startup.
+- Reschedule when due date or relevant debt state changes.
+- Cancel reminders when debt is paid or archived.
+- Handle Android notification and exact-alarm permissions gracefully.
+- Never imply that a notification proves a payment occurred.
+
+## 10. Testing and quality gates
+
+For relevant changes, use these commands as applicable:
+
+```bash
+dart format --set-exit-if-changed .
+flutter analyze
+flutter test
+```
+
+For Supabase changes, use the repository's configured Supabase CLI/test commands. If no test setup exists, document the gap and add appropriate tests where practical.
+
+Minimum expectations:
+- Unit tests for calculations, validation, status derivation, and conflict logic.
+- Repository tests for local transaction/outbox behavior.
+- Idempotency tests for payments/sync.
+- RLS tests for anon access and mutation denial.
+- Edge Function tests for missing/invalid/expired admin session.
+- Integration tests for offline → reconnect → sync → restart.
+- Widget tests for critical forms and navigation.
+
+Do not weaken tests or security policies just to make a build pass. Explain failures and propose a fix.
+
+## 11. Git and file safety
+
+- Never force-push, rewrite history, or reset user work.
+- Never delete unrelated files or user changes.
+- Inspect `git status` before and after modifications.
+- Do not commit unless explicitly requested.
+- Do not overwrite planning files without checking their current contents.
+- Keep generated files and secrets out of version control as appropriate.
+- Do not create fake credentials or production data.
+
+## 12. Response format
+
+At the end of each task, provide:
+
+### Summary
+What changed and why.
+
+### Files
+List created/modified files.
+
+### Validation
+Commands run and their actual results.
+
+### Acceptance criteria
+Completed / incomplete, with evidence.
+
+### Risks or blockers
+Security, migration, sync, or product decisions still pending.
+
+### Next step
+The next smallest useful task or sprint.
+
+Be concise but specific. Do not hide incomplete work.
+
+## 13. First-run instruction
+
+If the repository is empty or only contains planning files:
+
+1. Read all planning files.
+2. Check whether `plans/STATUS.md` still marks Sprint 00 as incomplete.
+3. Propose Sprint 00 implementation.
+4. Wait for owner approval unless the owner explicitly requested autonomous execution.
+5. Implement Sprint 00 only.
