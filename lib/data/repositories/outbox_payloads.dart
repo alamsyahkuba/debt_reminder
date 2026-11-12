@@ -1,0 +1,138 @@
+import '../../domain/entities/customer.dart';
+import '../../domain/entities/debt.dart';
+import '../../domain/entities/debt_group.dart';
+import '../../domain/entities/payment.dart';
+import 'repository_support.dart';
+
+Map<String, Object?> customerCreatePayload(Customer customer) {
+  return <String, Object?>{
+    'id': customer.id,
+    'name': customer.name,
+    'phone': customer.phone,
+    'notes': customer.notes,
+    'is_archived': customer.isArchived,
+    'created_at': timestampString(customer.createdAt),
+    'updated_at': timestampString(customer.updatedAt),
+    'version': customer.version,
+  };
+}
+
+Map<String, Object?> customerUpdatePayload(
+  Customer customer,
+  int expectedVersion,
+) {
+  return <String, Object?>{
+    'id': customer.id,
+    'expected_version': expectedVersion,
+    'name': customer.name,
+    'phone': customer.phone,
+    'notes': customer.notes,
+    'is_archived': customer.isArchived,
+    'updated_at': timestampString(customer.updatedAt),
+  };
+}
+
+Map<String, Object?> customerArchivePayload(
+  Customer customer,
+  int expectedVersion,
+) {
+  return <String, Object?>{
+    'id': customer.id,
+    'expected_version': expectedVersion,
+    'is_archived': customer.isArchived,
+  };
+}
+
+Map<String, Object?> debtGroupCreatePayload(DebtGroup group) {
+  return <String, Object?>{
+    'id': group.id,
+    'name': group.name,
+    'description': group.description,
+    'color': group.color,
+    'icon': group.icon,
+    'sort_order': group.sortOrder,
+    'is_archived': group.isArchived,
+    'created_at': timestampString(group.createdAt),
+    'updated_at': timestampString(group.updatedAt),
+    'version': group.version,
+  };
+}
+
+Map<String, Object?> debtGroupUpdatePayload(
+  DebtGroup group,
+  int expectedVersion,
+) {
+  return <String, Object?>{
+    'id': group.id,
+    'expected_version': expectedVersion,
+    'name': group.name,
+    'description': group.description,
+    'color': group.color,
+    'icon': group.icon,
+    'sort_order': group.sortOrder,
+    'is_archived': group.isArchived,
+    'updated_at': timestampString(group.updatedAt),
+  };
+}
+
+Map<String, Object?> debtGroupArchivePayload(
+  DebtGroup group,
+  int expectedVersion,
+) {
+  return <String, Object?>{
+    'id': group.id,
+    'expected_version': expectedVersion,
+    'is_archived': group.isArchived,
+  };
+}
+
+Map<String, Object?> debtCreatePayload(Debt debt) {
+  return <String, Object?>{
+    'id': debt.id,
+    'customer_id': debt.customerId,
+    'group_id': debt.groupId,
+    'title': debt.title,
+    'principal_amount': debt.principalAmount,
+    'due_date': debt.dueDate == null ? null : dateOnlyString(debt.dueDate!),
+    'notes': debt.notes,
+    'is_archived': debt.isArchived,
+    'created_at': timestampString(debt.createdAt),
+    'updated_at': timestampString(debt.updatedAt),
+    'version': debt.version,
+  };
+}
+
+Map<String, Object?> debtUpdatePayload(Debt debt, int expectedVersion) {
+  return <String, Object?>{
+    'id': debt.id,
+    'expected_version': expectedVersion,
+    'customer_id': debt.customerId,
+    'group_id': debt.groupId,
+    'title': debt.title,
+    'principal_amount': debt.principalAmount,
+    'due_date': debt.dueDate == null ? null : dateOnlyString(debt.dueDate!),
+    'notes': debt.notes,
+    'is_archived': debt.isArchived,
+    'updated_at': timestampString(debt.updatedAt),
+  };
+}
+
+Map<String, Object?> debtArchivePayload(Debt debt, int expectedVersion) {
+  return <String, Object?>{
+    'id': debt.id,
+    'expected_version': expectedVersion,
+    'is_archived': debt.isArchived,
+  };
+}
+
+Map<String, Object?> paymentCreatePayload(Payment payment) {
+  return <String, Object?>{
+    'id': payment.id,
+    'debt_id': payment.debtId,
+    'amount': payment.amount,
+    'paid_at': timestampString(payment.paidAt),
+    'notes': payment.notes,
+    'operation_id': payment.operationId,
+    'created_at': timestampString(payment.createdAt),
+  };
+}
