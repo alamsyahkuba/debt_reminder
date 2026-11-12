@@ -9,6 +9,7 @@ import '../features/debt_groups/presentation/groups_screen.dart';
 import '../features/debts/presentation/debt_detail_screen.dart';
 import '../features/debts/presentation/debt_form_screen.dart';
 import '../features/debts/presentation/debts_screen.dart';
+import '../features/payments/presentation/payment_form_screen.dart';
 import '../features/reminders/presentation/reminders_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import 'app_shell.dart';
@@ -35,6 +36,11 @@ GoRouter createAppRouter() {
             path: 'edit',
             builder: (context, state) =>
                 DebtFormScreen(debtId: state.pathParameters['debtId']!),
+          ),
+          GoRoute(
+            path: 'payments/new',
+            builder: (context, state) =>
+                PaymentFormScreen(debtId: state.pathParameters['debtId']!),
           ),
         ],
       ),

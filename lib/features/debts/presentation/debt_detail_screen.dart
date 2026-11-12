@@ -149,6 +149,14 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
               icon: const Icon(Icons.edit_outlined),
               label: const Text('Edit'),
             ),
+            FilledButton.icon(
+              key: const Key('debt-add-payment-button'),
+              onPressed: _busy || debt.isArchived
+                  ? null
+                  : () => context.push(AppRoutes.paymentNew(debt.id)),
+              icon: const Icon(Icons.payments_outlined),
+              label: const Text('Catat Pembayaran'),
+            ),
             OutlinedButton.icon(
               key: const Key('debt-move-group-button'),
               onPressed: _busy ? null : () => _moveGroup(debt, groups),

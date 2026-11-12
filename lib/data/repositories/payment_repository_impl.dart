@@ -78,6 +78,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
         );
       }
 
+      final paidAmount = await _payments.totalPaidForDebt(debtId);
+      if (paidAmount + normalizedAmount > debt.principalAmount) {
+        throw const AppException(
+          code: AppErrorCode.validation,
+          message: 'Pembayaran melebihi sisa hutang.',
+        );
+      }
+
       final now = _now().toUtc();
       final operationId = _uuid.v4();
       final row = PaymentRow(

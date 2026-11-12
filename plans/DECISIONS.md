@@ -287,3 +287,30 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
     pembayaran, bukan kolom status mutable.
 - **Konsekuensi:** Daftar/detail hutang dan dashboard harus memakai perhitungan
   yang sama; payment history tetap append-only.
+
+## D-017 — Pembayaran append-only, overpayment ditolak, dashboard turunan
+
+- **Tanggal:** 13 November 2026
+- **Status:** Diadopsi untuk Sprint 05
+- **Konteks:** Pembayaran adalah histori finansial yang tidak boleh diedit atau
+  dihapus diam-diam, dan dashboard tidak boleh menghitung angka dengan rumus
+  berbeda dari daftar/detail hutang.
+- **Keputusan:**
+  - Form pembayaran meminta konfirmasi sebelum menyimpan.
+  - Nominal pembayaran harus > 0 dan total pembayaran tidak boleh melebihi
+    pokok hutang; repository menolak di dalam transaksi SQLite, bukan hanya di
+    UI.
+  - Setiap pembayaran menyimpan `operation_id` unik dan outbox entry dibuat
+    dalam transaksi yang sama.
+  - Dashboard memakai `DashboardSummary` yang diturunkan dari `DebtOverview`
+    aktif, sehingga total pokok, dibayar, sisa, dan hitungan status konsisten
+    dengan debt list.
+  - Ringkasan group memakai `GroupSummary`; archived group tetap ditampilkan
+    bila masih memiliki hutang aktif, dan hutang tanpa group ditampilkan
+    sebagai Unassigned.
+  - Jatuh tempo terdekat mencakup hutang overdue dan due date dalam 7 hari ke
+    depan; hutang lunas tidak ditampilkan.
+- **Konsekuensi:** Overpayment tidak dapat dipaksa dari UI atau repository.
+  Perubahan kebijakan overpayment harus disetujui owner dan dilakukan di
+  repository, test, dan dokumentasi sekaligus. Sync indicator belum menjadi
+  bagian Sprint 05; indikator outbox menyusul di Sprint 07.

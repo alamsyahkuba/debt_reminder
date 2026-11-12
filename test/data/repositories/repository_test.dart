@@ -312,6 +312,37 @@ void main() {
         throwsA(isA<AppException>()),
       );
     });
+
+    test('menolak overpayment tanpa menyimpan pembayaran', () async {
+      final debt = await debts.create(title: 'Hutang', principalAmount: 500000);
+
+      await payments.create(debtId: debt.id, amount: 300000);
+
+      await expectLater(
+        payments.create(debtId: debt.id, amount: 200001),
+        throwsA(
+          isA<AppException>().having(
+            (error) => error.message,
+            'message',
+            'Pembayaran melebihi sisa hutang.',
+          ),
+        ),
+      );
+      await expectLater(
+        payments.create(debtId: debt.id, amount: 0),
+        throwsA(isA<AppException>()),
+      );
+
+      expect(await payments.totalPaidForDebt(debt.id), 300000);
+      expect(await payments.listByDebt(debt.id), hasLength(1));
+      final paymentEntries = (await queueDao.listAll())
+          .where((entry) => entry.entityType == 'payment')
+          .toList();
+      expect(paymentEntries, hasLength(1));
+
+      await payments.create(debtId: debt.id, amount: 200000);
+      expect(await payments.totalPaidForDebt(debt.id), 500000);
+    });
   });
 
   group('sync metadata and seed', () {

@@ -48,11 +48,12 @@ If any required file is missing, do not invent its contents. Report the missing 
 
 ### Current implementation note
 
-Sprint 01R–04 are complete: the cloud schema, local Drift schema, repositories,
-UI, and tests no longer contain customers or device enrollment. Debt management
-with derived status is implemented. Public read-only RPCs exist on the backend;
-public Flutter read-only mode and online pull remain part of Sprint 07. The
-project is ready for Sprint 05.
+Sprint 01R–05 are complete: the cloud schema, local Drift schema, repositories,
+UI, and tests no longer contain customers or device enrollment. Debt management,
+derived status, append-only payments, overpayment rejection, and the dashboard
+are implemented. Public read-only RPCs exist on the backend; public Flutter
+read-only mode and online pull remain part of Sprint 07. The project is ready
+for Sprint 06.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.

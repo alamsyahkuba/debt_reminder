@@ -184,4 +184,98 @@ void main() {
       await harness.dispose(tester);
     }
   });
+
+  testWidgets('mencatat pembayaran dan memperbarui sisa hutang', (
+    tester,
+  ) async {
+    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
+    try {
+      final debt = await harness.debts.create(
+        title: 'Hutang Motor',
+        principalAmount: 1000000,
+        dueDate: DateTime.utc(2026, 12, 1),
+      );
+
+      await harness.pump(tester);
+      await _openDebts(tester);
+      await tester.tap(find.byKey(Key('debt-tile-${debt.id}')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('debt-add-payment-button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('payment-form-screen')), findsOneWidget);
+      expect(find.text('Sisa hutang: Rp 1.000.000'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('payment-amount-field')),
+        '250000',
+      );
+      await tester.enterText(
+        find.byKey(const Key('payment-notes-field')),
+        'Cicilan pertama',
+      );
+      await _tapAfterScroll(
+        tester,
+        find.byKey(const Key('payment-save-button')),
+      );
+
+      expect(find.text('Catat pembayaran?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Simpan'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Detail Hutang'), findsOneWidget);
+      expect(find.text('Rp 750.000'), findsWidgets);
+      expect(find.textContaining('Cicilan pertama'), findsOneWidget);
+
+      final stored = await harness.database
+          .select(harness.database.payments)
+          .get();
+      expect(stored, hasLength(1));
+      expect(stored.single.amount, 250000);
+
+      final paymentQueue =
+          (await harness.database.select(harness.database.syncQueue).get())
+              .where((row) => row.entityType == 'payment')
+              .toList();
+      expect(paymentQueue, hasLength(1));
+      expect(paymentQueue.single.operation, 'payment_create');
+    } finally {
+      await harness.dispose(tester);
+    }
+  });
+
+  testWidgets('overpayment ditolak oleh form pembayaran', (tester) async {
+    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
+    try {
+      final debt = await harness.debts.create(
+        title: 'Hutang Motor',
+        principalAmount: 500000,
+      );
+
+      await harness.pump(tester);
+      await _openDebts(tester);
+      await tester.tap(find.byKey(Key('debt-tile-${debt.id}')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('debt-add-payment-button')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('payment-amount-field')),
+        '600000',
+      );
+      await _tapAfterScroll(
+        tester,
+        find.byKey(const Key('payment-save-button')),
+      );
+
+      expect(find.text('Nominal melebihi sisa hutang.'), findsOneWidget);
+      expect(find.byKey(const Key('payment-form-screen')), findsOneWidget);
+      expect(
+        await harness.database.select(harness.database.payments).get(),
+        isEmpty,
+      );
+    } finally {
+      await harness.dispose(tester);
+    }
+  });
 }

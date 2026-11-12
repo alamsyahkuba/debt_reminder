@@ -15,6 +15,7 @@ abstract final class AppRoutes {
   static const String debtNew = '/debts/new';
   static String debtDetail(String id) => '/debts/$id';
   static String debtEdit(String id) => '/debts/$id/edit';
+  static String paymentNew(String debtId) => '/debts/$debtId/payments/new';
 }
 
 @immutable

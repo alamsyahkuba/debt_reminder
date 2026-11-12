@@ -13,6 +13,11 @@ const AppConfig _config = AppConfig(
   supabaseAnonKey: '',
 );
 
+Future<void> _disposeApp(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox());
+  await tester.pump(const Duration(milliseconds: 20));
+}
+
 void main() {
   testWidgets('bootstrap membuka database lalu menampilkan dashboard', (
     tester,
@@ -33,6 +38,8 @@ void main() {
 
     expect(find.byKey(const Key('dashboard-screen')), findsOneWidget);
     expect(await database.select(database.debtGroups).get(), isEmpty);
+
+    await _disposeApp(tester);
   });
 
   testWidgets('flag development mengisi seed demo tanpa outbox', (
@@ -63,5 +70,7 @@ void main() {
     expect(await database.select(database.debts).get(), hasLength(2));
     expect(await database.select(database.payments).get(), hasLength(1));
     expect(await database.select(database.syncQueue).get(), isEmpty);
+
+    await _disposeApp(tester);
   });
 }

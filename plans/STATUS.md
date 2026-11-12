@@ -5,8 +5,8 @@
 Plan revised on 12 November 2026: two roles (owner/admin and public), no
 customer entity, groups retained, all business data public, admin PIN retained,
 device enrollment removed, and database reset approved. Cloud rework (Sprint
-01R), local rework (Sprint 02R/03R), and Sprint 04 debt management are complete.
-Ready for Sprint 05.
+01R), local rework (Sprint 02R/03R), Sprint 04 debt management, and Sprint 05
+payments/dashboard are complete. Ready for Sprint 06.
 
 ## Sprint status
 
@@ -20,7 +20,8 @@ Ready for Sprint 05.
       removed; public read-only UI deferred to Sprint 07)
 - [x] Sprint 04 — Debt management (debt form/list/detail/search/filter/sort,
       derived status, archive)
-- [ ] Sprint 05 — Payments & dashboard
+- [x] Sprint 05 — Payments & dashboard (payment form, overpayment rejection,
+      append-only history, derived dashboard totals/status/group/upcoming)
 - [ ] Sprint 06 — Admin PIN & sessions
 - [ ] Sprint 07 — Offline sync
 - [ ] Sprint 08 — Reminders
@@ -78,6 +79,23 @@ Ready for Sprint 05.
 - Repository/UI tests cover debt creation, search, status, payment history, and
   archive.
 
+### Sprint 05 — Payments & dashboard (complete)
+
+- Payment form from debt detail with amount, payment date, notes, and
+  confirmation before saving.
+- Payment creation is append-only, writes the entity and outbox entry in one
+  SQLite transaction, and keeps a stable `operation_id`.
+- Overpayment is rejected in the repository inside the transaction and by form
+  validation; amount must be positive.
+- Payment history remains visible in debt detail with amount, date, and notes.
+- Dashboard derives principal, paid, and outstanding totals plus active,
+  partial, overdue, and paid counts from `DebtOverview`.
+- Group summary includes active groups, archived groups that still have active
+  debts, and Unassigned.
+- Upcoming section shows overdue and next-seven-day debts, excludes paid debts.
+- Repository and widget tests cover overpayment, payment flow, and dashboard
+  aggregation.
+
 ## Required revision work
 
 Cloud (done in Sprint 01R):
@@ -133,7 +151,7 @@ Local (Sprint 02R/03R) — done:
 
 ## Test evidence
 
-Backend Sprint 01R (current):
+Backend Sprint 01R (rerun during Sprint 05):
 ```text
 supabase db reset                                                                                    passed
 supabase test db                                                                                     passed, 92 pgTAP assertions
@@ -141,32 +159,38 @@ supabase test db                                                                
   - public_read.test.sql                                                                             16
   - idempotency.test.sql                                                                             23
 supabase db lint                                                                                     passed
-deno fmt --check / deno check / deno lint / deno test                                                passed, 36 tests
+deno fmt --check / deno check / deno lint / deno test                                                passed, 36 tests (Sprint 01R; not rerun)
 ```
 
-Flutter (Sprint 02R/03R):
+Flutter (Sprint 05):
 ```text
-flutter analyze                                                                                      no issues
-flutter test                                                                                         passed, 36 tests
-flutter build apk --debug                                                                            passed
-  - schema v2 + no customers                                                                          passed
-  - destructive v1→v2 migration                                                                      passed
-  - group/debt/payment repository tests                                                               passed
-  - debt overview/status tests                                                                       passed
-  - group and debt flow widget tests                                                                 passed
+dart format --output=none --set-exit-if-changed .                                                passed
+flutter analyze                                                                                  no issues
+flutter test                                                                                     passed, 40 tests
+flutter build apk --debug                                                                        passed
+  - schema v2 + no customers                                                                      passed
+  - destructive v1→v2 migration                                                                  passed
+  - group/debt/payment repository tests                                                           passed
+  - overpayment and payment flow tests                                                           passed
+  - debt overview/status tests                                                                   passed
+  - dashboard aggregation/group/upcoming tests                                                   passed
+  - group and debt flow widget tests                                                             passed
 ```
 
 ## Blockers / known limitations
 
 - Cloud and local schemas are reworked; no customers/read_devices/customer_id.
-- No Android device was connected during Sprint 02/03 verification.
+- No Android device was connected during Sprint 04/05 verification.
 - Cloud Supabase has not been linked or pushed.
 - Admin PIN UI gating is not implemented yet; local management actions are
   currently accessible until Sprint 06.
+- Dashboard shows local data and a local-only notice; the outbox-driven sync
+  indicator arrives with Sprint 07.
 - Local SQLite is not encrypted; device-level app lock/encryption remains an
   owner decision.
 - Public read is intentionally world-readable to anyone with the anon key.
 - Existing outbox is not synced yet; sync is Sprint 07.
+- Public Flutter read-only mode/pull is not implemented; Sprint 07.
 
 ## Decisions
 
@@ -180,12 +204,17 @@ flutter build apk --debug                                                       
 - Local-first with Drift and atomic outbox for admin mutations.
 - Database reset is approved because the app is pre-release.
 - Debt paid/outstanding/status is derived from payments and due date.
-- See `plans/DECISIONS.md`, especially D-013, D-014, D-015, and D-016.
+- Payments are append-only; overpayment is rejected by default in repository
+  and form validation.
+- Dashboard totals, counts, group summaries, and upcoming debts are derived from
+  the same debt overviews as the debt list.
+- See `plans/DECISIONS.md`, especially D-013, D-014, D-015, D-016, and D-017.
 
 ## Owner decisions still pending
 
 - [ ] Confirm PIN length and recovery/rotation process.
-- [ ] Confirm overpayment policy (default reject).
+- [x] Overpayment policy: default reject implemented in Sprint 05; owner may
+      revise before release.
 - [ ] Confirm archive/delete policy for debts (group delete already defined).
 - [ ] Confirm exact reminder schedule and whether exact alarms are required.
 - [ ] Confirm whether device-level app lock/local SQLite encryption is required.
@@ -195,5 +224,5 @@ retained, admin PIN retained, device enrollment removed, database reset.
 
 ## Next step
 
-Request owner approval to start Sprint 05 (Payments & dashboard). Public
+Request owner approval to start Sprint 06 (Admin PIN & sessions). Public
 read-only UI and pull behavior remain scheduled for Sprint 07.
