@@ -9,18 +9,18 @@ Create a clean Flutter project foundation and developer workflow.
 - Git repository initialized.
 
 ## Tasks
-- [ ] Inspect repository and preserve existing work.
-- [ ] Configure `pubspec.yaml`, SDK constraints, dependencies.
-- [ ] Create app entry point and Material 3 theme.
-- [ ] Configure Riverpod ProviderScope.
-- [ ] Configure GoRouter with placeholder routes.
-- [ ] Create core folder structure from architecture.
-- [ ] Add environment/config loading without committing secrets.
-- [ ] Add lint rules and formatting conventions.
-- [ ] Add basic app shell and drawer.
-- [ ] Add placeholder Dashboard, Groups, Debts, Customers, Settings, Admin PIN screens.
-- [ ] Add README with setup/run instructions.
-- [ ] Add CI workflow for format/analyze/test if repository uses GitHub Actions.
+- [x] Inspect repository and preserve existing work.
+- [x] Configure `pubspec.yaml`, SDK constraints, dependencies.
+- [x] Create app entry point and Material 3 theme.
+- [x] Configure Riverpod ProviderScope.
+- [x] Configure GoRouter with placeholder routes.
+- [x] Create core folder structure from architecture.
+- [x] Add environment/config loading without committing secrets.
+- [x] Add lint rules and formatting conventions.
+- [x] Add basic app shell and drawer.
+- [x] Add placeholder Dashboard, Groups, Debts, Customers, Settings, Admin PIN screens.
+- [x] Add README with setup/run instructions.
+- [x] Add CI workflow for format/analyze/test if repository uses GitHub Actions.
 
 ## Deliverables
 - App launches on Android.
@@ -40,3 +40,16 @@ Create a clean Flutter project foundation and developer workflow.
 - Admin authentication.
 - CRUD.
 - Offline sync.
+
+## Verification (12 November 2026)
+
+| Check | Result |
+|---|---|
+| `flutter pub get` | Passed |
+| `dart format --output=none --set-exit-if-changed .` | Passed |
+| `flutter analyze` | Passed, no issues |
+| `flutter test` | Passed, 7 tests |
+| `flutter build apk --debug` | Passed, `build/app/outputs/flutter-apk/app-debug.apk` |
+| App launch on emulator/device | Passed on I2505 (Android 16, API 36) via `adb install`; Dashboard rendered and drawer navigation to Group Hutang worked |
+
+Sprint 00 acceptance criteria are complete.
