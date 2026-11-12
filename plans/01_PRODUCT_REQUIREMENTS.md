@@ -2,23 +2,22 @@
 
 ## 1. Roles
 
-### User biasa
+### Publik
 - Tidak perlu login.
-- Perangkat read-only harus di-enroll oleh admin sebelum dapat menarik data
-  cloud; enrollment bukan login user dan tidak memberikan akses admin.
-- Dapat melihat data yang diizinkan, termasuk nama, telepon, catatan, hutang,
-  group, dan histori pembayaran.
+- Dapat melihat seluruh data bisnis: group, hutang, pembayaran, dan status.
 - Read-only.
-- Tidak dapat membuat, mengedit, menghapus hutang, group, atau pembayaran.
+- Tidak dapat membuat, mengedit, menghapus, atau mengarsipkan data.
 - Tidak dapat membuka fitur admin tanpa PIN.
-- Token perangkat dapat dicabut admin.
+- Tidak memerlukan enrollment perangkat.
+- Tidak dapat mengakses data admin, audit, sesi, atau internal metadata.
 
 ### Admin tunggal
 - Membuka Drawer → Admin → memasukkan PIN.
-- Mengelola group, pelanggan, hutang, dan pembayaran.
+- Mengelola group, hutang, dan pembayaran.
 - Mengubah pengaturan reminder.
 - Melakukan operasi saat offline; perubahan masuk antrean sinkronisasi.
 - Sesi admin memiliki expiry dan dapat dikunci/logout.
+- Semua mutasi cloud diverifikasi server-side.
 
 ### Owner
 - Pemilik perangkat/aplikasi dan penanggung jawab konfigurasi.
@@ -33,7 +32,9 @@
 - Menampilkan total sisa hutang.
 - Menampilkan jumlah hutang aktif, lunas, dan overdue.
 - Menampilkan ringkasan per group.
+- Menampilkan hutang yang mendekati jatuh tempo.
 - Semua angka dihitung dari data lokal yang konsisten.
+- Publik dapat melihat dashboard yang sama tanpa aksi mutasi.
 
 ### Debt groups
 - Create, edit, archive, restore, dan delete sesuai aturan.
@@ -43,38 +44,44 @@
 - Group detail menampilkan jumlah hutang, total awal, pembayaran, dan sisa.
 - Hutang dapat dipindahkan antar-group.
 - Hutang tanpa group boleh ada (Unassigned).
-- Group yang memiliki hutang tidak boleh dihapus tanpa konfirmasi dan strategi relasi yang jelas; default: pindahkan hutang menjadi Unassigned.
-- Archived group tidak muncul di daftar aktif, tetapi histori hutangnya tetap tersedia.
-
-### Customers
-- Create, edit, archive, search.
-- Nama wajib; nomor telepon dan catatan opsional.
-- Customer memiliki banyak debt.
-- Jangan hard-delete customer yang memiliki histori hutang.
+- Group yang memiliki hutang tidak boleh dihapus tanpa konfirmasi dan strategi
+  relasi yang jelas; default: pindahkan hutang menjadi Unassigned.
+- Archived group tidak muncul di daftar aktif, tetapi histori hutangnya tetap
+  tersedia.
 
 ### Debts
 - Create, edit, archive/soft-delete.
-- Field minimum: id, customer_id, group_id nullable, title, principal_amount, due_date nullable, notes nullable, status derived/controlled, created_at, updated_at, version.
+- Field minimum: id, group_id nullable, title, principal_amount, due_date
+  nullable, notes nullable, created_at, updated_at, version.
+- Tidak ada `customer_id`.
+- Identitas peminjam, bila diperlukan, ditulis di judul atau catatan hutang.
 - Status ditentukan dari pembayaran dan tanggal:
   - unpaid: paid amount = 0 dan belum overdue
   - partial: 0 < paid amount < principal
-  - paid: paid amount >= principal (validasi mencegah overpayment atau kebijakan eksplisit)
+  - paid: paid amount >= principal (validasi mencegah overpayment atau
+    kebijakan eksplisit)
   - overdue: unpaid/partial dan due date sudah lewat
 - Status jangan menjadi sumber kebenaran terpisah jika dapat dihitung.
+- Publik dapat melihat seluruh field hutang.
 
 ### Payments
 - Create payment/cicilan.
 - Histori pembayaran append-only.
-- Field: id, debt_id, amount, paid_at, notes nullable, operation_id/idempotency key, created_at.
+- Field: id, debt_id, amount, paid_at, notes nullable, operation_id/idempotency
+  key, created_at.
 - Validasi amount > 0.
-- Kebijakan overpayment: default ditolak; jika dibutuhkan, harus menjadi keputusan owner.
-- Pembayaran tidak dihapus/diubah biasa; koreksi melalui reversal/adjustment yang tercatat (fitur adjustment dapat ditunda).
+- Kebijakan overpayment: default ditolak; jika dibutuhkan, harus menjadi
+  keputusan owner.
+- Pembayaran tidak dihapus/diubah biasa; koreksi melalui reversal/adjustment
+  yang tercatat (fitur adjustment dapat ditunda).
+- Publik dapat melihat seluruh field pembayaran.
 
 ### Search & filtering
-- Search customer name, debt title, dan notes bila relevan.
+- Search judul hutang dan catatan.
 - Filter group, status, due date.
-- Sort by due date, newest, amount, customer.
+- Sort by due date, newest, amount, group.
 - Search tetap bekerja offline.
+- Tidak ada pencarian pelanggan.
 
 ### Reminders
 - Admin dapat memilih reminder H-3, H-1, dan hari H (configurable).
@@ -82,21 +89,25 @@
 - Jadwal ulang ketika due date/status berubah.
 - Cancel reminder saat debt lunas atau archived.
 - Reminder tidak boleh menganggap notifikasi sebagai bukti pembayaran.
+- Publik hanya melihat informasi jatuh tempo; konfigurasi reminder milik admin.
 
 ### Settings
 - Admin PIN change.
 - Reminder preferences.
 - Sync status/manual sync.
 - Lock admin session.
-- Kelola perangkat read-only: enroll, lihat status, dan cabut akses.
 - App info dan privacy note.
+- Tidak ada pengaturan perangkat read-only.
 
 ## 3. Non-functional requirements
+
 - UI tidak menunggu network untuk menampilkan data lokal.
 - Error offline ditampilkan secara jelas, bukan crash.
 - Sync retry aman dan idempotent.
-- Data sensitif tidak ditulis ke log.
+- Data admin/sensitif tidak ditulis ke log.
 - Supabase secrets tidak berada di source Flutter.
+- Public read hanya melalui RPC/view read-only; anon tidak memiliki akses tulis.
 - Accessibility: text readable, touch targets nyaman, kontras memadai.
 - Currency formatting IDR konsisten.
-- Tanggal/timezone menggunakan timezone lokal perangkat dengan penyimpanan timestamp yang konsisten.
+- Tanggal/timezone menggunakan timezone lokal perangkat dengan penyimpanan
+  timestamp yang konsisten.

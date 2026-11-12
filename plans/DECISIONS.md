@@ -51,7 +51,7 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 ## D-004 — Tidak ada public read pada v1 (Option A)
 
 - **Tanggal:** 12 November 2026
-- **Status:** Disetujui owner
+- **Status:** Digantikan oleh D-013 (12 November 2026)
 - **Konteks:** Aplikasi tidak memiliki login user biasa dan memakai shared
   database. `anon` key ikut dibundel di APK, sehingga public read berarti data
   dapat dibaca siapa pun yang mengekstrak key tersebut.
@@ -71,6 +71,9 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
     migration eksplisit.
   - `service_role` tidak boleh berada di Flutter atau artefak client.
 
+> **Digantikan 12 November 2026:** owner mengubah keputusan menjadi public read
+> seluruh field bisnis. Lihat D-013 dan D-014.
+
 ## D-005 — RLS deny-all dan explicit service-role grants
 
 - **Tanggal:** 12 November 2026
@@ -84,6 +87,9 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   - `payments` dan `audit_logs` append-only melalui trigger database.
 - **Konsekuensi:** Tabel baru pada migration berikutnya harus diberi grant
   eksplisit ke `service_role`; tidak ada akses anon secara default.
+
+> **Direvisi 12 November 2026:** RLS tetap aktif pada base table, tetapi anon
+> kini boleh execute RPC public read-only. Lihat D-013/D-014.
 
 ## D-006 — Kontrak sesi admin server-side
 
@@ -118,8 +124,7 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 ## D-008 — Read-only device enrollment (Option A+)
 
 - **Tanggal:** 12 November 2026
-- **Status:** Disetujui owner; fondasi schema/helper di Sprint 01, UI/endpoint di
-  Sprint 06–07
+- **Status:** Dicabut oleh D-014 (12 November 2026)
 - **Konteks:** Option A murni mengharuskan setiap perangkat memiliki sesi admin
   untuk menarik data cloud. Owner membutuhkan perangkat read-only yang bisa
   mengambil data terbaru tanpa menjadikan perangkat itu admin.
@@ -143,10 +148,13 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   - Token yang bocor dapat dicabut admin; durasi expiry harus ditetapkan pada
     implementasi enrollment.
 
+> **Dicabut 12 November 2026:** publik membaca langsung melalui RPC read-only;
+> `read_devices`, device token, dan enrollment dihapus. Lihat D-013/D-014.
+
 ## D-009 — Local-first Drift schema dan atomic outbox
 
 - **Tanggal:** 12 November 2026
-- **Status:** Diadopsi untuk Sprint 02
+- **Status:** Direvisi oleh D-015 (12 November 2026)
 - **Konteks:** UI harus membaca dari SQLite, mutasi harus tetap aman saat
   offline, dan retry sync tidak boleh kehilangan operasi.
 - **Keputusan:**
@@ -166,6 +174,9 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
     migration, dan test migration.
   - SQLite lokal belum dienkripsi; keputusan app lock/encryption menunggu owner.
 
+> **Direvisi 12 November 2026:** schema lokal di-reset tanpa customers dan
+> `read_devices`. Lihat D-015.
+
 ## D-010 — Demo seed opt-in untuk development
 
 - **Tanggal:** 12 November 2026
@@ -178,30 +189,25 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 - **Konsekuensi:** Jangan aktifkan flag ini sebelum menghubungkan aplikasi ke
   cloud nyata. Hapus database lokal jika ingin mengulang seed.
 
-## D-011 — Kebijakan delete group dan customer
+## D-011 — Kebijakan delete group
 
 - **Tanggal:** 12 November 2026
-- **Status:** Diadopsi untuk Sprint 03
+- **Status:** Diadopsi untuk Sprint 03; customer portion dihapus oleh D-014
 - **Konteks:** Group perlu bisa dihapus tanpa kehilangan histori hutang.
-  Customer dengan histori tidak boleh hilang diam-diam.
 - **Keputusan:**
   - Delete group berjalan dalam satu transaksi: semua hutang di group
     dipindahkan ke Unassigned, versi/sync state-nya diperbarui, outbox update
     hutang dibuat lebih dulu, lalu group dihapus dan outbox delete group dibuat.
   - Hutang, pembayaran, dan histori tidak pernah dihapus oleh delete group.
-  - Tidak ada aksi hard-delete customer di UI maupun repository. Customer hanya
-    dapat diarsipkan/dipulihkan.
-  - Ringkasan group/customer dihitung dari hutang dan pembayaran, bukan counter
-    manual.
+  - Ringkasan group dihitung dari hutang dan pembayaran, bukan counter manual.
 - **Konsekuensi:** Delete group menghasilkan beberapa operasi sync dan harus
-  diurutkan oleh sync worker pada Sprint 07. Customer dengan histori tetap
-  tersedia untuk laporan.
+  diurutkan oleh sync worker pada Sprint 07.
 
 ## D-012 — Admin PIN gate ditunda sampai Sprint 06
 
 - **Tanggal:** 12 November 2026
 - **Status:** Urutan implementasi Sprint 03–05
-- **Konteks:** Group/customer management dibangun sebelum PIN/session admin.
+- **Konteks:** Group/debt/payment management dibangun sebelum PIN/session admin.
   Sprint 03–05 belum memiliki jalur mutasi cloud.
 - **Keputusan:** Aksi pengelolaan lokal pada Sprint 03–05 dapat diakses tanpa
   PIN. Sprint 06 wajib memasang route guard dan admin session sebelum sync
@@ -209,3 +215,56 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 - **Konsekuensi:** Build lokal saat ini bukan release-ready; jangan
   mendistribusikan APK sebelum Sprint 06 selesai. Tidak ada klaim bahwa UI guard
   adalah otorisasi server.
+
+## D-013 — Public read seluruh data bisnis
+
+- **Tanggal:** 12 November 2026
+- **Status:** Disetujui owner; public RPC implemented in Sprint 01R; public
+  Flutter mode still pending
+- **Konteks:** Owner memutuskan aplikasi hanya memiliki owner/admin dan publik.
+  Publik harus dapat melihat data tanpa login.
+- **Keputusan:**
+  - Publik dapat membaca seluruh field bisnis: group, hutang, pembayaran,
+    catatan, nominal, tanggal, status arsip, dan status turunan.
+  - Public read hanya melalui RPC read-only dengan field allowlist.
+  - Base table tidak memberikan SELECT langsung ke anon.
+  - Anon tidak memiliki INSERT/UPDATE/DELETE.
+  - Data admin, audit, sesi, operation registry, PIN, token, dan sync metadata
+    tetap privat.
+- **Konsekuensi:**
+  - Siapa pun dengan anon/publishable key dapat membaca data bisnis.
+  - “Semua data publik” adalah tradeoff privasi yang disetujui owner.
+  - Public UI harus read-only dan tidak membuat outbox.
+
+## D-014 — Hapus customer dan read-only device enrollment
+
+- **Tanggal:** 12 November 2026
+- **Status:** Disetujui owner; cloud removal done in Sprint 01R; local cleanup
+  pending Sprint 02R/03R
+- **Konteks:** Owner menyederhanakan produk menjadi group, hutang, dan
+  pembayaran, serta memilih public read langsung.
+- **Keputusan:**
+  - Hapus tabel/entity/DAO/repository/UI/test `customers`.
+  - Hapus `debts.customer_id`.
+  - Tidak ada `borrower_name` terpisah; identitas ditulis di title/notes.
+  - Hapus `read_devices`, device token, enrollment UI, dan helper device auth.
+  - Group tetap ada.
+- **Konsekuensi:** Implementasi Sprint 01–03 harus dirework. Tidak ada migrasi
+  data pelanggan; database di-reset karena belum release.
+
+## D-015 — Reset database dan local schema v2
+
+- **Tanggal:** 12 November 2026
+- **Status:** Disetujui owner; cloud reset done in Sprint 01R; local SQLite
+  reset pending Sprint 02R/03R
+- **Konteks:** Schema lama memuat customers/read_devices dan tidak sesuai
+  produk baru. Belum ada data produksi.
+- **Keputusan:**
+  - Reset database cloud/local daripada memigrasikan data pelanggan.
+  - Cloud migration baru menghapus customers/read_devices/customer_id dan
+    menambahkan public RPC read-only.
+  - Drift schema dinaikkan/di-reset tanpa customers dan read_devices.
+  - Public mode tidak memiliki outbox; hanya admin mutation yang memiliki
+    outbox.
+- **Konsekuensi:** Data lama akan hilang; ini disetujui karena aplikasi belum
+  release. Semua test dan dokumentasi harus disesuaikan.

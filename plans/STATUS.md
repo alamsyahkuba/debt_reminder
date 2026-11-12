@@ -2,17 +2,21 @@
 
 ## Current phase
 
-Sprint 00 — Foundation, Sprint 01 — Cloud schema & security (including the
-read-only device enrollment foundation), Sprint 02 — Local database &
-repository, and Sprint 03 — Groups & customers are complete. Ready for owner
-approval before Sprint 04.
+Plan revised on 12 November 2026: two roles (owner/admin and public), no
+customer entity, groups retained, all business data public, admin PIN retained,
+device enrollment removed, and database reset approved. Sprint 01R cloud rework
+is complete; local Flutter/Drift rework (Sprint 02R/03R) is still pending.
 
 ## Sprint status
 
-- [x] Sprint 00 — Foundation
-- [x] Sprint 01 — Cloud schema & security
-- [x] Sprint 02 — Local database & repository
-- [x] Sprint 03 — Groups & customers
+- [x] Sprint 00 — Foundation (historical; customer placeholder will be removed
+      by the public-read rework)
+- [x] Sprint 01 — Cloud schema & security (Sprint 01R: customers/read_devices
+      removed, public read RPC and tests added)
+- [ ] Sprint 02 — Local database & repository (revision required: remove
+      customer schema/repositories, reset Drift schema)
+- [ ] Sprint 03 — Groups (revision required: remove customer UI/tests, retain
+      group features)
 - [ ] Sprint 04 — Debt management
 - [ ] Sprint 05 — Payments & dashboard
 - [ ] Sprint 06 — Admin PIN & sessions
@@ -20,314 +24,155 @@ approval before Sprint 04.
 - [ ] Sprint 08 — Reminders
 - [ ] Sprint 09 — QA, hardening & release
 
-## Completed work
+## Implementation status by area
 
-### Sprint 00 — Foundation (12 November 2026)
+### Sprint 00 — Foundation
 
-- Flutter foundation with Material 3 light/dark theme and Indonesian locale.
-- Riverpod `ProviderScope`, app config provider, and typed core foundations.
-- GoRouter shell with drawer navigation and seven placeholder screens:
-  Dashboard, Semua Hutang, Group Hutang, Pelanggan, Reminder, Pengaturan, and
-  Admin PIN.
-- Environment configuration through `--dart-define`; example config committed,
-  local config ignored.
-- Strict lint/analyzer rules, formatter check, and GitHub Actions CI.
-- README with setup, configuration, and quality commands.
-- Technical decisions recorded in `plans/DECISIONS.md`.
-- Sprint 00 itself added no database, CRUD, authentication, or sync code.
-- Debug APK installed and launched on I2505 (Android 16, API 36); Dashboard
-  rendered and drawer navigation to Group Hutang verified.
+- Flutter foundation, Material 3, Indonesian locale, Riverpod, GoRouter,
+  drawer, environment config, lint, CI, and placeholder screens.
+- Debug APK was verified on I2505 during Sprint 00.
+- Customer placeholder still exists in Flutter and must be removed in Sprint 03R.
 
-### Sprint 01 — Cloud schema & security (12 November 2026)
+### Sprint 01 — Cloud schema & security (Sprint 01R complete)
 
-- Supabase CLI config initialized; local seed disabled and
-  `api.auto_expose_new_tables = false`.
-- Migrations created for `customers`, `debt_groups`, `debts`, `payments`,
-  `admin_settings`, `audit_logs`, `admin_sessions`, and `operation_registry`.
-- Added constraints, indexes, timestamps, version triggers, allowlisted group
-  icons, safe-integer rupiah limits, and archive/sync indexes.
-- Payments and audit logs are append-only at the database trigger level.
-- RLS enabled on every table. Option A applied: no public read, no
-  anon/authenticated policies, no schema usage for those roles, and no public
-  views/RPCs.
-- Explicit service-role grants only; `admin_settings` and `audit_logs` are
-  inaccessible to anon/authenticated.
-- Server-side idempotency helpers: `begin_operation`, `complete_operation`,
-  `fail_operation`, payload hashing, and unique payment `operation_id`.
-- Admin audit helper with allowlisted-object metadata and size limit.
-- Edge Function shared helpers for admin JWT/session verification, input
-  validation, idempotency RPC wrappers, and safe HTTP errors.
-- pgTAP schema/RLS/idempotency tests, Deno helper tests, and backend CI job.
-- Local Supabase setup and security model documented in `supabase/README.md`.
-- Option A+ extension: `read_devices` table with active-device uniqueness,
-  expiry/revocation, and service-role-only access.
-- Device-token helpers: opaque `dr_dev_` token generation, SHA-256 hashing,
-  expiry/revocation checks, and `last_seen_at` touch.
-- Read-only device visibility approved: name, phone, notes, debt/group data,
-  and payment history; no admin/audit/registry data.
-- Enrollment/revocation endpoint + UI remain scheduled for Sprint 06; read-only
-  pull endpoint remains scheduled for Sprint 07.
+- Supabase baseline migrations now contain `debt_groups`, `debts`, `payments`,
+  admin settings, audit logs, admin sessions, and operation registry only.
+- `customers`, `debts.customer_id`, `read_devices`, and device auth were removed.
+- Public read-only RPCs: `public_debt_groups`, `public_debts`,
+  `public_payments`.
+- RLS is enabled; anon has schema usage and execute on public RPCs only; anon
+  has no base-table grants or mutation.
+- Public RPC tests, anon denial tests, idempotency tests, and Deno admin helper
+  tests pass after reset.
+- Device auth helper/tests were deleted; http error mapping no longer references
+  device errors.
 
-### Sprint 02 — Local database & repository (12 November 2026)
+### Sprint 02 — Local database & repository (pending rework)
 
-- Drift/SQLite schema version 1 with `customers`, `debt_groups`, `debts`,
-  `payments`, `sync_queue`, and `sync_metadata`.
-- Local schema mirrors cloud fields and adds `sync_state`, `server_updated_at`,
-  and `version` for mutable entities.
-- Foreign keys enabled; customer/debt references restrict deletion, group
-  references set null; payments use append-only SQLite triggers.
-- Drift code generated and committed for reproducible builds.
-- Domain entities, repository contracts, DAOs, and repository providers.
-- Repository reads are reactive Drift streams.
-- Every local mutation runs inside a SQLite transaction and inserts its outbox
-  entry with a stable operation ID; forced outbox failure rolls back the entity.
-- Local version conflicts throw a typed `AppException` instead of overwriting.
-- Payment repository is append-only; no update/delete API is exposed.
-- `sync_queue` stores operation metadata, retry count, status, error code, and
-  next retry time; `sync_metadata` stores sync cursors.
-- Database bootstrap opens the local DB before the app shell and shows a
-  loading/error screen if opening fails.
-- Development-only demo seed is opt-in with `SEED_DEMO_DATA=true`; demo rows are
-  marked synced and do not create outbox entries.
-- Local repository tests cover atomic writes, outbox, reactive reads, version
-  conflicts, append-only payments, seeding, and schema creation.
+- Drift schema v1 still contains customers and customer_id.
+- Customer repository/entity/DAO and device-token helpers remain in Flutter.
+- Must be reset/reworked in Sprint 02R.
 
-### Sprint 03 — Groups & customers (12 November 2026)
+### Sprint 03 — Groups & customers (pending rework)
 
-- Group list with color/icon, sort order, debt count, and outstanding summary.
-- Group create/edit form with validation, color/icon choices, and sort order.
-- Group detail with summary, debt list, edit, archive/restore, and delete.
-- Group delete moves all debts to Unassigned in one transaction, preserves
-  payments/history, and queues debt updates before the group delete.
-- Move debt between groups or to Unassigned from group detail.
-- Customer list with local search by name/phone/notes, archived filter, debt
-  count, and outstanding summary.
-- Customer create/edit form and detail with summary and debt history.
-- Customer archive/restore; no hard-delete action is exposed, so history is
-  preserved.
-- Derived group/customer summaries use SQL aggregates over active debts and
-  payments.
-- Empty, loading, error, and local-data/offline states implemented.
-- Repository and widget tests cover create/search/archive/delete/move flows.
+- Group list/form/detail, archive/restore/delete, summaries, move debt.
+- Customer list/form/detail/search/archive still exists.
+- Customer module must be removed in Sprint 03R; group features remain.
 
-## Files changed
+## Required revision work
 
-### Sprint 00
+Cloud (done in Sprint 01R):
+- [x] Remove `customers`, `debts.customer_id`, `read_devices`, and device auth.
+- [x] Add public read-only RPCs for groups, debts, and payments.
+- [x] Keep base tables RLS-enabled with no anon table grants.
+- [x] Allow anon execute only on public read RPCs.
+- [x] Keep internal tables private.
+- [x] Reset local Supabase and update backend tests.
 
-- `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml`, `.gitignore`
-- `README.md`, `config/app_config.example.json`
-- `.github/workflows/ci.yml`
-- `lib/main.dart`
-- `lib/app/` (app, router, navigation, theme, shell, drawer, error screen,
-  providers)
-- `lib/core/` (config, errors, logging, network, security notes, currency
-  formatter)
-- `lib/features/` (dashboard, debts, debt_groups, customers, reminders,
-  settings, admin placeholders)
-- `lib/shared/widgets/feature_placeholder.dart`
-- `test/app/app_navigation_test.dart`
-- `test/core/config/app_config_test.dart`
-- `test/core/utils/currency_formatter_test.dart`
-- `android/app/src/main/AndroidManifest.xml` (app label)
+Local (Sprint 02R/03R):
+- [ ] Remove customer table/entity/DAO/repository/validation.
+- [ ] Remove `customer_id` from local debts.
+- [ ] Remove customer providers/screens/routes and tests.
+- [ ] Remove local device-token/device-enrollment artifacts.
+- [ ] Reset SQLite data/schema.
+- [ ] Rework debt repository/UI to remove customer selectors and summaries.
+- [ ] Update widget/repository tests for group/debt/payment/public mode.
+- [ ] Keep group features and remove customer navigation.
+- [ ] Update root README/status when local rework is complete.
 
-### Sprint 01
+## Plan files changed
 
-- `supabase/config.toml`
-- `supabase/migrations/20261112120000_core_functions.sql`
-- `supabase/migrations/20261112120100_business_tables.sql`
-- `supabase/migrations/20261112120200_security.sql`
-- `supabase/migrations/20261112120300_idempotency_audit.sql`
-- `supabase/migrations/20261112120400_read_devices.sql`
-- `supabase/tests/schema_security.test.sql`
-- `supabase/tests/idempotency.test.sql`
-- `supabase/tests/read_devices.test.sql`
-- `supabase/functions/deno.json`
-- `supabase/functions/.env.example`
-- `supabase/functions/_shared/auth.ts`
-- `supabase/functions/_shared/crypto.ts`
-- `supabase/functions/_shared/device_auth.ts`
-- `supabase/functions/_shared/validation.ts`
-- `supabase/functions/_shared/idempotency.ts`
-- `supabase/functions/_shared/http.ts`
-- `supabase/functions/_shared/*_test.ts`
-- `supabase/README.md`
-- `.github/workflows/ci.yml` (backend job)
-- `README.md` (backend section)
-- `plans/DECISIONS.md` (D-004 s.d. D-008)
-- `plans/01_PRODUCT_REQUIREMENTS.md` (read-only devices)
-- `plans/03_DATABASE_AND_SECURITY.md` (implemented schema and Option A+)
-- `plans/04_OFFLINE_SYNC.md` (read-only device pull path)
-- `plans/05_UI_UX_SPEC.md` (device enrollment UI)
+- `plans/00_PROJECT_BRIEF.md`
+- `plans/01_PRODUCT_REQUIREMENTS.md`
+- `plans/02_ARCHITECTURE.md`
+- `plans/03_DATABASE_AND_SECURITY.md`
+- `plans/04_OFFLINE_SYNC.md`
+- `plans/05_UI_UX_SPEC.md`
+- `plans/06_TESTING_AND_ACCEPTANCE.md`
+- `plans/07_AGENT_WORKFLOW.md`
 - `plans/README.md`
+- `plans/DECISIONS.md`
+- `plans/STATUS.md`
+- `plans/sprints/SPRINT_00_FOUNDATION.md`
 - `plans/sprints/SPRINT_01_CLOUD_SCHEMA_SECURITY.md`
+- `plans/sprints/SPRINT_02_LOCAL_DATABASE_REPOSITORY.md`
+- `plans/sprints/SPRINT_03_GROUPS_CUSTOMERS.md`
+- `plans/sprints/SPRINT_04_DEBT_MANAGEMENT.md`
+- `plans/sprints/SPRINT_05_PAYMENTS_DASHBOARD.md`
 - `plans/sprints/SPRINT_06_ADMIN_SECURITY.md`
 - `plans/sprints/SPRINT_07_OFFLINE_SYNC.md`
-- `plans/STATUS.md`
+- `plans/sprints/SPRINT_08_REMINDERS.md`
+- `plans/sprints/SPRINT_09_QA_RELEASE.md`
 
-### Sprint 02
+## Documentation outside plans updated
 
-- `pubspec.yaml`, `pubspec.lock` (Drift, drift_flutter, uuid, drift_dev,
-  build_runner)
-- `lib/data/local/app_database.dart`
-- `lib/data/local/app_database.g.dart` (generated Drift code)
-- `lib/data/local/daos/` (customer, debt group, debt, payment, sync queue,
-  sync metadata)
-- `lib/data/local/dev_seed.dart`
-- `lib/data/repositories/` (customer, group, debt, payment implementations,
-  mappers, payloads, support)
-- `lib/domain/entities/` (customer, debt, debt group, payment, sync state)
-- `lib/domain/repositories/` (customer, debt group, debt, payment contracts)
-- `lib/domain/validation/entity_validation.dart`
-- `lib/app/bootstrap.dart`
-- `lib/app/providers.dart` (database/repository providers)
-- `lib/main.dart` (DB bootstrap)
-- `lib/core/config/app_config.dart` (`SEED_DEMO_DATA`)
-- `lib/core/errors/app_exception.dart` (`notFound`)
-- `config/app_config.example.json`
-- `test/data/local/app_database_test.dart`
-- `test/data/repositories/repository_test.dart`
-- `test/app/bootstrap_test.dart`
-- `test/core/config/app_config_test.dart`
-- `linux/flutter/generated_plugins.cmake`,
-  `windows/flutter/generated_plugins.cmake` (generated plugin registrants)
-- `.gitignore` (`android/.kotlin`)
-- `README.md` (local database section)
-- `plans/DECISIONS.md` (D-009, D-010)
-- `plans/03_DATABASE_AND_SECURITY.md` (implemented local schema)
-- `plans/sprints/SPRINT_02_LOCAL_DATABASE_REPOSITORY.md`
-- `plans/STATUS.md`
-
-### Sprint 03
-
-- `lib/domain/entities/group_summary.dart`
-- `lib/domain/entities/customer_summary.dart`
-- `lib/domain/repositories/customer_repository.dart`,
-  `lib/domain/repositories/debt_group_repository.dart`,
-  `lib/domain/repositories/debt_repository.dart`
-- `lib/data/local/daos/customer_dao.dart`,
-  `lib/data/local/daos/debt_group_dao.dart`,
-  `lib/data/local/daos/debt_dao.dart`
-- `lib/data/repositories/customer_repository_impl.dart`,
-  `lib/data/repositories/debt_group_repository_impl.dart`,
-  `lib/data/repositories/debt_repository_impl.dart`,
-  `lib/data/repositories/outbox_payloads.dart`
-- `lib/features/debt_groups/application/group_providers.dart`
-- `lib/features/debt_groups/presentation/groups_screen.dart`,
-  `group_form_screen.dart`, `group_detail_screen.dart`, `group_visuals.dart`
-- `lib/features/customers/application/customer_providers.dart`
-- `lib/features/customers/presentation/customers_screen.dart`,
-  `customer_form_screen.dart`, `customer_detail_screen.dart`
-- `lib/features/debts/application/debt_providers.dart`
-- `lib/features/debts/presentation/widgets/debt_list_tile.dart`
-- `lib/shared/widgets/empty_state.dart`, `error_state.dart`,
-  `loading_state.dart`, `local_data_notice.dart`, `metric_card.dart`,
-  `confirm_dialog.dart`
-- `lib/core/utils/date_formatter.dart`
-- `lib/app/navigation.dart`, `lib/app/router.dart`
-- `test/data/repositories/group_customer_management_test.dart`
-- `test/features/group_customer_flow_test.dart`
-- `test/app/app_navigation_test.dart`
-- `plans/DECISIONS.md` (D-011, D-012)
-- `plans/03_DATABASE_AND_SECURITY.md`
-- `plans/sprints/SPRINT_03_GROUPS_CUSTOMERS.md`
-- `plans/STATUS.md`
+- `AGENTS.md` — revised roles/data/public-read/security/rework rules.
+- `README.md` — revised product status, local DB target, public read policy,
+  and pending rework.
+- `supabase/README.md` — target public RPC/RLS model, removal of customers and
+  device enrollment, and reset requirements.
 
 ## Test evidence
 
-Commands run on 12 November 2026:
-
+Backend Sprint 01R (current):
 ```text
-flutter pub get                                              passed
-dart run build_runner build                                  passed
-dart format --output=none --set-exit-if-changed .            passed
-flutter analyze                                              no issues
-flutter test                                                 passed, 34 tests
-flutter build apk --debug                                    passed
-adb install -r build/app/outputs/flutter-apk/app-debug.apk   passed (I2505, Sprint 00)
-
-supabase db start                                            passed
-supabase db reset                                            passed
-supabase test db                                             passed, 92 pgTAP assertions
-supabase db lint                                             no schema errors
-deno fmt --check                                             passed
-deno check _shared/*.ts                                      passed
-deno lint                                                    passed
-deno test                                                    passed, 43 tests
+supabase db reset                                                                                    passed
+supabase test db                                                                                     passed, 92 pgTAP assertions
+  - schema_security.test.sql                                                                         53
+  - public_read.test.sql                                                                             16
+  - idempotency.test.sql                                                                             23
+supabase db lint                                                                                     passed
+deno fmt --check / deno check / deno lint / deno test                                                passed, 36 tests
 ```
 
-On-device verification: Sprint 00 launched on I2505 (Android 16, API 36), the
-Dashboard rendered, the drawer opened, and navigation to Group Hutang worked.
-Sprint 02 verified database bootstrap and seed via widget tests. Sprint 03
-verified group/customer flows via widget tests. The debug APK builds, but no
-Android device was connected to launch the Sprint 02/03 APK.
+Flutter (still old customer/local model):
+```text
+flutter test                                                                                         passed, 34 tests (historical)
+flutter build apk --debug                                                                            passed (historical)
+```
 
-Backend verification: a fresh local database was recreated from all five
-migrations; anon/authenticated access failed at schema, table, and function
-level; admin settings/audit logs were inaccessible; idempotency replay and
-payload-conflict paths passed; read-device enrollment, revocation, expiry, and
-token uniqueness constraints passed.
+Flutter tests will be updated in Sprint 02R/03R after customer removal.
 
 ## Blockers / known limitations
 
-- No active blockers for Sprint 03.
-- No Android device was connected during Sprint 02/03; APK build and widget
-  tests passed, but the latest APK has not been launched on device.
-- Admin PIN gating is not implemented yet. Group/customer management actions are
-  locally accessible until Sprint 06; no cloud mutation path exists yet. Do not
-  distribute the APK as a release before Sprint 06.
-- Cloud Supabase project has not been linked or pushed. No owner-provided cloud
-  credentials were used, and `db push` was not run.
-- Edge Functions currently contain shared helpers only; PIN verification,
-  session issuance, and device enrollment are Sprint 06; sync/pull endpoints are
-  Sprint 07.
-- No public read exists by design. Read-only devices must be enrolled by an
-  admin before they can pull cloud data; until their enrollment/pull endpoint is
-  implemented, non-admin devices can only read cached local data.
-- Local SQLite is not encrypted yet. It contains customer contact data and
-  notes; device-level app lock/encryption remains an owner decision.
-- Schema version 1 has no upgrade path yet. `onUpgrade` intentionally throws;
-  future schema changes require explicit migration steps and tests.
-- Stale `processing` operations and expired admin session cleanup will be
-  handled by the sync/session sprints; no background cleanup job exists yet.
-- Outbox entries are queued but not sent yet; sync is Sprint 07.
-- Demo seed is available only with `SEED_DEMO_DATA=true` in development.
+- Cloud schema is reworked, but local Flutter/Drift schema still has customers
+  and device-token artifacts.
+- No Android device was connected during Sprint 02/03 verification.
+- Cloud Supabase has not been linked or pushed.
+- Admin PIN UI gating is not implemented yet; local management actions are
+  currently accessible until Sprint 06.
+- Local SQLite is not encrypted; device-level app lock/encryption remains an
+  owner decision.
+- Public read is intentionally world-readable to anyone with the anon key.
+- Existing outbox is not synced yet; sync is Sprint 07.
 
 ## Decisions
 
-- One admin.
-- Shared cloud data.
-- No ordinary user login.
-- Simple groups only (no subgroup).
-- Offline-first with Drift/SQLite and outbox.
-- No public read in v1; RLS deny-all for anon/authenticated.
-- Read-only device enrollment (Option A+) uses revocable opaque device tokens.
-- Enrolled read-only devices may see phone/notes/debt/payment history.
-- Admin mutations must be server-authorized through Edge Functions.
-- Admin sessions use short-lived HS256 JWTs with server-side hashed sessions.
-- Idempotency uses `operation_id` + stable payload hash + registry.
-- Local-first writes use Drift schema v1 with an atomic outbox.
-- Demo seed is opt-in only with `SEED_DEMO_DATA=true` in development.
-- Group delete moves debts to Unassigned; customer history is archive-only.
-- Group/customer summaries are derived from debts and payments.
-- Admin PIN UI gating is deferred to Sprint 06; server authorization remains
-  mandatory for cloud mutations.
-- Environment config uses `--dart-define`; see `plans/DECISIONS.md`.
+- Two roles: owner/admin and public.
+- One admin; public does not log in.
+- Data: groups, debts, payments only; no customers.
+- All business fields are public through read-only RPC.
+- Anon cannot mutate; admin mutations require server-side session.
+- Device enrollment is removed.
+- Group deletion moves debts to Unassigned and never deletes history.
+- Local-first with Drift and atomic outbox for admin mutations.
+- Database reset is approved because the app is pre-release.
+- See `plans/DECISIONS.md`, especially D-013, D-014, and D-015.
 
 ## Owner decisions still pending
 
-- [ ] Confirm whether device-level app lock/local SQLite encryption is required.
-- [ ] Confirm read-only device token lifetime and enrollment UX.
 - [ ] Confirm PIN length and recovery/rotation process.
-- [ ] Confirm exact reminder schedule and whether exact alarms are required.
 - [ ] Confirm overpayment policy (default reject).
-- [ ] Confirm delete/archive policy for debts, groups, customers.
+- [ ] Confirm archive/delete policy for debts (group delete already defined).
+- [ ] Confirm exact reminder schedule and whether exact alarms are required.
+- [ ] Confirm whether device-level app lock/local SQLite encryption is required.
 
-Resolved: public data visibility — no anon/public read; admin-enrolled read-only
-devices may pull phone/notes/debt/payment data (12 November 2026).
+Resolved 12 November 2026: public read all business data, no customers, groups
+retained, admin PIN retained, device enrollment removed, database reset.
 
 ## Next step
 
-1. Request owner approval before starting Sprint 04 (Debt management).
-2. Sprint 04 will add debt create/edit forms, list/detail, customer/group
-   selectors, Unassigned support, search, filters, sorting, archive, derived
-   paid/outstanding/status, and tests.
+1. Sprint 02R — reset local Drift schema, remove customer table/entity/DAO/
+   repository, and remove customer references from debt payloads/tests.
+2. Sprint 03R — remove customer UI/providers/routes/tests and keep group UI.
+3. After local rework passes tests, continue to Sprint 04.

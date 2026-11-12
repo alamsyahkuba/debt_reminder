@@ -6,14 +6,30 @@ Drawer:
 - Dashboard
 - Semua Hutang
 - Group Hutang
-- Pelanggan
-- Reminder (optional list)
+- Reminder
 - Pengaturan
 - Admin (PIN gate)
 
-Admin menu opens PIN screen. Admin unlock reveals management actions; lock/logout returns to public mode.
+Menu Pelanggan dihapus.
 
-## 2. Screens
+Admin menu membuka PIN screen. Setelah unlock, aksi mutasi terlihat. Lock/logout
+kembali ke mode publik/read-only.
+
+## 2. Mode akses
+
+### Mode publik
+- Tanpa login.
+- Semua data bisnis terlihat.
+- Tidak ada tombol create/edit/archive/delete.
+- Data berasal dari cache lokal dan public pull.
+
+### Mode admin
+- Dibuka setelah PIN valid.
+- Aksi CRUD group, hutang, dan pembayaran terlihat.
+- Aksi mutation lokal masuk outbox.
+- Session expiry/lock mengembalikan UI ke mode publik.
+
+## 3. Screens
 
 ### Dashboard
 - Summary cards: principal, paid, outstanding.
@@ -37,32 +53,29 @@ Admin menu opens PIN screen. Admin unlock reveals management actions; lock/logou
 - Admin actions: edit/archive/reorder/delete/move debt.
 
 ### All debts
-- Search field.
+- Search field untuk judul/catatan.
 - Filters: group, payment status, overdue, due date.
-- Sort: due date, latest, outstanding amount, customer.
-- Debt row shows title/customer, due date, remaining amount, status.
+- Sort: due date, latest, outstanding amount, group.
+- Debt row shows title, group, due date, remaining amount, status.
+- Tidak ada kolom customer.
 
 ### Debt detail
-- Customer information.
 - Principal amount.
 - Paid total and outstanding amount.
 - Due date and notes.
 - Payment history.
 - Admin: edit, record payment, move group, archive.
-
-### Customer list/detail
-- Search.
-- Debt count and outstanding summary.
-- Admin CRUD/archive.
+- Tidak ada informasi customer.
 
 ### Payment form
 - Amount, paid_at, notes.
 - Validate positive amount and no overpayment by default.
 - Confirmation before saving.
 - Show offline/pending-sync status.
+- Admin only.
 
 ### Admin PIN
-- Numeric keypad or secure input.
+- Numeric keypad atau secure input.
 - Rate-limit feedback.
 - No PIN in logs.
 - Error generic enough not to expose internals.
@@ -73,24 +86,16 @@ Admin menu opens PIN screen. Admin unlock reveals management actions; lock/logou
 - Admin PIN change.
 - Sync now.
 - Pending operations and last sync.
-- Perangkat read-only: daftar perangkat, status aktif/revoked/expired, enroll
-  perangkat baru, dan cabut akses.
-- App version.
+- App version dan privacy note.
+- Tidak ada menu perangkat read-only.
 
-### Read-only device enrollment
-- Admin menghasilkan kode enrollment sekali pakai (short-lived) atau QR.
-- Perangkat baru memasukkan kode tersebut, lalu menyimpan token read-only di
-  secure storage.
-- Konfirmasi sebelum mencabut perangkat.
-- Perangkat read-only menampilkan data tanpa aksi admin; jika token revoked/
-  expired, tampilkan status dan tetap izinkan baca cache lokal.
-- Enrollment tidak boleh menampilkan PIN atau token di log.
-
-## 3. Visual rules
+## 4. Visual rules
 - Material 3.
 - Responsive to small Android screens.
 - Currency format `Rp 1.000.000` (locale Indonesia).
 - Clear status colors with text labels; color alone is not sufficient.
-- Loading, empty, error, offline, and pending-sync states for each data screen.
+- Loading, empty, error, offline, dan pending-sync states untuk setiap data
+  screen.
 - Confirm destructive/archive actions.
 - No subgroup UI.
+- Public mode tidak menampilkan aksi mutation.

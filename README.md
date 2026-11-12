@@ -4,19 +4,28 @@ Aplikasi Android untuk mencatat, mengelompokkan, memantau, dan mengingatkan
 hutang/piutang. Dibangun dengan Flutter dan disiapkan untuk backend Supabase
 serta penyimpanan lokal offline-first.
 
+Data bisnis terdiri dari **group hutang, hutang, dan pembayaran**. Tidak ada
+modul pelanggan.
+
 ## Status
 
-Sprint 00 (Foundation) menyediakan kerangka aplikasi, tema Material 3,
-navigasi, drawer, konfigurasi environment, lint, CI, dan placeholder screen.
-Sprint 01 (Cloud schema & security) menyediakan schema Supabase, RLS, sesi
-admin, idempotency, dan fondasi perangkat read-only. Sprint 02 (Local database
-& repository) menyediakan Drift/SQLite, entity/domain, repository, dan outbox.
-Sprint 03 (Groups & customers) menyediakan pengelolaan group dan pelanggan
-end-to-end secara lokal, termasuk pencarian, arsip, ringkasan, dan pemindahan
-hutang ke Unassigned. Autentikasi PIN admin dan sync cloud belum aktif.
+Sprint 00–03 sudah memiliki implementasi awal, tetapi **plan telah direvisi**
+pada 12 November 2026:
 
-Spesifikasi produk dan sprint ada di [`plans/`](plans/), dengan status terbaru
-di [`plans/STATUS.md`](plans/STATUS.md).
+- hanya dua peran: owner/admin dan publik;
+- tidak ada entitas pelanggan;
+- group tetap ada;
+- semua field bisnis dapat dibaca publik;
+- admin tetap memakai PIN dan sesi server-side;
+- read-only device enrollment dihapus;
+- database akan di-reset.
+
+Sprint 01R sudah menyelesaikan rework cloud: schema tanpa customers/read_devices,
+public read RPC, dan RLS read-only. Aplikasi Flutter dan database lokal masih
+memuat model customer lama; Sprint 02R/03R diperlukan sebelum melanjutkan ke
+Sprint 04. Lihat [`plans/STATUS.md`](plans/STATUS.md).
+
+Spesifikasi produk dan sprint ada di [`plans/`](plans/).
 
 ## Prasyarat
 
@@ -66,17 +75,26 @@ argumen build client.
 
 ## Database lokal
 
-Database memakai Drift/SQLite schema versi 1. Tabel bisnis:
-`customers`, `debt_groups`, `debts`, `payments`, ditambah `sync_queue` dan
-`sync_metadata`.
+Target plan memakai Drift/SQLite dengan tabel bisnis:
+
+- `debt_groups`
+- `debts`
+- `payments`
+- `sync_queue`
+- `sync_metadata`
+
+Tidak ada tabel `customers`, `customer_id`, atau `read_devices`.
+
+Status implementasi saat ini: schema Drift v1 masih memuat customers dan
+`customer_id`. Database lokal akan di-reset; jangan menganggap schema lama
+sebagai target final.
 
 - UI membaca data melalui repository dan Drift stream; jangan query Supabase
   langsung dari widget.
-- Setiap mutasi lokal dan outbox entry disimpan dalam satu transaksi SQLite.
+- Mutasi admin dan outbox entry disimpan dalam satu transaksi SQLite.
+- Public mode hanya pull dan tidak membuat outbox.
 - Pembayaran bersifat append-only, termasuk trigger SQLite yang menolak
   UPDATE/DELETE.
-- Schema version 1 belum memiliki migration upgrade. Setiap perubahan schema
-  berikutnya wajib menambah migration dan test.
 - Kode Drift dihasilkan dengan:
 
   ```bash
@@ -103,8 +121,8 @@ flutter test
 
 ## Backend Supabase
 
-Schema, RLS, idempotency registry, dan Edge Function helpers ada di
-[`supabase/`](supabase/README.md).
+Schema, RLS, idempotency registry, public read RPCs, dan Edge Function helpers
+ada di [`supabase/`](supabase/README.md).
 
 ```bash
 npx --yes supabase@3.1.0 db start
@@ -123,16 +141,25 @@ deno lint
 deno test
 ```
 
-Kebijakan cloud v1: **tidak ada public read**. RLS aktif di semua tabel, tanpa
-policy anon/authenticated. Perangkat read-only yang di-enroll admin boleh
-menarik data terbaru dengan token perangkat revocable; perangkat lain hanya
-membaca cache lokal. Detail dan aturan migration ada di
-[`supabase/README.md`](supabase/README.md).
+Kebijakan cloud target:
+
+- **Public read-only**: anon dapat membaca seluruh field bisnis melalui RPC
+  read-only.
+- Anon tidak dapat SELECT base table langsung.
+- Anon tidak dapat INSERT/UPDATE/DELETE.
+- Semua mutation admin melalui Edge Function dengan sesi admin server-side.
+- Data admin, audit, sesi, PIN, token, dan metadata internal tetap privat.
+- Tidak ada `customers`, `read_devices`, atau device enrollment.
+
+Schema cloud lokal sudah di-rework dan di-reset. Cloud project belum di-push.
+Detail ada di [`supabase/README.md`](supabase/README.md).
 
 CI GitHub Actions menjalankan pemeriksaan Flutter serta test database/helper
 Edge Function pada push ke `main` dan setiap pull request.
 
 ## Struktur utama
+
+Target akhir:
 
 ```text
 lib/
@@ -141,25 +168,30 @@ lib/
   data/
     local/             # Drift database, DAOs, demo seed
     repositories/      # Implementasi repository + outbox
+    sync/              # Sync service, queue, worker, conflict resolver
   domain/
-    entities/          # Entity domain
+    entities/          # Entity domain: group, debt, payment
     repositories/      # Kontrak repository
     validation/        # Validasi domain
-  features/            # Screen per fitur
+  features/            # Dashboard, groups, debts, payments, reminders, admin, settings
   shared/              # Widget lintas fitur
   main.dart
-test/                  # Unit, repository, database, dan widget test
+test/                  # Unit, repository, database, widget test
 config/                # Contoh konfigurasi (nilai lokal di-ignore)
 plans/                 # Spesifikasi dan status sprint
 ```
 
+Saat ini `features/customers` dan file customer/device-enrollment masih ada dan
+harus dihapus pada rework.
+
 ## Catatan pengembangan
 
 - UI selalu membaca data dari database lokal melalui repository.
-- Mutasi lokal dan outbox harus berada dalam transaksi SQLite yang sama.
+- Mutasi admin dan outbox harus berada dalam transaksi SQLite yang sama.
+- Public mode tidak boleh membuat mutation atau outbox.
 - Semua operasi admin akan diverifikasi server-side.
 - Nominal uang disimpan sebagai integer rupiah.
-- Group/customer management saat ini dapat diakses secara lokal tanpa PIN;
+- Group/debt/payment management saat ini dapat diakses secara lokal tanpa PIN;
   route guard dan sesi admin ditambahkan pada Sprint 06. Jangan distribusikan
   build ini sebagai release sebelum gate tersebut aktif.
 - Jangan mengedit `lib/data/local/app_database.g.dart` secara manual; ubah

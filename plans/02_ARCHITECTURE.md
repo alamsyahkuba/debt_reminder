@@ -8,11 +8,20 @@ Flutter Android
 → Domain (entities/repository contracts)
 → Data (repository implementations)
 → Local Drift/SQLite + Outbox
-→ Sync service
-→ Supabase Edge Functions
+→ Admin sync service
+→ Supabase Edge Functions (admin mutation)
 → PostgreSQL
 
-UI tidak boleh memanggil Supabase langsung untuk CRUD bisnis. UI menggunakan repository/use case.
+Public read path:
+
+Publik
+→ anon/publishable Supabase client
+→ RPC public read-only
+→ PostgreSQL
+
+UI tidak boleh memanggil Supabase langsung untuk CRUD bisnis. UI menggunakan
+repository/use case. Public read juga harus melalui repository/use case, bukan
+query langsung dari widget.
 
 ## 2. Stack
 
@@ -23,7 +32,8 @@ UI tidak boleh memanggil Supabase langsung untuk CRUD bisnis. UI menggunakan rep
 - `supabase_flutter` untuk Supabase client.
 - `flutter_local_notifications` + timezone package untuk reminder.
 - `flutter_secure_storage` untuk local admin session/token.
-- `connectivity_plus` hanya sebagai sinyal konektivitas; hasilnya bukan bukti internet benar-benar tersedia.
+- `connectivity_plus` hanya sebagai sinyal konektivitas; hasilnya bukan bukti
+  internet benar-benar tersedia.
 - WorkManager untuk best-effort background sync; foreground sync juga wajib.
 
 ## 3. Suggested folder structure
@@ -49,6 +59,7 @@ lib/
       daos/
     remote/
       supabase_client.dart
+      public_read_client.dart
       edge_function_client.dart
     repositories/
     sync/
@@ -63,7 +74,6 @@ lib/
   features/
     dashboard/
     debt_groups/
-    customers/
     debts/
     payments/
     reminders/
@@ -74,15 +84,20 @@ lib/
     extensions/
 ```
 
+Tidak ada folder `features/customers`.
+
 ## 4. Repository rules
 
 - Repository adalah satu-satunya entry point data untuk feature.
 - Read stream/query berasal dari Drift.
-- Write lokal harus atomik: update local entity + insert outbox dalam transaksi SQLite yang sama.
-- Remote writes melalui Edge Functions.
+- Public pull menggunakan RPC read-only dan hasilnya disimpan ke Drift.
+- Write lokal harus atomik: update local entity + insert outbox dalam transaksi
+  SQLite yang sama.
+- Remote admin writes melalui Edge Functions.
 - Setelah remote success, update sync metadata/local record.
 - Tidak boleh ada network request langsung dari widget.
 - Domain entities tidak bergantung pada Drift/Supabase model.
+- Public repository/use case tidak boleh menulis atau membuat outbox.
 
 ## 5. State
 
@@ -90,6 +105,8 @@ lib/
 - UI state (form, filter, selected tab) dipisah dari persisted data.
 - Sync status global: offline, syncing, synced, pending, error.
 - Admin session state: locked, unlocked, expired.
+- Public mode selalu read-only.
+- Admin mode membuka aksi mutasi setelah PIN berhasil.
 
 ## 6. Error handling
 
@@ -101,12 +118,24 @@ Gunakan typed/domain errors untuk:
 - duplicate operation
 - remote unavailable
 - local database failure
+- public read failure
 
-UI menampilkan pesan ramah; log tidak boleh memuat PIN, token, atau data hutang sensitif.
+UI menampilkan pesan ramah; log tidak boleh memuat PIN, token, atau data admin
+internal.
 
 ## 7. Configuration
 
-- Supabase URL dan anon/publishable key boleh berada di client; tetap bukan secret.
+- Supabase URL dan anon/publishable key boleh berada di client; tetap bukan
+  secret.
 - Service role key hanya di Supabase server/secret.
 - Environment config dipisah dev/prod.
 - Jangan commit `.env` yang berisi secret.
+
+## 8. Public read architecture
+
+- Public client menggunakan anon/publishable key.
+- Public read hanya lewat RPC/view read-only yang diekspos eksplisit.
+- Base table tidak memberikan grant SELECT langsung ke anon.
+- RPC publik mengembalikan field bisnis yang disetujui owner.
+- Tidak ada public INSERT/UPDATE/DELETE.
+- Admin mutation tetap melalui Edge Function dengan sesi admin.

@@ -1,5 +1,9 @@
 # Sprint 00 — Foundation
 
+> **Revision note (12 November 2026):** the Pelanggan placeholder created in this
+> sprint is removed by the public-read revision. The historical checklist below
+> remains for traceability; the target UI has no customer menu or route.
+
 ## Goal
 Create a clean Flutter project foundation and developer workflow.
 
@@ -18,7 +22,7 @@ Create a clean Flutter project foundation and developer workflow.
 - [x] Add environment/config loading without committing secrets.
 - [x] Add lint rules and formatting conventions.
 - [x] Add basic app shell and drawer.
-- [x] Add placeholder Dashboard, Groups, Debts, Customers, Settings, Admin PIN screens.
+- [x] Add placeholder Dashboard, Groups, Debts, Customers (removed by revision), Settings, Admin PIN screens.
 - [x] Add README with setup/run instructions.
 - [x] Add CI workflow for format/analyze/test if repository uses GitHub Actions.
 

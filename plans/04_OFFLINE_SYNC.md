@@ -1,39 +1,41 @@
 # Offline-first & Synchronization
 
+> **Revisi 12 November 2026:** read-only device enrollment dihapus. Publik
+> membaca data melalui RPC read-only tanpa login/enrollment. Admin mutation
+> tetap melalui outbox dan Edge Functions.
+
 ## 1. Data flow
 
-**Sprint 02 status:** local Drift schema, outbox, sync metadata, atomic local
-writes, and repository reads are implemented. The sync worker and remote
-endpoints are not implemented yet (Sprint 07).
-
-- App launch: initialize Drift → render local data immediately → start sync if connectivity available.
+- App launch: initialize Drift → render local data immediately → pull public
+  data if online.
 - All reads: Drift.
-- All writes: local transaction + outbox atomically.
-- Sync worker: claim queue item → send to Edge Function → handle response → mark success or conflict.
-- Pull: fetch server changes since cursor/last sync and merge into local DB.
+- Admin writes: local transaction + outbox atomically.
+- Admin sync worker: claim queue item → send to Edge Function → handle response
+  → mark success/conflict.
+- Public pull: fetch public group/debt/payment data via anon RPC and merge into
+  local DB.
 - UI observes Drift streams.
 
-### Read-only device path (Option A+)
+## 2. Public pull path
 
-- Admin enrolls a device from an authenticated admin session and receives a
-  one-time enrollment code/token.
-- The device stores its opaque read token in secure storage; the server stores
-  only the token hash.
-- Pull uses a dedicated Edge Function with the device token. It returns only
-  approved read fields (including name, phone, notes, debts, groups, and payment
-  history) with cursor/pagination.
-- Read-only devices have no outbox and cannot call mutation endpoints.
-- Revoked/expired tokens stop cloud pull but do not delete already cached data.
-- Admin can revoke the device at any time; revocation must be checked on every
-  pull, not only at enrollment.
+- Tidak perlu login dan tidak perlu enrollment perangkat.
+- Gunakan anon/publishable key hanya untuk RPC read-only.
+- RPC mengembalikan field bisnis publik: group, hutang, pembayaran, derived
+  totals/status.
+- Public client tidak memiliki outbox dan tidak boleh memanggil mutation
+  endpoint.
+- Pull menggunakan cursor/pagination dan transaksi SQLite.
+- Data cache tetap bisa dibaca jika public pull gagal/offline.
+- Revocation/device token tidak relevan karena tidak ada device enrollment.
 
-## 2. Outbox schema
+## 3. Outbox schema
 
-Suggested columns:
+Digunakan hanya oleh admin mutation:
+
 - `operation_id UUID primary key`
 - `entity_type TEXT`
 - `entity_id UUID`
-- `operation TEXT` (`create`, `update`, `archive`, `payment_create`, etc.)
+- `operation TEXT` (`create`, `update`, `archive`, `payment_create`, dll.)
 - `payload JSON`
 - `created_at`
 - `retry_count`
@@ -41,75 +43,76 @@ Suggested columns:
 - `last_error_code`
 - `next_retry_at`
 
-## 3. Atomic local write
+## 4. Atomic local write
 
-For every mutation:
-1. Validate locally.
+Untuk setiap mutation admin:
+
+1. Validasi lokal.
 2. Begin SQLite transaction.
 3. Write/modify entity.
-4. Insert outbox operation with stable operation_id.
+4. Insert outbox operation dengan stable operation_id.
 5. Commit.
-6. UI immediately reflects local state.
-7. Sync later.
+6. UI langsung mencerminkan state lokal.
+7. Sync nanti.
 
-Do not create outbox item outside the entity transaction.
+Jangan membuat outbox item di luar transaksi entity.
 
-## 4. Sync order and dependencies
+## 5. Sync order and dependencies
 
-- Customer/group create before debt referencing them.
-- Debt create/update before payment referencing it.
-- Payments are append-only and idempotent.
-- Archive operations should not erase referenced records.
-- Queue can be ordered by dependency and created time.
-- If dependency fails, dependent operation remains pending/blocked.
+- Group create sebelum debt yang mereferensikannya.
+- Debt create/update sebelum payment yang mereferensikannya.
+- Payments append-only dan idempotent.
+- Archive tidak menghapus referenced records.
+- Queue diurutkan berdasarkan dependency dan created time.
+- Jika dependency gagal, dependent operation tetap pending/blocked.
+- Tidak ada customer dependency.
 
-## 5. Idempotency
+## 6. Idempotency
 
-- Every mutation has stable `operation_id`.
-- Server stores processed operation IDs or enforces unique payment operation_id.
-- Retrying the same operation returns the prior result without duplicating effects.
-- Client must not generate a new operation_id on retry.
+- Setiap mutation admin memiliki stable `operation_id`.
+- Server menyimpan processed operation IDs dan/atau unique payment operation_id.
+- Retry mengembalikan hasil sebelumnya tanpa duplikasi.
+- Client tidak boleh membuat operation_id baru saat retry.
 
-## 6. Conflict strategy
+## 7. Conflict strategy
 
-- Every mutable entity has `version`.
-- Update includes expected version.
-- Server rejects stale version with conflict response.
-- Client retains local and server snapshots; mark entity conflict.
-- UI offers compare/reload/resolve action.
-- Do not silently overwrite finance data.
-- Payments never use last-write-wins.
+- Setiap mutable entity memiliki `version`.
+- Update menyertakan expected version.
+- Server menolak stale version dengan conflict response.
+- Client menyimpan local dan server snapshot; mark entity conflict.
+- UI menawarkan compare/reload/resolve.
+- Jangan menimpa finance data diam-diam.
+- Payments tidak pernah last-write-wins.
 
-## 7. Pull synchronization
+## 8. Pull synchronization
 
-- Use cursor or server timestamp with deterministic ordering.
+- Cursor/server timestamp dengan urutan deterministik.
 - Handle pagination.
-- Account for records updated during pagination.
-- Apply remote changes in SQLite transaction.
-- Do not overwrite unsynced local edits without conflict resolution.
-- Maintain tombstones/archive markers for deletions.
+- Handle record yang berubah selama pagination.
+- Apply remote changes dalam transaksi SQLite.
+- Jangan menimpa unsynced local edits tanpa conflict resolution.
+- Maintain archive/tombstone markers.
+- Public pull tidak boleh mengubah outbox admin.
 
-## 8. Retry and background work
+## 9. Retry and background work
 
-- Retry transient network/5xx with exponential backoff and jitter.
-- Do not endlessly retry validation/authorization failures.
-- WorkManager is best-effort; foreground sync must also exist.
-- Connectivity events trigger sync attempt but actual request determines connectivity.
-- Expose pending count and last successful sync time.
+- Retry transient network/5xx dengan exponential backoff + jitter.
+- Jangan retry validation/authorization failure tanpa akhir.
+- WorkManager best-effort; foreground sync wajib ada.
+- Connectivity event memicu percobaan sync; hasil request tetap penentu.
+- Tampilkan pending count dan last successful sync.
 
-## 9. Offline admin behavior
+## 10. Offline admin behavior
 
-- Local PIN unlock can allow editing cached data offline.
-- Clearly label changes as pending sync.
-- Server-side authorization is checked when syncing.
-- If session expired, queue remains intact and user must re-authenticate online.
-- Do not discard local operations after auth failure.
+- Local PIN unlock dapat membuka edit cache offline.
+- Tandai perubahan sebagai pending sync.
+- Server-side authorization diperiksa saat sync.
+- Jika sesi expired, outbox tetap utuh dan admin diminta autentikasi online.
+- Jangan membuang local operations setelah auth failure.
 
-## 10. Read-only device token handling
+## 11. Public read behavior
 
-- Do not reuse the admin token for a read-only device.
-- Store device token in secure storage; never put it in logs or analytics.
-- Send it only to the dedicated read-only pull endpoint.
-- The endpoint must verify revocation, expiry, and token hash on every request.
-- Device token failures must not be retried endlessly; show access revoked/expired
-  and keep local cache readable.
+- Publik selalu read-only.
+- Public pull tidak membuat operasi tulis.
+- Jika RPC publik gagal, tampilkan status offline/error dan tetap baca cache.
+- Data bisnis yang tampil adalah data cache terakhir yang berhasil dipull.

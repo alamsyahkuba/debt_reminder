@@ -1,7 +1,8 @@
 # Sprint 05 — Payments & Dashboard
 
 ## Goal
-Implement payment history, payment entry, and summary dashboard.
+Implement payment history, payment entry, and summary dashboard for the revised
+group/debt/payment model.
 
 ## Tasks
 - [ ] Payment entity and append-only repository API.
@@ -12,9 +13,10 @@ Implement payment history, payment entry, and summary dashboard.
 - [ ] Add operation_id idempotency key.
 - [ ] Dashboard totals and status counts.
 - [ ] Group summary totals.
-- [ ] Customer summary totals.
+- [ ] Remove customer summary totals.
 - [ ] Currency formatting in Indonesian Rupiah.
-- [ ] Tests for payment aggregation and duplicate operation.
+- [ ] Public read of payment data through RPC.
+- [ ] Tests for payment aggregation, duplicate operation, and public read.
 
 ## Acceptance criteria
 - Payment recorded offline and visible immediately.
@@ -22,3 +24,5 @@ Implement payment history, payment entry, and summary dashboard.
 - Paid/outstanding totals are correct.
 - Payment history cannot be silently edited/deleted.
 - Dashboard aggregates match source records.
+- No customer summary or customer dependency exists.
+- Public users can read payment data but cannot mutate.

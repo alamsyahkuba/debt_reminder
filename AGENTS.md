@@ -16,30 +16,45 @@ Before planning or coding, read these files when present:
 7. `plans/05_UI_UX_SPEC.md`
 8. `plans/06_TESTING_AND_ACCEPTANCE.md`
 9. `plans/07_AGENT_WORKFLOW.md`
-10. `plans/STATUS.md`
-11. The active sprint file under `plans/sprints/`
+10. `plans/DECISIONS.md`
+11. `plans/STATUS.md`
+12. The active sprint file under `plans/sprints/`
 
 If any required file is missing, do not invent its contents. Report the missing file and ask whether to regenerate it or proceed with an explicitly documented assumption.
 
 ## 2. Product decisions — do not change without approval
 
 - Product: Android debt/reminder app built with Flutter and Supabase.
-- One owner and one admin in v1.
-- Ordinary users do not log in.
+- There are exactly two roles: **owner/admin** and **public**.
+- One owner and one admin in v1. The owner and admin may be the same person.
+- Public users do not log in and do not have an account.
 - Admin entry: Drawer → Admin → PIN.
 - Cloud data is shared.
 - App is offline-first using Drift/SQLite.
 - Supabase PostgreSQL is the cloud source of truth.
-- UI reads from local database/repositories, not direct Supabase queries.
-- Local mutations are saved atomically with an outbox operation.
-- Sync is idempotent and conflict-aware.
+- Business data is limited to **debt groups, debts, and payments**.
+- There is **no customer entity, customer module, or `customer_id`**.
+- A debt may identify a borrower only through its `title` and/or `notes`.
 - Debt groups are simple: **Group → debts**. No nested groups/subgroups.
+- All **business fields** are public: groups, debts, payments, notes, amounts,
+  dates, archive state, and derived totals/status.
+- Public read is read-only through explicit public RPCs.
+- Public users cannot mutate data.
+- Admin mutations are server-authorized and require a valid admin session.
+- Read-only device enrollment and `read_devices` are removed.
 - Payments are append-only and must not be silently edited or deleted.
-- Anonymous users are read-only, and only approved public-safe fields may be exposed.
-- All admin mutations must be authorized server-side.
 - Never ship Supabase `service_role` credentials in Flutter or any client artifact.
+- Database reset is approved because the app is pre-release.
 
-If a task conflicts with these decisions, stop and ask the project owner. Do not silently reinterpret the product.
+### Current implementation note
+
+Sprint 01R has reworked the cloud schema: customers/`read_devices` are removed,
+public read-only RPCs exist, and RLS/tests are updated. The Flutter app and
+local Drift schema still contain the superseded customer model. Sprint 02R/03R
+must remove local customer data/UI/tests and reset SQLite before later sprints.
+
+If a task conflicts with these decisions, stop and ask the project owner. Do not
+silently reinterpret the product.
 
 ## 3. OpenCode operating procedure
 
@@ -48,8 +63,9 @@ If a task conflicts with these decisions, stop and ask the project owner. Do not
 1. Inspect the repository and `git status`; preserve existing user changes.
 2. Read the mandatory context and the active sprint.
 3. Identify the sprint goal, prerequisites, acceptance criteria, and out-of-scope items.
-4. Summarize the intended implementation, affected files, risks, and tests before substantial changes.
-5. If the task is ambiguous, security-sensitive, or changes product scope, ask for clarification before coding.
+4. Determine whether the task is a planned rework or new feature work.
+5. Summarize the intended implementation, affected files, risks, and tests before substantial changes.
+6. If the task is ambiguous, security-sensitive, or changes product scope, ask for clarification before coding.
 
 ### Sprint discipline
 
@@ -59,6 +75,7 @@ If a task conflicts with these decisions, stop and ask the project owner. Do not
 - Keep changes small and reviewable.
 - When a sprint is requested, use its checklist as the task boundary.
 - If the owner explicitly asks for multiple sprints, state the expanded scope and execute in dependency order.
+- Do not add customer features or device enrollment “for compatibility”; they are out of scope.
 
 ### After a task or sprint
 
@@ -95,15 +112,22 @@ If a task conflicts with these decisions, stop and ask the project owner. Do not
 - Handle dates/timezones consistently; store timestamps in UTC where appropriate and render in local timezone.
 - Include loading, empty, error, offline, and pending-sync states.
 - Add tests for business logic and critical user flows.
+- Public mode must never expose mutation controls or create outbox entries.
+- Admin mutation controls must be gated in Sprint 06; local UI guards are not server authorization.
+- Do not create a `features/customers` module.
 
 ## 5. Database and Supabase security rules
 
 - Follow `plans/03_DATABASE_AND_SECURITY.md`.
 - Enable RLS on every exposed table.
 - Policies must be explicit and least-privilege.
-- Anonymous role must never mutate business data directly.
-- Do not expose `admin_settings`, PIN hashes, audit logs, or private customer fields through public endpoints.
-- Prefer public-safe views/RPCs over unrestricted table access.
+- Public access is allowed only through explicit read-only RPCs.
+- Anon must have no direct SELECT on base business tables.
+- Anonymous role must never mutate business data.
+- Do not expose `admin_settings`, `admin_sessions`, `audit_logs`,
+  `operation_registry`, PIN hashes, tokens, or sync metadata through public endpoints.
+- Do not expose or recreate a customer table; there is no customer data.
+- Do not recreate `read_devices` or device enrollment.
 - Admin writes must pass through Edge Functions or another approved server-side boundary.
 - Every admin mutation must verify a valid server-issued admin session/token.
 - Never trust a client flag, local PIN unlock, or UI route guard as server authorization.
@@ -114,15 +138,17 @@ If a task conflicts with these decisions, stop and ask the project owner. Do not
 - Payments must be idempotent and append-only.
 - Use optimistic concurrency/version checks for mutable records.
 - Preserve auditability for sensitive/admin actions.
+- Public RPCs must not return internal `version`, `operation_id`, sync metadata, or admin/audit/session fields.
 
 ## 6. Offline-first and sync rules
 
 - All feature reads come from Drift/SQLite.
-- Every local mutation must update the entity and enqueue its outbox operation in the **same SQLite transaction**.
+- Admin local mutations must update the entity and enqueue its outbox operation in the **same SQLite transaction**.
+- Public pull is read-only and must not create outbox entries.
 - Do not send remote requests directly from screens/forms.
 - Keep a stable `operation_id` across retries.
 - Never generate a new idempotency key merely because a request failed.
-- Sync must respect entity dependencies (customer/group → debt → payment).
+- Sync must respect entity dependencies: **group → debt → payment**. There is no customer dependency.
 - Use retry/backoff for transient failures; do not endlessly retry validation/auth errors.
 - Do not discard pending operations after network or authorization failure.
 - A stale version must produce a conflict, not silent last-write-wins.
@@ -130,21 +156,22 @@ If a task conflicts with these decisions, stop and ask the project owner. Do not
 - Use tombstones/archive markers where needed; avoid hard deletion of financial history.
 - Connectivity status is only a hint; the actual request determines network availability.
 - WorkManager is best-effort. Provide foreground/manual sync too.
-- Show pending, syncing, conflict, and failed states to users.
+- Show pending, syncing, conflict, failed, and offline states to users.
 
 ## 7. Group and debt rules
 
 - Groups are flat; never add `parent_id`, subgroup navigation, or recursive group UI unless approved.
 - A debt may have one group or be Unassigned (`group_id = null`).
 - Group archive preserves its debts and history.
-- Group deletion must follow the approved policy and must never delete debts unintentionally.
+- Group deletion must follow the approved policy: move debts to Unassigned, never delete debts.
 - Moving a debt between groups must be auditable/syncable.
 - Group totals must be derived from underlying debts/payments, not manually maintained counters unless a verified cache is used.
 - Debt status and outstanding amount must be derived consistently from principal, payments, and due date.
 - Do not allow invalid/negative amounts.
 - Default policy rejects overpayment unless the owner explicitly changes it.
+- A debt has no customer relation; use title/notes for borrower identity.
 
-## 8. Admin session and offline unlock
+## 8. Admin session and device policy
 
 - Online PIN verification is performed by a server endpoint.
 - Store session/token securely on device and enforce expiry.
@@ -152,6 +179,7 @@ If a task conflicts with these decisions, stop and ask the project owner. Do not
 - Offline unlock is only a local convenience for editing cached data; it does not authorize cloud mutations.
 - When syncing admin operations, server authorization is mandatory.
 - If the admin session expires, preserve the outbox and request re-authentication; never discard local work.
+- Do not add read-only device enrollment, device tokens, or `read_devices`; public read does not require enrollment.
 
 ## 9. Notifications
 
@@ -161,6 +189,7 @@ If a task conflicts with these decisions, stop and ask the project owner. Do not
 - Cancel reminders when debt is paid or archived.
 - Handle Android notification and exact-alarm permissions gracefully.
 - Never imply that a notification proves a payment occurred.
+- Reminder configuration belongs to admin; public mode only displays due dates.
 
 ## 10. Testing and quality gates
 
@@ -176,12 +205,13 @@ For Supabase changes, use the repository's configured Supabase CLI/test commands
 
 Minimum expectations:
 - Unit tests for calculations, validation, status derivation, and conflict logic.
-- Repository tests for local transaction/outbox behavior.
+- Repository tests for local transaction/outbox behavior and public pull.
 - Idempotency tests for payments/sync.
-- RLS tests for anon access and mutation denial.
+- RLS tests for anon public-RPC read, base-table denial, and mutation denial.
 - Edge Function tests for missing/invalid/expired admin session.
-- Integration tests for offline → reconnect → sync → restart.
-- Widget tests for critical forms and navigation.
+- Integration tests for offline → reconnect → sync → restart and public pull.
+- Widget tests for critical forms, public read-only mode, and navigation.
+- Reset/migration tests proving customers/read_devices are absent.
 
 Do not weaken tests or security policies just to make a build pass. Explain failures and propose a fix.
 
@@ -194,6 +224,7 @@ Do not weaken tests or security policies just to make a build pass. Explain fail
 - Do not overwrite planning files without checking their current contents.
 - Keep generated files and secrets out of version control as appropriate.
 - Do not create fake credentials or production data.
+- Database reset is allowed only because the app is pre-release; confirm before deleting any real data.
 
 ## 12. Response format
 
@@ -219,7 +250,7 @@ The next smallest useful task or sprint.
 
 Be concise but specific. Do not hide incomplete work.
 
-## 13. First-run instruction
+## 13. First-run and rework instruction
 
 If the repository is empty or only contains planning files:
 
@@ -228,3 +259,11 @@ If the repository is empty or only contains planning files:
 3. Propose Sprint 00 implementation.
 4. Wait for owner approval unless the owner explicitly requested autonomous execution.
 5. Implement Sprint 00 only.
+
+If the repository already contains the superseded Sprint 00–03 implementation:
+
+1. Do not continue to Sprint 04+ yet.
+2. Read the revised plan and `plans/STATUS.md`.
+3. Propose/perform the planned rework: remove customers and device enrollment,
+   reset schemas, add public read-only RPCs, and update local repositories/UI/tests.
+4. Do not claim a sprint complete until the revised acceptance tests pass.

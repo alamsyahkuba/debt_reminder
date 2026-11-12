@@ -1,16 +1,10 @@
 # Database & Security
 
-## 1. Cloud schema
+> **Revisi 12 November 2026:** plan ini menggantikan Option A/A+.
+> Data pelanggan dan read-only device enrollment dihapus. Semua field bisnis
+> dapat dibaca publik melalui RPC read-only. Database lama akan di-reset.
 
-### `customers`
-- `id uuid primary key`
-- `name text not null`
-- `phone text null`
-- `notes text null`
-- `is_archived boolean not null default false`
-- `created_at timestamptz not null`
-- `updated_at timestamptz not null`
-- `version bigint not null default 1`
+## 1. Cloud schema
 
 ### `debt_groups`
 - `id uuid primary key`
@@ -23,11 +17,10 @@
 - `created_at timestamptz not null`
 - `updated_at timestamptz not null`
 - `version bigint not null default 1`
-- No `parent_id`: group is simple, not nested.
+- Tidak ada `parent_id`: group sederhana, tidak bertingkat.
 
 ### `debts`
 - `id uuid primary key`
-- `customer_id uuid not null references customers(id)`
 - `group_id uuid null references debt_groups(id) on delete set null`
 - `title text not null`
 - `principal_amount bigint not null check (principal_amount > 0)`
@@ -38,7 +31,11 @@
 - `updated_at timestamptz not null`
 - `version bigint not null default 1`
 
-Paid amount is calculated from payments. Debt status should be derived in query/domain, not blindly stored as a mutable status.
+Tidak ada `customer_id` dan tidak ada tabel `customers`. Identitas peminjam,
+bila diperlukan, ditulis di `title` atau `notes`.
+
+Paid amount dihitung dari payments. Debt status diturunkan di query/domain,
+bukan disimpan sebagai mutable status.
 
 ### `payments`
 - `id uuid primary key`
@@ -49,14 +46,15 @@ Paid amount is calculated from payments. Debt status should be derived in query/
 - `operation_id uuid not null unique`
 - `created_at timestamptz not null`
 
-Payments are append-only. Enforce no duplicate `operation_id`. Any correction must be represented by an auditable adjustment/reversal design.
+Payments are append-only. Enforce no duplicate `operation_id`. Koreksi harus
+berupa adjustment/reversal yang tercatat.
 
 ### `admin_settings`
-- Single logical row, e.g. fixed UUID.
+- Single logical row, fixed UUID.
 - `pin_hash text not null`
 - `pin_hash_algorithm text not null`
 - `updated_at timestamptz not null`
-- Optional `pin_changed_at`, failed attempt metadata handled safely.
+- Optional `pin_changed_at`, failed attempt metadata.
 
 ### `audit_logs`
 - `id uuid primary key`
@@ -70,7 +68,7 @@ Payments are append-only. Enforce no duplicate `operation_id`. Any correction mu
 
 ### `admin_sessions`
 - `id uuid primary key`
-- `token_hash text not null unique` (SHA-256 hex; token asli tidak disimpan)
+- `token_hash text not null unique` (SHA-256 hex)
 - `device_id text not null`
 - `issued_at timestamptz not null`
 - `expires_at timestamptz not null`
@@ -90,142 +88,132 @@ Payments are append-only. Enforce no duplicate `operation_id`. Any correction mu
 - `error_code text null`
 - `created_at`, `updated_at`, `completed_at timestamptz`
 
-### `read_devices`
-- `id uuid primary key`
-- `name text not null` (label perangkat)
-- `device_id text not null` (identifier perangkat)
-- `token_hash text not null unique` (SHA-256 hex; token asli tidak disimpan)
-- `created_by_session_id uuid null` (sesi admin yang melakukan enrollment)
-- `created_at timestamptz not null`
-- `last_seen_at timestamptz null`
-- `expires_at timestamptz not null`
-- `revoked_at timestamptz null`
-- Hanya satu enrollment aktif per `device_id`; perangkat yang dicabut dapat
-  di-enroll ulang.
+### Tabel yang dihapus
+- `customers`
+- `read_devices`
+- `debts.customer_id`
+- Semua helper/device-token terkait read-only enrollment.
 
-## 2. Local schema — implemented in Sprint 02
+## 2. Public read
 
-Drift schema version 1 mirrors the business entities:
+Public read disetujui owner untuk seluruh **field bisnis**. Gunakan RPC
+read-only, bukan grant SELECT ke tabel mentah.
 
-- `customers`, `debt_groups`, `debts`, and `payments` with the same business
-  fields as cloud.
-- Mutable entities carry `version`, `sync_state` (`pending`, `synced`,
-  `conflict`), and `server_updated_at`.
-- `payments.operation_id` is unique and payments are append-only. SQLite
-  triggers also reject direct UPDATE/DELETE.
-- `sync_queue` stores `operation_id`, entity type/ID, operation, JSON payload,
-  created time, retry count, status, last error code, and next retry time.
-- `sync_metadata` stores pull cursors by key.
-- `PRAGMA foreign_keys = ON`; customer/debt references restrict deletion and
-  group deletion sets `debts.group_id` to null.
-- Database is opened by `drift_flutter`; bootstrap opens it before the app shell.
-- Schema version 1 has no previous migration. `onUpgrade` intentionally throws
-  until explicit migration steps are added; every future schema change must
-  include a migration test.
-- Local writes use Drift companions so nullable fields can be explicitly
-  cleared. Data-class-only upserts omit nulls and are not used for updates.
-- Demo seed is development-only, opt-in via `SEED_DEMO_DATA=true`, marked
-  `synced`, and does not create outbox entries.
-- Local SQLite encryption/app lock is still an owner decision.
+### `public_debt_groups`
+- id, name, description, color, icon, sort_order, is_archived, created_at,
+  updated_at.
 
-## 3. Security model
+### `public_debts`
+- id, group_id, group_name, title, principal_amount, due_date, notes,
+  is_archived, created_at, updated_at, paid_amount, outstanding_amount, status.
+
+### `public_payments`
+- id, debt_id, amount, paid_at, notes, created_at.
+
+Aturan:
+
+- RPC menggunakan `security definer` dengan `search_path` tetap.
+- `grant execute` hanya ke `anon`.
+- RPC hanya SELECT; tidak ada mutation.
+- Field internal tidak diekspos: `version`, `operation_id`, `sync_state`,
+  `server_updated_at`, audit metadata, session/token.
+- Base table RLS aktif; anon tidak mendapat grant langsung.
+- Anon tidak memiliki INSERT/UPDATE/DELETE.
+- Archived records dapat dibaca publik; UI default menyembunyikan arsip dan
+  menyediakan filter histori.
+- Admin tetap dapat membaca melalui sesi admin; mutation tetap lewat Edge
+  Function.
+
+## 3. Local schema
+
+Target revisi: Drift schema baru setelah reset.
+
+- `debt_groups`, `debts`, dan `payments` dengan field bisnis yang sama.
+- `debts` tidak memiliki `customer_id`.
+- Mutable entities membawa `version`, `sync_state` (`pending`, `synced`,
+  `conflict`), dan `server_updated_at`.
+- `payments.operation_id` unik dan append-only; trigger SQLite menolak
+  UPDATE/DELETE.
+- `sync_queue` untuk mutation admin.
+- `sync_metadata` untuk cursor pull publik/admin.
+- `PRAGMA foreign_keys = ON`; group deletion set `debts.group_id` null.
+- Public mode tidak membuat outbox.
+- Schema lama (customers/read_devices) harus dihapus. Karena aplikasi belum
+  release, reset database lokal dan cloud lebih disarankan daripada migrasi
+  data.
+- Demo seed development hanya berisi group, hutang, dan pembayaran.
+
+## 4. Security model
 
 ### Public read
-- Anonymous read is only allowed if product owner explicitly accepts that shared debt data is public to anyone who knows the project API.
-- Expose only fields that public users need; consider a safe view/RPC instead of direct table reads.
-- Never expose PIN hash, audit details, private notes, or unnecessary customer contact data to anon.
-- RLS enabled on every exposed table.
-- No anon INSERT/UPDATE/DELETE policies.
-
-**Implemented decision (12 November 2026):** owner chose **Option A — no public
-read**. There are no anon/authenticated policies, no public views/RPCs, and the
-anon/authenticated roles have no `USAGE` on schema `public`. All cloud reads and
-writes go through Edge Functions using the service role after session
-verification. Adding public read later requires a new owner decision and a new
-migration.
-
-### Read-only device access (Option A+)
-
-Owner approved admin-enrolled read-only devices on 12 November 2026. This is not
-anonymous public read:
-
-- Admin enrolls a device from an authenticated admin session.
-- The device receives an opaque token once; the server stores only its SHA-256
-  hash in `read_devices`.
-- Every pull verifies `token_hash`, `expires_at`, `revoked_at`, and updates
-  `last_seen_at`.
-- The token grants pull-only access. It cannot mutate data.
-- Admin can revoke a device at any time.
-- anon/authenticated still have no schema or table access.
-
-Fields visible to an enrolled read-only device, per owner decision:
-
-- customer name, phone, and notes;
-- debt title, principal, paid/outstanding totals, status, due date, and notes;
-- group name, description, color, and icon;
-- payment history including amount, paid date, and notes.
-
-Not visible: `admin_settings`, `admin_sessions`, `audit_logs`,
-`operation_registry`, PIN/token material, and other server-only metadata.
-Retention of phone/notes is an explicit owner privacy tradeoff; do not expose
-these fields through any anon path.
+- Seluruh field bisnis publik melalui RPC read-only.
+- Tidak ada anon SELECT ke tabel mentah.
+- Tidak ada anon INSERT/UPDATE/DELETE.
+- Tidak ada public view/RPC yang mengembalikan admin settings, audit logs,
+  sessions, operation registry, PIN, token, atau metadata internal.
+- RLS aktif pada semua tabel.
+- Test anon read dan anon mutation denial.
 
 ### Admin mutation
-- Admin mutations go through Edge Functions.
-- Verify admin session/token server-side on every mutation.
-- Service role secret is only in Edge Function environment.
-- Validate payload, IDs, amount, dates, ownership/relations, version, and idempotency.
-- Rate-limit PIN verification; use constant-time comparison where applicable.
-- Do not return PIN hash.
-- Admin token should be signed, short-lived, revocable/rotatable, and bound to intended app/device as feasible.
-- Never treat a client-side boolean `isAdmin=true` as authorization.
+- Admin mutations melalui Edge Functions.
+- Verifikasi admin session/token server-side pada setiap mutation.
+- Service role secret hanya di Edge Function environment.
+- Validasi payload, IDs, amount, dates, relations, version, dan idempotency.
+- Rate-limit PIN verification; constant-time comparison bila relevan.
+- Jangan pernah mengembalikan PIN hash.
+- Admin token short-lived, signed, revocable, dan bound ke device bila feasible.
+- Client-side `isAdmin=true` bukan otorisasi.
 
 ### PIN
-- PIN is low entropy. Hashing alone does not make a short PIN strong.
-- Use server-side secret/pepper and a suitable password hashing strategy supported by the deployment; evaluate rate limiting and lockout.
-- PIN verification response must not leak whether partial data is correct.
-- Offline admin unlock is local convenience only; it is not cloud authorization.
-- On reconnect, server must require a valid admin session for mutation.
+- PIN low entropy; gunakan server-side pepper dan password hashing yang sesuai.
+- Rate limit dan lockout.
+- Response tidak boleh membocorkan detail internal.
+- Offline unlock hanya kenyamanan lokal; bukan otorisasi cloud.
+- Saat reconnect, server tetap meminta sesi admin valid untuk mutation.
 
-### Data privacy decision required
-No-login + shared data implies access-control tradeoffs. Before release, owner must decide:
-1. Is the debt list truly public to every app user?
-2. Which customer fields can public users see?
-3. Should public access be read-only and limited to a public-safe view?
-4. Is device-level app lock required?
+### Internal data
+Tidak publik:
+- `admin_settings`
+- `admin_sessions`
+- `audit_logs`
+- `operation_registry`
+- PIN/token material
+- sync metadata internal
 
-**Status 12 November 2026:** questions 1–3 resolved by Option A + read-only
-device enrollment: the debt list is not public, no anon fields are exposed, and
-only admin-enrolled devices may pull read-only data. Device-level app lock is
-still pending owner confirmation.
+### Data privacy decision
+Owner sudah memutuskan:
+1. Semua data bisnis publik.
+2. Data pelanggan tidak ada.
+3. Public read hanya read-only melalui RPC.
+4. Device-level app lock/local SQLite encryption masih pending.
 
-### Implemented database guards
+## 5. RLS checklist
 
-- All business tables have RLS enabled; Edge Functions use `service_role` after
-  admin session or read-only device token verification.
-- `read_devices` has RLS enabled, no anon/authenticated policies, and only
-  service-role grants.
-- `payments` and `audit_logs` reject UPDATE/DELETE through database triggers.
-- `payments.operation_id` and `operation_registry.operation_id` are unique.
-- `version` and `updated_at` are bumped by trigger on mutable tables.
-- `debts.group_id` is `ON DELETE SET NULL` (Unassigned); customer/debt
-  references with history use `ON DELETE RESTRICT`.
-- `debt_groups` has no `parent_id`; group icons use an allowlist.
-- Local group deletion is transactional: all debts are explicitly moved to
-  Unassigned with version bumps and outbox updates, then the group delete is
-  queued. Debts and payments are never deleted.
-- Customer hard-delete is not exposed; customer archive/restore preserves all
-  debt history.
-- Group/customer summaries are derived from active debts and payments, not
-  stored counters.
-
-## 4. RLS checklist
-- Enable RLS on all exposed tables.
+- Enable RLS pada semua tabel.
 - Explicit policies only.
-- Anon SELECT only on approved public view/RPC or approved tables.
-- No anon mutation.
-- No direct anon access to `admin_settings` or `audit_logs`.
-- No direct anon access to `read_devices`; only server-side token checks.
-- Read-only device tokens grant pull only, never mutation.
-- Test policies with anon role and authenticated role.
-- Verify service role is not shipped in Flutter.
+- Anon hanya boleh execute public read RPC.
+- Tidak ada anon SELECT langsung ke base table.
+- Tidak ada anon mutation.
+- Tidak ada akses anon ke `admin_settings`, `admin_sessions`, `audit_logs`,
+  `operation_registry`.
+- Test dengan role anon dan authenticated.
+- Verify service role tidak ada di Flutter.
+- Verify public RPC tidak mengembalikan field internal.
+- Verify `customer`/`read_devices` benar-benar tidak ada.
+
+## 6. Reset dan rework
+
+Karena data lama belum produksi:
+
+- Ganti baseline migration dengan schema baru tanpa `customers`,
+  `read_devices`, dan `debts.customer_id`.
+- Migration lama yang memuat customer/device enrollment boleh dihapus dari repo
+  karena proyek di-reset, bukan di-upgrade.
+- Reset database lokal Supabase dan cloud project setelah owner menyetujui.
+- Reset SQLite lokal; jangan mencoba migrasi data pelanggan.
+- Hapus customer repository/entity/DAO/UI/test.
+- Hapus device auth helper dan enrollment.
+- Tambah public RPC, RLS read-only, dan test.
+
+Jika di kemudian hari ada database yang tidak boleh di-reset, buat migration
+drop/backfill terpisah; itu bukan jalur v1 saat ini.
