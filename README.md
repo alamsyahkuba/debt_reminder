@@ -9,8 +9,9 @@ serta penyimpanan lokal offline-first.
 Sprint 00 (Foundation) menyediakan kerangka aplikasi, tema Material 3,
 navigasi, drawer, konfigurasi environment, lint, CI, dan placeholder screen.
 Sprint 01 (Cloud schema & security) menyediakan schema Supabase, RLS, sesi
-admin, idempotency, dan fondasi perangkat read-only. Database lokal Drift,
-autentikasi admin di aplikasi, CRUD, dan sync belum aktif.
+admin, idempotency, dan fondasi perangkat read-only. Sprint 02 (Local database
+& repository) menyediakan Drift/SQLite, entity/domain, repository, dan outbox.
+Autentikasi admin di aplikasi, CRUD screen, dan sync belum aktif.
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/), dengan status terbaru
 di [`plans/STATUS.md`](plans/STATUS.md).
@@ -49,6 +50,7 @@ dibundel sebagai asset.
    | `APP_ENV` | `development`, `staging`, atau `production` |
    | `SUPABASE_URL` | URL project Supabase |
    | `SUPABASE_ANON_KEY` | Anon/publishable key (bukan secret) |
+   | `SEED_DEMO_DATA` | `true` hanya untuk development; mengisi data demo lokal |
 
 3. Jalankan:
 
@@ -59,6 +61,35 @@ dibundel sebagai asset.
 `config/*.json` diabaikan Git, kecuali `config/app_config.example.json`.
 Jangan pernah menaruh Supabase `service_role` key di aplikasi, repository, atau
 argumen build client.
+
+## Database lokal
+
+Database memakai Drift/SQLite schema versi 1. Tabel bisnis:
+`customers`, `debt_groups`, `debts`, `payments`, ditambah `sync_queue` dan
+`sync_metadata`.
+
+- UI membaca data melalui repository dan Drift stream; jangan query Supabase
+  langsung dari widget.
+- Setiap mutasi lokal dan outbox entry disimpan dalam satu transaksi SQLite.
+- Pembayaran bersifat append-only, termasuk trigger SQLite yang menolak
+  UPDATE/DELETE.
+- Schema version 1 belum memiliki migration upgrade. Setiap perubahan schema
+  berikutnya wajib menambah migration dan test.
+- Kode Drift dihasilkan dengan:
+
+  ```bash
+  dart run build_runner build
+  ```
+
+Data demo hanya untuk development:
+
+```bash
+flutter run --dart-define=SEED_DEMO_DATA=true
+```
+
+Seed demo tidak membuat outbox dan tidak boleh dipakai dengan database cloud
+nyata. Database lokal belum dienkripsi; keputusan app lock/encryption masih
+menunggu owner.
 
 ## Kualitas kode
 
@@ -103,19 +134,28 @@ Edge Function pada push ke `main` dan setiap pull request.
 
 ```text
 lib/
-  app/                 # App, router, theme, shell, drawer
+  app/                 # App, router, theme, shell, drawer, bootstrap
   core/                # Config, errors, logging, network, security, utils
+  data/
+    local/             # Drift database, DAOs, demo seed
+    repositories/      # Implementasi repository + outbox
+  domain/
+    entities/          # Entity domain
+    repositories/      # Kontrak repository
+    validation/        # Validasi domain
   features/            # Screen per fitur
   shared/              # Widget lintas fitur
   main.dart
-test/                  # Unit dan widget test
+test/                  # Unit, repository, database, dan widget test
 config/                # Contoh konfigurasi (nilai lokal di-ignore)
 plans/                 # Spesifikasi dan status sprint
 ```
 
 ## Catatan pengembangan
 
-- UI nantinya selalu membaca data dari database lokal melalui repository.
+- UI selalu membaca data dari database lokal melalui repository.
 - Mutasi lokal dan outbox harus berada dalam transaksi SQLite yang sama.
 - Semua operasi admin akan diverifikasi server-side.
 - Nominal uang disimpan sebagai integer rupiah.
+- Jangan mengedit `lib/data/local/app_database.g.dart` secara manual; ubah
+  schema lalu jalankan build_runner.

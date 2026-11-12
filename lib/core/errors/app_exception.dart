@@ -1,6 +1,7 @@
 /// Kategori error domain yang dapat ditampilkan dengan aman oleh UI.
 enum AppErrorCode {
   validation,
+  notFound,
   offline,
   unauthorized,
   conflict,

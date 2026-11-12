@@ -103,16 +103,30 @@ Payments are append-only. Enforce no duplicate `operation_id`. Any correction mu
 - Hanya satu enrollment aktif per `device_id`; perangkat yang dicabut dapat
   di-enroll ulang.
 
-## 2. Local schema
+## 2. Local schema — implemented in Sprint 02
 
-Mirror the business entities in Drift. Include:
-- local sync state (`pending`, `synced`, `conflict`, etc.)
-- server version/updated timestamp
-- tombstone/archive fields as needed
-- `sync_queue` with operation ID, entity type, entity ID, operation, payload, created time, retry count, status, last error code
-- `sync_cursor`/metadata for pull synchronization
+Drift schema version 1 mirrors the business entities:
 
-Use migrations and schema versioning. Test migrations from previous versions.
+- `customers`, `debt_groups`, `debts`, and `payments` with the same business
+  fields as cloud.
+- Mutable entities carry `version`, `sync_state` (`pending`, `synced`,
+  `conflict`), and `server_updated_at`.
+- `payments.operation_id` is unique and payments are append-only. SQLite
+  triggers also reject direct UPDATE/DELETE.
+- `sync_queue` stores `operation_id`, entity type/ID, operation, JSON payload,
+  created time, retry count, status, last error code, and next retry time.
+- `sync_metadata` stores pull cursors by key.
+- `PRAGMA foreign_keys = ON`; customer/debt references restrict deletion and
+  group deletion sets `debts.group_id` to null.
+- Database is opened by `drift_flutter`; bootstrap opens it before the app shell.
+- Schema version 1 has no previous migration. `onUpgrade` intentionally throws
+  until explicit migration steps are added; every future schema change must
+  include a migration test.
+- Local writes use Drift companions so nullable fields can be explicitly
+  cleared. Data-class-only upserts omit nulls and are not used for updates.
+- Demo seed is development-only, opt-in via `SEED_DEMO_DATA=true`, marked
+  `synced`, and does not create outbox entries.
+- Local SQLite encryption/app lock is still an owner decision.
 
 ## 3. Security model
 

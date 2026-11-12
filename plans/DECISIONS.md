@@ -142,3 +142,38 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
     Sprint 06/07.
   - Token yang bocor dapat dicabut admin; durasi expiry harus ditetapkan pada
     implementasi enrollment.
+
+## D-009 — Local-first Drift schema dan atomic outbox
+
+- **Tanggal:** 12 November 2026
+- **Status:** Diadopsi untuk Sprint 02
+- **Konteks:** UI harus membaca dari SQLite, mutasi harus tetap aman saat
+  offline, dan retry sync tidak boleh kehilangan operasi.
+- **Keputusan:**
+  - Drift schema versi 1 mencerminkan `customers`, `debt_groups`, `debts`, dan
+    `payments`, ditambah `sync_queue` dan `sync_metadata`.
+  - Entity mutable membawa `version`, `sync_state`, dan `server_updated_at`.
+  - Setiap mutasi repository berjalan dalam satu transaksi SQLite bersama
+    outbox entry dengan `operation_id` stabil.
+  - Update memakai companion Drift agar kolom nullable bisa dikosongkan secara
+    eksplisit; `insertOnConflictUpdate` dengan data class saja tidak cukup.
+  - Pembayaran append-only, termasuk trigger SQLite yang menolak UPDATE/DELETE.
+  - `onUpgrade` sengaja gagal sampai migration eksplisit ditambahkan; schema
+    versi 1 tidak memiliki jalur upgrade.
+- **Konsekuensi:**
+  - UI tidak boleh menulis langsung ke Drift; gunakan repository.
+  - Perubahan schema berikutnya wajib menaikkan `schemaVersion`, menambahkan
+    migration, dan test migration.
+  - SQLite lokal belum dienkripsi; keputusan app lock/encryption menunggu owner.
+
+## D-010 — Demo seed opt-in untuk development
+
+- **Tanggal:** 12 November 2026
+- **Status:** Diadopsi untuk Sprint 02
+- **Konteks:** Developer membutuhkan data contoh tanpa mengotori database
+  production atau membuat outbox palsu.
+- **Keputusan:** Seed demo hanya berjalan jika `APP_ENV=development` dan
+  `SEED_DEMO_DATA=true`. Semua baris demo ditandai `synced` dan tidak membuat
+  outbox. Seed tidak berjalan jika database sudah berisi data.
+- **Konsekuensi:** Jangan aktifkan flag ini sebelum menghubungkan aplikasi ke
+  cloud nyata. Hapus database lokal jika ingin mengulang seed.

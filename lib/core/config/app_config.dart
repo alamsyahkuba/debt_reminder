@@ -27,6 +27,7 @@ final class AppConfig {
     required this.environment,
     required this.supabaseUrl,
     required this.supabaseAnonKey,
+    this.seedDemoData = false,
   });
 
   factory AppConfig.fromEnvironment() {
@@ -36,17 +37,23 @@ final class AppConfig {
     );
     const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
     const supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+    const seedDemoData = bool.fromEnvironment(
+      'SEED_DEMO_DATA',
+      defaultValue: false,
+    );
 
     return AppConfig(
       environment: AppEnvironment.fromName(environmentName),
       supabaseUrl: supabaseUrl,
       supabaseAnonKey: supabaseAnonKey,
+      seedDemoData: seedDemoData,
     );
   }
 
   final AppEnvironment environment;
   final String supabaseUrl;
   final String supabaseAnonKey;
+  final bool seedDemoData;
 
   bool get hasSupabaseConfig =>
       supabaseUrl.trim().isNotEmpty && supabaseAnonKey.trim().isNotEmpty;

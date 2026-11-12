@@ -2,15 +2,15 @@
 
 ## Current phase
 
-Sprint 00 — Foundation and Sprint 01 — Cloud schema & security are complete,
-including the read-only device enrollment foundation (Option A+). Ready for
-owner approval before Sprint 02.
+Sprint 00 — Foundation, Sprint 01 — Cloud schema & security (including the
+read-only device enrollment foundation), and Sprint 02 — Local database &
+repository are complete. Ready for owner approval before Sprint 03.
 
 ## Sprint status
 
 - [x] Sprint 00 — Foundation
 - [x] Sprint 01 — Cloud schema & security
-- [ ] Sprint 02 — Local database & repository
+- [x] Sprint 02 — Local database & repository
 - [ ] Sprint 03 — Groups & customers
 - [ ] Sprint 04 — Debt management
 - [ ] Sprint 05 — Payments & dashboard
@@ -67,6 +67,30 @@ owner approval before Sprint 02.
 - Enrollment/revocation endpoint + UI remain scheduled for Sprint 06; read-only
   pull endpoint remains scheduled for Sprint 07.
 
+### Sprint 02 — Local database & repository (12 November 2026)
+
+- Drift/SQLite schema version 1 with `customers`, `debt_groups`, `debts`,
+  `payments`, `sync_queue`, and `sync_metadata`.
+- Local schema mirrors cloud fields and adds `sync_state`, `server_updated_at`,
+  and `version` for mutable entities.
+- Foreign keys enabled; customer/debt references restrict deletion, group
+  references set null; payments use append-only SQLite triggers.
+- Drift code generated and committed for reproducible builds.
+- Domain entities, repository contracts, DAOs, and repository providers.
+- Repository reads are reactive Drift streams.
+- Every local mutation runs inside a SQLite transaction and inserts its outbox
+  entry with a stable operation ID; forced outbox failure rolls back the entity.
+- Local version conflicts throw a typed `AppException` instead of overwriting.
+- Payment repository is append-only; no update/delete API is exposed.
+- `sync_queue` stores operation metadata, retry count, status, error code, and
+  next retry time; `sync_metadata` stores sync cursors.
+- Database bootstrap opens the local DB before the app shell and shows a
+  loading/error screen if opening fails.
+- Development-only demo seed is opt-in with `SEED_DEMO_DATA=true`; demo rows are
+  marked synced and do not create outbox entries.
+- Local repository tests cover atomic writes, outbox, reactive reads, version
+  conflicts, append-only payments, seeding, and schema creation.
+
 ## Files changed
 
 ### Sprint 00
@@ -121,17 +145,51 @@ owner approval before Sprint 02.
 - `plans/sprints/SPRINT_07_OFFLINE_SYNC.md`
 - `plans/STATUS.md`
 
+### Sprint 02
+
+- `pubspec.yaml`, `pubspec.lock` (Drift, drift_flutter, uuid, drift_dev,
+  build_runner)
+- `lib/data/local/app_database.dart`
+- `lib/data/local/app_database.g.dart` (generated Drift code)
+- `lib/data/local/daos/` (customer, debt group, debt, payment, sync queue,
+  sync metadata)
+- `lib/data/local/dev_seed.dart`
+- `lib/data/repositories/` (customer, group, debt, payment implementations,
+  mappers, payloads, support)
+- `lib/domain/entities/` (customer, debt, debt group, payment, sync state)
+- `lib/domain/repositories/` (customer, debt group, debt, payment contracts)
+- `lib/domain/validation/entity_validation.dart`
+- `lib/app/bootstrap.dart`
+- `lib/app/providers.dart` (database/repository providers)
+- `lib/main.dart` (DB bootstrap)
+- `lib/core/config/app_config.dart` (`SEED_DEMO_DATA`)
+- `lib/core/errors/app_exception.dart` (`notFound`)
+- `config/app_config.example.json`
+- `test/data/local/app_database_test.dart`
+- `test/data/repositories/repository_test.dart`
+- `test/app/bootstrap_test.dart`
+- `test/core/config/app_config_test.dart`
+- `linux/flutter/generated_plugins.cmake`,
+  `windows/flutter/generated_plugins.cmake` (generated plugin registrants)
+- `.gitignore` (`android/.kotlin`)
+- `README.md` (local database section)
+- `plans/DECISIONS.md` (D-009, D-010)
+- `plans/03_DATABASE_AND_SECURITY.md` (implemented local schema)
+- `plans/sprints/SPRINT_02_LOCAL_DATABASE_REPOSITORY.md`
+- `plans/STATUS.md`
+
 ## Test evidence
 
 Commands run on 12 November 2026:
 
 ```text
 flutter pub get                                              passed
+dart run build_runner build                                  passed
 dart format --output=none --set-exit-if-changed .            passed
 flutter analyze                                              no issues
-flutter test                                                 passed, 7 tests
+flutter test                                                 passed, 24 tests
 flutter build apk --debug                                    passed
-adb install -r build/app/outputs/flutter-apk/app-debug.apk   passed (I2505)
+adb install -r build/app/outputs/flutter-apk/app-debug.apk   passed (I2505, Sprint 00)
 
 supabase db start                                            passed
 supabase db reset                                            passed
@@ -143,8 +201,10 @@ deno lint                                                    passed
 deno test                                                    passed, 43 tests
 ```
 
-On-device verification: the app launched on I2505 (Android 16, API 36), the
+On-device verification: Sprint 00 launched on I2505 (Android 16, API 36), the
 Dashboard rendered, the drawer opened, and navigation to Group Hutang worked.
+Sprint 02 verified database bootstrap and seed via widget tests; the debug APK
+builds, but no Android device was connected to launch the Sprint 02 APK.
 
 Backend verification: a fresh local database was recreated from all five
 migrations; anon/authenticated access failed at schema, table, and function
@@ -154,7 +214,9 @@ token uniqueness constraints passed.
 
 ## Blockers / known limitations
 
-- No active blockers for Sprint 01.
+- No active blockers for Sprint 02.
+- No Android device was connected during Sprint 02; APK build and DB bootstrap
+  tests passed, but the Sprint 02 APK has not been launched on device.
 - Cloud Supabase project has not been linked or pushed. No owner-provided cloud
   credentials were used, and `db push` was not run.
 - Edge Functions currently contain shared helpers only; PIN verification,
@@ -163,9 +225,14 @@ token uniqueness constraints passed.
 - No public read exists by design. Read-only devices must be enrolled by an
   admin before they can pull cloud data; until their enrollment/pull endpoint is
   implemented, non-admin devices can only read cached local data.
+- Local SQLite is not encrypted yet. It contains customer contact data and
+  notes; device-level app lock/encryption remains an owner decision.
+- Schema version 1 has no upgrade path yet. `onUpgrade` intentionally throws;
+  future schema changes require explicit migration steps and tests.
 - Stale `processing` operations and expired admin session cleanup will be
   handled by the sync/session sprints; no background cleanup job exists yet.
-- Local database seed/demo data is intentionally absent until Sprint 02.
+- Outbox entries are queued but not sent yet; sync is Sprint 07.
+- Demo seed is available only with `SEED_DEMO_DATA=true` in development.
 
 ## Decisions
 
@@ -180,11 +247,13 @@ token uniqueness constraints passed.
 - Admin mutations must be server-authorized through Edge Functions.
 - Admin sessions use short-lived HS256 JWTs with server-side hashed sessions.
 - Idempotency uses `operation_id` + stable payload hash + registry.
+- Local-first writes use Drift schema v1 with an atomic outbox.
+- Demo seed is opt-in only with `SEED_DEMO_DATA=true` in development.
 - Environment config uses `--dart-define`; see `plans/DECISIONS.md`.
 
 ## Owner decisions still pending
 
-- [ ] Confirm whether device-level app lock is required.
+- [ ] Confirm whether device-level app lock/local SQLite encryption is required.
 - [ ] Confirm read-only device token lifetime and enrollment UX.
 - [ ] Confirm PIN length and recovery/rotation process.
 - [ ] Confirm exact reminder schedule and whether exact alarms are required.
@@ -196,7 +265,7 @@ devices may pull phone/notes/debt/payment data (12 November 2026).
 
 ## Next step
 
-1. Request owner approval before starting Sprint 02 (Local database &
-   repository).
-2. Sprint 02 will add Drift/SQLite, domain entities, repository contracts,
-   atomic local writes + outbox, migrations, and local tests.
+1. Request owner approval before starting Sprint 03 (Groups & customers).
+2. Sprint 03 will build group/customer screens on top of the Sprint 02
+   repositories, including validation, archive/restore, search, empty/loading/
+   error/offline states, and tests.

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app/app.dart';
+import 'app/bootstrap.dart';
 import 'app/providers.dart';
 import 'core/config/app_config.dart';
 import 'core/logging/app_logger.dart';
@@ -21,7 +21,7 @@ void main() {
   runApp(
     ProviderScope(
       overrides: [appConfigProvider.overrideWithValue(config)],
-      child: const DebtReminderApp(),
+      child: const AppBootstrap(),
     ),
   );
 }

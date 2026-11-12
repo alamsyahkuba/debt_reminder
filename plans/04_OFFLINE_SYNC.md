@@ -2,6 +2,10 @@
 
 ## 1. Data flow
 
+**Sprint 02 status:** local Drift schema, outbox, sync metadata, atomic local
+writes, and repository reads are implemented. The sync worker and remote
+endpoints are not implemented yet (Sprint 07).
+
 - App launch: initialize Drift → render local data immediately → start sync if connectivity available.
 - All reads: Drift.
 - All writes: local transaction + outbox atomically.

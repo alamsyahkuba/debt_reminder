@@ -21,6 +21,25 @@ void main() {
     });
   });
 
+  group('AppConfig.seedDemoData', () {
+    test('default false dan dapat diaktifkan eksplisit', () {
+      const AppConfig defaultConfig = AppConfig(
+        environment: AppEnvironment.development,
+        supabaseUrl: '',
+        supabaseAnonKey: '',
+      );
+      const AppConfig seededConfig = AppConfig(
+        environment: AppEnvironment.development,
+        supabaseUrl: '',
+        supabaseAnonKey: '',
+        seedDemoData: true,
+      );
+
+      expect(defaultConfig.seedDemoData, isFalse);
+      expect(seededConfig.seedDemoData, isTrue);
+    });
+  });
+
   group('AppConfig.hasSupabaseConfig', () {
     test('true hanya jika URL dan anon key terisi', () {
       const AppConfig complete = AppConfig(
