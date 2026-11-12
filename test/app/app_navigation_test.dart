@@ -2,11 +2,8 @@ import 'package:debt_reminder/app/app.dart';
 import 'package:debt_reminder/app/navigation.dart';
 import 'package:debt_reminder/app/providers.dart';
 import 'package:debt_reminder/core/config/app_config.dart';
-import 'package:debt_reminder/domain/entities/customer.dart';
-import 'package:debt_reminder/domain/entities/customer_summary.dart';
 import 'package:debt_reminder/domain/entities/debt_group.dart';
 import 'package:debt_reminder/domain/entities/group_summary.dart';
-import 'package:debt_reminder/features/customers/application/customer_providers.dart';
 import 'package:debt_reminder/features/debt_groups/application/group_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,12 +26,6 @@ Future<void> _pumpApp(WidgetTester tester) async {
         ),
         groupSummariesProvider.overrideWith(
           (ref) => Stream<Map<String, GroupSummary>>.value(const {}),
-        ),
-        customerListProvider.overrideWith(
-          (ref, includeArchived) => Stream<List<Customer>>.value(const []),
-        ),
-        customerSummariesProvider.overrideWith(
-          (ref) => Stream<Map<String, CustomerSummary>>.value(const {}),
         ),
       ],
       child: const DebtReminderApp(),
@@ -71,7 +62,6 @@ void main() {
     const destinations = <String, Key>{
       AppRoutes.debts: Key('debts-screen'),
       AppRoutes.groups: Key('groups-screen'),
-      AppRoutes.customers: Key('customers-screen'),
       AppRoutes.reminders: Key('reminders-screen'),
       AppRoutes.settings: Key('settings-screen'),
       AppRoutes.admin: Key('admin-pin-screen'),

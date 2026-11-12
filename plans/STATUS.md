@@ -4,19 +4,19 @@
 
 Plan revised on 12 November 2026: two roles (owner/admin and public), no
 customer entity, groups retained, all business data public, admin PIN retained,
-device enrollment removed, and database reset approved. Sprint 01R cloud rework
-is complete; local Flutter/Drift rework (Sprint 02R/03R) is still pending.
+device enrollment removed, and database reset approved. Cloud rework (Sprint
+01R) and local rework (Sprint 02R/03R) are complete. Ready for Sprint 04.
 
 ## Sprint status
 
-- [x] Sprint 00 — Foundation (historical; customer placeholder will be removed
-      by the public-read rework)
+- [x] Sprint 00 — Foundation (historical; customer placeholder removed by the
+      public-read rework)
 - [x] Sprint 01 — Cloud schema & security (Sprint 01R: customers/read_devices
       removed, public read RPC and tests added)
-- [ ] Sprint 02 — Local database & repository (revision required: remove
-      customer schema/repositories, reset Drift schema)
-- [ ] Sprint 03 — Groups (revision required: remove customer UI/tests, retain
-      group features)
+- [x] Sprint 02 — Local database & repository (Sprint 02R: Drift v2 reset,
+      customers removed, 32 Flutter tests pass; public pull deferred to Sprint 07)
+- [x] Sprint 03 — Groups (Sprint 03R: group UI retained, customer UI/tests
+      removed; public read-only UI deferred to Sprint 07)
 - [ ] Sprint 04 — Debt management
 - [ ] Sprint 05 — Payments & dashboard
 - [ ] Sprint 06 — Admin PIN & sessions
@@ -31,7 +31,7 @@ is complete; local Flutter/Drift rework (Sprint 02R/03R) is still pending.
 - Flutter foundation, Material 3, Indonesian locale, Riverpod, GoRouter,
   drawer, environment config, lint, CI, and placeholder screens.
 - Debug APK was verified on I2505 during Sprint 00.
-- Customer placeholder still exists in Flutter and must be removed in Sprint 03R.
+- Customer placeholder was removed in Sprint 03R.
 
 ### Sprint 01 — Cloud schema & security (Sprint 01R complete)
 
@@ -47,17 +47,22 @@ is complete; local Flutter/Drift rework (Sprint 02R/03R) is still pending.
 - Device auth helper/tests were deleted; http error mapping no longer references
   device errors.
 
-### Sprint 02 — Local database & repository (pending rework)
+### Sprint 02 — Local database & repository (Sprint 02R complete)
 
-- Drift schema v1 still contains customers and customer_id.
-- Customer repository/entity/DAO and device-token helpers remain in Flutter.
-- Must be reset/reworked in Sprint 02R.
+- Drift schema v2 has `debt_groups`, `debts`, `payments`, `sync_queue`, and
+  `sync_metadata`; no customers and no `customer_id`.
+- Destructive v1→v2 migration resets old data; migration test passes.
+- Customer entity/DAO/repository, customer payloads, and provider were removed.
+- Debt repository and payloads no longer contain customer references.
+- 32 Flutter tests and APK build pass.
 
-### Sprint 03 — Groups & customers (pending rework)
+### Sprint 03 — Groups (Sprint 03R complete)
 
-- Group list/form/detail, archive/restore/delete, summaries, move debt.
-- Customer list/form/detail/search/archive still exists.
-- Customer module must be removed in Sprint 03R; group features remain.
+- Group list/form/detail, archive/restore/delete, summaries, and move debt remain.
+- Customer UI, providers, routes, navigation item, and tests were removed.
+- Group flow and group-management tests pass.
+- Public read-only UI/pull behavior remains part of the sync/public-mode work in
+  Sprint 07.
 
 ## Required revision work
 
@@ -69,16 +74,16 @@ Cloud (done in Sprint 01R):
 - [x] Keep internal tables private.
 - [x] Reset local Supabase and update backend tests.
 
-Local (Sprint 02R/03R):
-- [ ] Remove customer table/entity/DAO/repository/validation.
-- [ ] Remove `customer_id` from local debts.
-- [ ] Remove customer providers/screens/routes and tests.
-- [ ] Remove local device-token/device-enrollment artifacts.
-- [ ] Reset SQLite data/schema.
-- [ ] Rework debt repository/UI to remove customer selectors and summaries.
-- [ ] Update widget/repository tests for group/debt/payment/public mode.
-- [ ] Keep group features and remove customer navigation.
-- [ ] Update root README/status when local rework is complete.
+Local (Sprint 02R/03R) — done:
+- [x] Remove customer table/entity/DAO/repository/validation.
+- [x] Remove `customer_id` from local debts.
+- [x] Remove customer providers/screens/routes and tests.
+- [x] Remove local device-token/device-enrollment artifacts.
+- [x] Reset SQLite schema/data with destructive v1→v2 migration.
+- [x] Rework debt repository/UI to remove customer selectors and summaries.
+- [x] Update widget/repository tests for group/debt/payment.
+- [x] Keep group features and remove customer navigation.
+- [x] Update root README/AGENTS/status when local rework completed.
 
 ## Plan files changed
 
@@ -125,18 +130,19 @@ supabase db lint                                                                
 deno fmt --check / deno check / deno lint / deno test                                                passed, 36 tests
 ```
 
-Flutter (still old customer/local model):
+Flutter (Sprint 02R/03R):
 ```text
-flutter test                                                                                         passed, 34 tests (historical)
-flutter build apk --debug                                                                            passed (historical)
+flutter analyze                                                                                      no issues
+flutter test                                                                                         passed, 32 tests
+flutter build apk --debug                                                                            passed
+  - schema v2 + no customers                                                                          passed
+  - destructive v1→v2 migration                                                                      passed
+  - group/debt/payment repository + group flow tests                                                  passed
 ```
-
-Flutter tests will be updated in Sprint 02R/03R after customer removal.
 
 ## Blockers / known limitations
 
-- Cloud schema is reworked, but local Flutter/Drift schema still has customers
-  and device-token artifacts.
+- Cloud and local schemas are reworked; no customers/read_devices/customer_id.
 - No Android device was connected during Sprint 02/03 verification.
 - Cloud Supabase has not been linked or pushed.
 - Admin PIN UI gating is not implemented yet; local management actions are
@@ -172,7 +178,6 @@ retained, admin PIN retained, device enrollment removed, database reset.
 
 ## Next step
 
-1. Sprint 02R — reset local Drift schema, remove customer table/entity/DAO/
-   repository, and remove customer references from debt payloads/tests.
-2. Sprint 03R — remove customer UI/providers/routes/tests and keep group UI.
-3. After local rework passes tests, continue to Sprint 04.
+Request owner approval to start Sprint 04 (Debt management) on the revised
+group/debt/payment model. Public read-only UI and pull behavior are implemented
+in Sprint 07.

@@ -1,25 +1,8 @@
-import '../../domain/entities/customer.dart';
 import '../../domain/entities/debt.dart';
 import '../../domain/entities/debt_group.dart';
 import '../../domain/entities/payment.dart';
 import '../../domain/entities/sync_state.dart';
 import '../local/app_database.dart';
-
-extension CustomerRowMapper on CustomerRow {
-  Customer toDomain() {
-    return Customer(
-      id: id,
-      name: name,
-      phone: phone,
-      notes: notes,
-      isArchived: isArchived,
-      createdAt: createdAt.toUtc(),
-      updatedAt: updatedAt.toUtc(),
-      version: version,
-      syncState: SyncState.fromDatabase(syncState),
-    );
-  }
-}
 
 extension DebtGroupRowMapper on DebtGroupRow {
   DebtGroup toDomain() {
@@ -43,7 +26,6 @@ extension DebtRowMapper on DebtRow {
   Debt toDomain() {
     return Debt(
       id: id,
-      customerId: customerId,
       groupId: groupId,
       title: title,
       principalAmount: principalAmount,

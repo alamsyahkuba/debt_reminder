@@ -1,7 +1,6 @@
 import 'package:debt_reminder/app/app.dart';
 import 'package:debt_reminder/app/providers.dart';
 import 'package:debt_reminder/data/local/app_database.dart';
-import 'package:debt_reminder/data/repositories/customer_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/debt_group_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/debt_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/payment_repository_impl.dart';
@@ -17,10 +16,6 @@ class _Harness {
 
   final AppDatabase database;
 
-  late final CustomerRepositoryImpl customers = CustomerRepositoryImpl(
-    database,
-    now: _fixedNow,
-  );
   late final DebtGroupRepositoryImpl groups = DebtGroupRepositoryImpl(
     database,
     now: _fixedNow,
@@ -74,11 +69,6 @@ Future<void> _openGroups(WidgetTester tester) async {
   await _tapDrawerItem(tester, '/groups');
 }
 
-Future<void> _openCustomers(WidgetTester tester) async {
-  await _openDrawer(tester);
-  await _tapDrawerItem(tester, '/customers');
-}
-
 Future<void> _tapAfterScroll(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();
@@ -117,44 +107,11 @@ void main() {
     }
   });
 
-  testWidgets('pencarian pelanggan bekerja offline', (tester) async {
-    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
-    try {
-      final budi = await harness.customers.create(name: 'Budi');
-      final ani = await harness.customers.create(name: 'Ani');
-      await harness.pump(tester);
-      await _openCustomers(tester);
-
-      expect(find.byKey(Key('customer-tile-${budi.id}')), findsOneWidget);
-      expect(find.byKey(Key('customer-tile-${ani.id}')), findsOneWidget);
-
-      await tester.enterText(
-        find.byKey(const Key('customer-search-field')),
-        'Budi',
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(Key('customer-tile-${budi.id}')), findsOneWidget);
-      expect(find.byKey(Key('customer-tile-${ani.id}')), findsNothing);
-
-      await tester.enterText(
-        find.byKey(const Key('customer-search-field')),
-        'tidak-ada',
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Pelanggan tidak ditemukan'), findsOneWidget);
-    } finally {
-      await harness.dispose(tester);
-    }
-  });
-
   testWidgets('hapus group memindahkan hutang ke Unassigned', (tester) async {
     final harness = _Harness(AppDatabase(NativeDatabase.memory()));
     try {
-      final customer = await harness.customers.create(name: 'Budi');
       final group = await harness.groups.create(name: 'Keluarga');
       final debt = await harness.debts.create(
-        customerId: customer.id,
         groupId: group.id,
         title: 'Hutang keluarga',
         principalAmount: 500000,
@@ -182,47 +139,12 @@ void main() {
     }
   });
 
-  testWidgets('arsip pelanggan mempertahankan histori hutang', (tester) async {
-    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
-    try {
-      final customer = await harness.customers.create(name: 'Budi');
-      final debt = await harness.debts.create(
-        customerId: customer.id,
-        title: 'Hutang',
-        principalAmount: 100000,
-      );
-
-      await harness.pump(tester);
-      await _openCustomers(tester);
-      await tester.tap(find.byKey(Key('customer-tile-${customer.id}')));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('customer-archive-button')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Arsipkan'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Belum ada pelanggan'), findsOneWidget);
-      final storedCustomer = await harness.customers.findById(customer.id);
-      expect(storedCustomer?.isArchived, isTrue);
-      expect(await harness.debts.findById(debt.id), isNotNull);
-
-      await tester.tap(find.text('Tampilkan arsip'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(Key('customer-tile-${customer.id}')), findsOneWidget);
-    } finally {
-      await harness.dispose(tester);
-    }
-  });
-
   testWidgets('pindahkan hutang ke group lain dari detail', (tester) async {
     final harness = _Harness(AppDatabase(NativeDatabase.memory()));
     try {
-      final customer = await harness.customers.create(name: 'Budi');
       final family = await harness.groups.create(name: 'Keluarga');
       final business = await harness.groups.create(name: 'Usaha');
       final debt = await harness.debts.create(
-        customerId: customer.id,
         groupId: family.id,
         title: 'Hutang',
         principalAmount: 100000,

@@ -7,21 +7,18 @@ import '../../../../domain/entities/debt.dart';
 class DebtListTile extends StatelessWidget {
   const DebtListTile({
     required this.debt,
-    this.customerName,
     this.groupName,
     this.onMoveGroup,
     super.key,
   });
 
   final Debt debt;
-  final String? customerName;
   final String? groupName;
   final VoidCallback? onMoveGroup;
 
   @override
   Widget build(BuildContext context) {
     final details = <String>[
-      if (customerName != null && customerName!.isNotEmpty) customerName!,
       if (groupName != null && groupName!.isNotEmpty) groupName!,
       if (debt.isArchived) 'Diarsipkan',
       debt.dueDate == null

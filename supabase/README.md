@@ -3,10 +3,10 @@
 Folder ini berisi schema PostgreSQL, RLS, idempotency helpers, public read RPCs,
 dan Edge Function shared utilities untuk aplikasi Catatan Hutang.
 
-> **Status implementasi (Sprint 01R):** cloud schema dan public read RPC sudah
-> dirework. Migration lama customers/read_devices sudah dihapus dan local
-> Supabase sudah di-reset. Aplikasi Flutter masih memakai model customer lokal
-> sampai Sprint 02R/03R selesai. Cloud project belum di-push.
+> **Status implementasi:** cloud schema, public read RPC, dan local Flutter/
+> Drift customer cleanup sudah selesai. Migration lama customers/read_devices
+> dihapus dan local Supabase sudah di-reset. Cloud project belum di-push.
+> Public Flutter pull/read-only mode dijadwalkan Sprint 07.
 
 ## Prasyarat
 
@@ -202,4 +202,4 @@ npx --yes supabase@3.1.0 db push
 - Perangkat read-only dan device enrollment (dihapus).
 - Data pelanggan (dihapus).
 - Seed/demo data produksi.
-- Local Flutter customer/device cleanup (Sprint 02R/03R).
+- Public Flutter pull/read-only mode (Sprint 07).

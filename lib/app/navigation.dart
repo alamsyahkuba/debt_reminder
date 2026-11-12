@@ -4,7 +4,6 @@ abstract final class AppRoutes {
   static const String dashboard = '/dashboard';
   static const String debts = '/debts';
   static const String groups = '/groups';
-  static const String customers = '/customers';
   static const String reminders = '/reminders';
   static const String settings = '/settings';
   static const String admin = '/admin';
@@ -12,10 +11,6 @@ abstract final class AppRoutes {
   static const String groupNew = '/groups/new';
   static String groupDetail(String id) => '/groups/$id';
   static String groupEdit(String id) => '/groups/$id/edit';
-
-  static const String customerNew = '/customers/new';
-  static String customerDetail(String id) => '/customers/$id';
-  static String customerEdit(String id) => '/customers/$id/edit';
 }
 
 @immutable
@@ -54,13 +49,6 @@ const AppDestination groupsDestination = AppDestination(
   selectedIcon: Icons.folder,
 );
 
-const AppDestination customersDestination = AppDestination(
-  path: AppRoutes.customers,
-  label: 'Pelanggan',
-  icon: Icons.people_outline,
-  selectedIcon: Icons.people,
-);
-
 const AppDestination remindersDestination = AppDestination(
   path: AppRoutes.reminders,
   label: 'Reminder',
@@ -86,7 +74,6 @@ const List<AppDestination> primaryDestinations = <AppDestination>[
   dashboardDestination,
   debtsDestination,
   groupsDestination,
-  customersDestination,
   remindersDestination,
   settingsDestination,
 ];

@@ -21,9 +21,10 @@ pada 12 November 2026:
 - database akan di-reset.
 
 Sprint 01R sudah menyelesaikan rework cloud: schema tanpa customers/read_devices,
-public read RPC, dan RLS read-only. Aplikasi Flutter dan database lokal masih
-memuat model customer lama; Sprint 02R/03R diperlukan sebelum melanjutkan ke
-Sprint 04. Lihat [`plans/STATUS.md`](plans/STATUS.md).
+public read RPC, dan RLS read-only. Sprint 02R/03R sudah membersihkan schema
+lokal, repository, UI, dan test customer. Public Flutter pull/read-only mode
+tetap dijadwalkan Sprint 07. Proyek siap melanjutkan ke Sprint 04.
+Lihat [`plans/STATUS.md`](plans/STATUS.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
 
@@ -75,7 +76,7 @@ argumen build client.
 
 ## Database lokal
 
-Target plan memakai Drift/SQLite dengan tabel bisnis:
+Drift/SQLite schema v2 memakai tabel bisnis:
 
 - `debt_groups`
 - `debts`
@@ -83,11 +84,8 @@ Target plan memakai Drift/SQLite dengan tabel bisnis:
 - `sync_queue`
 - `sync_metadata`
 
-Tidak ada tabel `customers`, `customer_id`, atau `read_devices`.
-
-Status implementasi saat ini: schema Drift v1 masih memuat customers dan
-`customer_id`. Database lokal akan di-reset; jangan menganggap schema lama
-sebagai target final.
+Tidak ada tabel `customers`, `customer_id`, atau `read_devices`. Migrasi v1→v2
+bersifat destruktif karena aplikasi belum release; database lama di-reset.
 
 - UI membaca data melalui repository dan Drift stream; jangan query Supabase
   langsung dari widget.
@@ -181,8 +179,7 @@ config/                # Contoh konfigurasi (nilai lokal di-ignore)
 plans/                 # Spesifikasi dan status sprint
 ```
 
-Saat ini `features/customers` dan file customer/device-enrollment masih ada dan
-harus dihapus pada rework.
+Tidak ada lagi `features/customers` atau artefak device-enrollment.
 
 ## Catatan pengembangan
 

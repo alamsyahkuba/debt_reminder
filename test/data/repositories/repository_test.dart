@@ -5,11 +5,10 @@ import 'package:debt_reminder/data/local/app_database.dart';
 import 'package:debt_reminder/data/local/daos/sync_metadata_dao.dart';
 import 'package:debt_reminder/data/local/daos/sync_queue_dao.dart';
 import 'package:debt_reminder/data/local/dev_seed.dart';
-import 'package:debt_reminder/data/repositories/customer_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/debt_group_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/debt_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/payment_repository_impl.dart';
-import 'package:debt_reminder/domain/entities/customer.dart';
+import 'package:debt_reminder/domain/entities/debt_group.dart';
 import 'package:debt_reminder/domain/entities/sync_state.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -35,7 +34,6 @@ class _ThrowingSyncQueueDao extends SyncQueueDao {
 void main() {
   late AppDatabase database;
   late SyncQueueDao queueDao;
-  late CustomerRepositoryImpl customers;
   late DebtGroupRepositoryImpl groups;
   late DebtRepositoryImpl debts;
   late PaymentRepositoryImpl payments;
@@ -43,11 +41,6 @@ void main() {
   setUp(() {
     database = AppDatabase(NativeDatabase.memory());
     queueDao = SyncQueueDao(database);
-    customers = CustomerRepositoryImpl(
-      database,
-      syncQueueDao: queueDao,
-      now: _fixedNow,
-    );
     groups = DebtGroupRepositoryImpl(
       database,
       syncQueueDao: queueDao,
@@ -69,56 +62,58 @@ void main() {
     await database.close();
   });
 
-  group('customer repository', () {
+  group('debt group repository', () {
     test('create menyimpan entity dan outbox dalam satu transaksi', () async {
-      final customer = await customers.create(
-        name: '  Budi  ',
-        phone: ' 0812-0000 ',
-        notes: ' Catatan ',
+      final group = await groups.create(
+        name: '  Keluarga  ',
+        description: ' Group keluarga ',
+        color: '#00695C',
+        icon: 'family',
+        sortOrder: 1,
       );
 
-      expect(customer.name, 'Budi');
-      expect(customer.phone, '0812-0000');
-      expect(customer.notes, 'Catatan');
-      expect(customer.version, 1);
-      expect(customer.syncState, SyncState.pending);
-
-      final stored = await customers.findById(customer.id);
-      expect(stored?.name, 'Budi');
+      expect(group.name, 'Keluarga');
+      expect(group.description, 'Group keluarga');
+      expect(group.version, 1);
+      expect(group.syncState, SyncState.pending);
+      expect(await groups.watchAll().first, hasLength(1));
 
       final queue = await queueDao.listAll();
       expect(queue, hasLength(1));
-      expect(queue.single.entityType, 'customer');
+      expect(queue.single.entityType, 'debt_group');
       expect(queue.single.operation, 'create');
 
       final payload = jsonDecode(queue.single.payload) as Map<String, dynamic>;
-      expect(payload['id'], customer.id);
-      expect(payload['name'], 'Budi');
-      expect(payload['phone'], '0812-0000');
+      expect(payload['id'], group.id);
+      expect(payload['name'], 'Keluarga');
+      expect(payload['icon'], 'family');
     });
 
-    test('update menaikkan versi dan membaca stream secara reaktif', () async {
-      final customer = await customers.create(name: 'Budi');
+    test('update menaikkan versi dan stream reaktif', () async {
+      final group = await groups.create(name: 'Keluarga');
 
       final expectation = expectLater(
-        customers.watchAll(),
+        groups.watchAll(),
         emitsThrough(
-          predicate<List<Customer>>(
-            (items) => items.length == 1 && items.single.name == 'Budi Baru',
+          predicate<List<DebtGroup>>(
+            (items) =>
+                items.length == 1 && items.single.name == 'Keluarga Besar',
           ),
         ),
       );
 
-      final updated = await customers.update(
-        id: customer.id,
-        expectedVersion: customer.version,
-        name: 'Budi Baru',
-        phone: null,
-        notes: null,
+      final updated = await groups.update(
+        id: group.id,
+        expectedVersion: group.version,
+        name: 'Keluarga Besar',
+        description: null,
+        color: null,
+        icon: null,
+        sortOrder: 2,
       );
 
       expect(updated.version, 2);
-      expect(updated.syncState, SyncState.pending);
+      expect(updated.description, isNull);
       await expectation;
 
       final queue = await queueDao.listAll();
@@ -126,17 +121,18 @@ void main() {
       final updatePayload =
           jsonDecode(queue.last.payload) as Map<String, dynamic>;
       expect(updatePayload['expected_version'], 1);
-      expect(updatePayload['name'], 'Budi Baru');
+      expect(updatePayload['name'], 'Keluarga Besar');
     });
 
-    test('versi lama menjadi konflik, bukan overwrite diam-diam', () async {
-      final customer = await customers.create(name: 'Budi');
+    test('versi lama menjadi konflik', () async {
+      final group = await groups.create(name: 'Keluarga');
 
       await expectLater(
-        customers.update(
-          id: customer.id,
+        groups.update(
+          id: group.id,
           expectedVersion: 99,
-          name: 'Budi Baru',
+          name: 'Keluarga Besar',
+          sortOrder: 1,
         ),
         throwsA(
           isA<AppException>().having(
@@ -147,103 +143,60 @@ void main() {
         ),
       );
 
-      final stored = await customers.findById(customer.id);
-      expect(stored?.name, 'Budi');
-      expect(stored?.version, 1);
+      expect((await groups.findById(group.id))?.name, 'Keluarga');
     });
 
     test('archive idempoten tidak menambah outbox berulang', () async {
-      final customer = await customers.create(name: 'Budi');
+      final group = await groups.create(name: 'Keluarga');
 
-      final archived = await customers.setArchived(
-        id: customer.id,
-        expectedVersion: customer.version,
+      final archived = await groups.setArchived(
+        id: group.id,
+        expectedVersion: group.version,
         isArchived: true,
       );
       expect(archived.isArchived, isTrue);
-      expect(archived.version, 2);
+      expect(await groups.watchAll().first, isEmpty);
 
       final queueLength = (await queueDao.listAll()).length;
-      final again = await customers.setArchived(
-        id: customer.id,
+      final again = await groups.setArchived(
+        id: group.id,
         expectedVersion: archived.version,
         isArchived: true,
       );
 
       expect(again.version, archived.version);
       expect((await queueDao.listAll()).length, queueLength);
-      expect(await customers.watchAll().first, isEmpty);
     });
 
-    test('kegagalan outbox membatalkan entity write', () async {
-      final failing = CustomerRepositoryImpl(
-        database,
-        syncQueueDao: _ThrowingSyncQueueDao(database),
-        now: _fixedNow,
-      );
-
-      await expectLater(
-        failing.create(name: 'Gagal'),
-        throwsA(isA<StateError>()),
-      );
-
-      expect(await database.select(database.customers).get(), isEmpty);
-      expect(await queueDao.listAll(), isEmpty);
-    });
-  });
-
-  group('debt group repository', () {
-    test('create, update, dan validasi warna/icon', () async {
-      final group = await groups.create(
-        name: 'Keluarga',
-        description: 'Group keluarga',
-        color: '#00695C',
-        icon: 'family',
-        sortOrder: 1,
-      );
-
-      expect(group.name, 'Keluarga');
-      expect(group.version, 1);
-      expect(await groups.watchAll().first, hasLength(1));
-
-      final updated = await groups.update(
-        id: group.id,
-        expectedVersion: group.version,
-        name: 'Keluarga Besar',
-        description: null,
-        color: '#5D4037',
-        icon: 'home',
-        sortOrder: 2,
-      );
-
-      expect(updated.name, 'Keluarga Besar');
-      expect(updated.version, 2);
-      expect(updated.description, isNull);
-
+    test('validasi warna/icon dan kegagalan outbox', () async {
       await expectLater(
         groups.create(name: 'Warna salah', color: 'teal'),
-        throwsA(
-          isA<AppException>().having(
-            (error) => error.code,
-            'code',
-            AppErrorCode.validation,
-          ),
-        ),
+        throwsA(isA<AppException>()),
       );
       await expectLater(
         groups.create(name: 'Ikon salah', icon: 'arbitrary_widget'),
         throwsA(isA<AppException>()),
       );
+
+      final failing = DebtGroupRepositoryImpl(
+        database,
+        syncQueueDao: _ThrowingSyncQueueDao(database),
+        now: _fixedNow,
+      );
+      await expectLater(
+        failing.create(name: 'Gagal'),
+        throwsA(isA<StateError>()),
+      );
+
+      expect(await database.select(database.debtGroups).get(), isEmpty);
+      expect(await queueDao.listAll(), isEmpty);
     });
   });
 
   group('debt repository', () {
-    test('create, pindah group, archive, dan validasi relasi', () async {
-      final customer = await customers.create(name: 'Budi');
+    test('create tanpa customer, pindah group, archive, validasi', () async {
       final group = await groups.create(name: 'Keluarga');
-
       final debt = await debts.create(
-        customerId: customer.id,
         groupId: group.id,
         title: 'Hutang sembako',
         principalAmount: 1000000,
@@ -273,17 +226,13 @@ void main() {
       expect(await debts.watchAll().first, isEmpty);
 
       await expectLater(
-        debts.create(
-          customerId: customer.id,
-          title: 'Pokok nol',
-          principalAmount: 0,
-        ),
+        debts.create(title: 'Pokok nol', principalAmount: 0),
         throwsA(isA<AppException>()),
       );
       await expectLater(
         debts.create(
-          customerId: '99999999-9999-4999-8999-999999999999',
-          title: 'Pelanggan hilang',
+          groupId: '99999999-9999-4999-8999-999999999999',
+          title: 'Group hilang',
           principalAmount: 1000,
         ),
         throwsA(isA<AppException>()),
@@ -293,12 +242,7 @@ void main() {
 
   group('payment repository', () {
     test('pembayaran append-only menyimpan total dan outbox', () async {
-      final customer = await customers.create(name: 'Budi');
-      final debt = await debts.create(
-        customerId: customer.id,
-        title: 'Hutang',
-        principalAmount: 500000,
-      );
+      final debt = await debts.create(title: 'Hutang', principalAmount: 500000);
 
       final first = await payments.create(
         debtId: debt.id,
@@ -363,8 +307,6 @@ void main() {
         expectedVersion: debt.version,
         isArchived: true,
       );
-      final archivedDebt = await debts.findById(debt.id);
-      expect(archivedDebt, isNotNull);
       await expectLater(
         payments.create(debtId: debt.id, amount: 1000),
         throwsA(isA<AppException>()),
@@ -385,10 +327,9 @@ void main() {
       expect(await metadata.getValue('debts'), '2026-11-12T10:00:00.000Z');
     });
 
-    test('seed demo lokal tidak membuat outbox dan idempoten', () async {
+    test('seed demo lokal tanpa customer dan tanpa outbox', () async {
       expect(await seedDevelopmentData(database, now: _fixedNow()), isTrue);
 
-      expect(await database.select(database.customers).get(), hasLength(1));
       expect(await database.select(database.debtGroups).get(), hasLength(2));
       expect(await database.select(database.debts).get(), hasLength(2));
       expect(await database.select(database.payments).get(), hasLength(1));

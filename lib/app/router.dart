@@ -2,9 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/admin/presentation/admin_pin_screen.dart';
-import '../features/customers/presentation/customer_detail_screen.dart';
-import '../features/customers/presentation/customer_form_screen.dart';
-import '../features/customers/presentation/customers_screen.dart';
 import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/debt_groups/presentation/group_detail_screen.dart';
 import '../features/debt_groups/presentation/group_form_screen.dart';
@@ -39,24 +36,6 @@ GoRouter createAppRouter() {
           ),
         ],
       ),
-      GoRoute(
-        path: AppRoutes.customerNew,
-        builder: (context, state) => const CustomerFormScreen(),
-      ),
-      GoRoute(
-        path: '/customers/:customerId',
-        builder: (context, state) => CustomerDetailScreen(
-          customerId: state.pathParameters['customerId']!,
-        ),
-        routes: <RouteBase>[
-          GoRoute(
-            path: 'edit',
-            builder: (context, state) => CustomerFormScreen(
-              customerId: state.pathParameters['customerId']!,
-            ),
-          ),
-        ],
-      ),
       ShellRoute(
         builder: (context, state, child) {
           return AppShell(currentPath: state.uri.path, child: child);
@@ -73,10 +52,6 @@ GoRouter createAppRouter() {
           GoRoute(
             path: AppRoutes.groups,
             builder: (context, state) => const GroupsScreen(),
-          ),
-          GoRoute(
-            path: AppRoutes.customers,
-            builder: (context, state) => const CustomersScreen(),
           ),
           GoRoute(
             path: AppRoutes.reminders,

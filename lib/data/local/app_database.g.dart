@@ -3,622 +3,6 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
-class $CustomersTable extends Customers
-    with TableInfo<$CustomersTable, CustomerRow> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $CustomersTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<String> id = GeneratedColumn<String>(
-    'id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _nameMeta = const VerificationMeta('name');
-  @override
-  late final GeneratedColumn<String> name = GeneratedColumn<String>(
-    'name',
-    aliasedName,
-    false,
-    additionalChecks: GeneratedColumn.checkTextLength(
-      minTextLength: 1,
-      maxTextLength: 200,
-    ),
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _phoneMeta = const VerificationMeta('phone');
-  @override
-  late final GeneratedColumn<String> phone = GeneratedColumn<String>(
-    'phone',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
-  @override
-  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
-    'notes',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _isArchivedMeta = const VerificationMeta(
-    'isArchived',
-  );
-  @override
-  late final GeneratedColumn<bool> isArchived = GeneratedColumn<bool>(
-    'is_archived',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_archived" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _versionMeta = const VerificationMeta(
-    'version',
-  );
-  @override
-  late final GeneratedColumn<int> version = GeneratedColumn<int>(
-    'version',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(1),
-  );
-  static const VerificationMeta _syncStateMeta = const VerificationMeta(
-    'syncState',
-  );
-  @override
-  late final GeneratedColumn<String> syncState = GeneratedColumn<String>(
-    'sync_state',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant('pending'),
-  );
-  static const VerificationMeta _serverUpdatedAtMeta = const VerificationMeta(
-    'serverUpdatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> serverUpdatedAt =
-      GeneratedColumn<DateTime>(
-        'server_updated_at',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    name,
-    phone,
-    notes,
-    isArchived,
-    createdAt,
-    updatedAt,
-    version,
-    syncState,
-    serverUpdatedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'customers';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<CustomerRow> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    } else if (isInserting) {
-      context.missing(_idMeta);
-    }
-    if (data.containsKey('name')) {
-      context.handle(
-        _nameMeta,
-        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_nameMeta);
-    }
-    if (data.containsKey('phone')) {
-      context.handle(
-        _phoneMeta,
-        phone.isAcceptableOrUnknown(data['phone']!, _phoneMeta),
-      );
-    }
-    if (data.containsKey('notes')) {
-      context.handle(
-        _notesMeta,
-        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
-      );
-    }
-    if (data.containsKey('is_archived')) {
-      context.handle(
-        _isArchivedMeta,
-        isArchived.isAcceptableOrUnknown(data['is_archived']!, _isArchivedMeta),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    if (data.containsKey('version')) {
-      context.handle(
-        _versionMeta,
-        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
-      );
-    }
-    if (data.containsKey('sync_state')) {
-      context.handle(
-        _syncStateMeta,
-        syncState.isAcceptableOrUnknown(data['sync_state']!, _syncStateMeta),
-      );
-    }
-    if (data.containsKey('server_updated_at')) {
-      context.handle(
-        _serverUpdatedAtMeta,
-        serverUpdatedAt.isAcceptableOrUnknown(
-          data['server_updated_at']!,
-          _serverUpdatedAtMeta,
-        ),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  CustomerRow map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CustomerRow(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}id'],
-      )!,
-      name: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}name'],
-      )!,
-      phone: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}phone'],
-      ),
-      notes: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}notes'],
-      ),
-      isArchived: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_archived'],
-      )!,
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-      version: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}version'],
-      )!,
-      syncState: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}sync_state'],
-      )!,
-      serverUpdatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}server_updated_at'],
-      ),
-    );
-  }
-
-  @override
-  $CustomersTable createAlias(String alias) {
-    return $CustomersTable(attachedDatabase, alias);
-  }
-}
-
-class CustomerRow extends DataClass implements Insertable<CustomerRow> {
-  final String id;
-  final String name;
-  final String? phone;
-  final String? notes;
-  final bool isArchived;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final int version;
-  final String syncState;
-  final DateTime? serverUpdatedAt;
-  const CustomerRow({
-    required this.id,
-    required this.name,
-    this.phone,
-    this.notes,
-    required this.isArchived,
-    required this.createdAt,
-    required this.updatedAt,
-    required this.version,
-    required this.syncState,
-    this.serverUpdatedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<String>(id);
-    map['name'] = Variable<String>(name);
-    if (!nullToAbsent || phone != null) {
-      map['phone'] = Variable<String>(phone);
-    }
-    if (!nullToAbsent || notes != null) {
-      map['notes'] = Variable<String>(notes);
-    }
-    map['is_archived'] = Variable<bool>(isArchived);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
-    map['version'] = Variable<int>(version);
-    map['sync_state'] = Variable<String>(syncState);
-    if (!nullToAbsent || serverUpdatedAt != null) {
-      map['server_updated_at'] = Variable<DateTime>(serverUpdatedAt);
-    }
-    return map;
-  }
-
-  CustomersCompanion toCompanion(bool nullToAbsent) {
-    return CustomersCompanion(
-      id: Value(id),
-      name: Value(name),
-      phone: phone == null && nullToAbsent
-          ? const Value.absent()
-          : Value(phone),
-      notes: notes == null && nullToAbsent
-          ? const Value.absent()
-          : Value(notes),
-      isArchived: Value(isArchived),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-      version: Value(version),
-      syncState: Value(syncState),
-      serverUpdatedAt: serverUpdatedAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(serverUpdatedAt),
-    );
-  }
-
-  factory CustomerRow.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CustomerRow(
-      id: serializer.fromJson<String>(json['id']),
-      name: serializer.fromJson<String>(json['name']),
-      phone: serializer.fromJson<String?>(json['phone']),
-      notes: serializer.fromJson<String?>(json['notes']),
-      isArchived: serializer.fromJson<bool>(json['isArchived']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-      version: serializer.fromJson<int>(json['version']),
-      syncState: serializer.fromJson<String>(json['syncState']),
-      serverUpdatedAt: serializer.fromJson<DateTime?>(json['serverUpdatedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<String>(id),
-      'name': serializer.toJson<String>(name),
-      'phone': serializer.toJson<String?>(phone),
-      'notes': serializer.toJson<String?>(notes),
-      'isArchived': serializer.toJson<bool>(isArchived),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
-      'version': serializer.toJson<int>(version),
-      'syncState': serializer.toJson<String>(syncState),
-      'serverUpdatedAt': serializer.toJson<DateTime?>(serverUpdatedAt),
-    };
-  }
-
-  CustomerRow copyWith({
-    String? id,
-    String? name,
-    Value<String?> phone = const Value.absent(),
-    Value<String?> notes = const Value.absent(),
-    bool? isArchived,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    int? version,
-    String? syncState,
-    Value<DateTime?> serverUpdatedAt = const Value.absent(),
-  }) => CustomerRow(
-    id: id ?? this.id,
-    name: name ?? this.name,
-    phone: phone.present ? phone.value : this.phone,
-    notes: notes.present ? notes.value : this.notes,
-    isArchived: isArchived ?? this.isArchived,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-    version: version ?? this.version,
-    syncState: syncState ?? this.syncState,
-    serverUpdatedAt: serverUpdatedAt.present
-        ? serverUpdatedAt.value
-        : this.serverUpdatedAt,
-  );
-  CustomerRow copyWithCompanion(CustomersCompanion data) {
-    return CustomerRow(
-      id: data.id.present ? data.id.value : this.id,
-      name: data.name.present ? data.name.value : this.name,
-      phone: data.phone.present ? data.phone.value : this.phone,
-      notes: data.notes.present ? data.notes.value : this.notes,
-      isArchived: data.isArchived.present
-          ? data.isArchived.value
-          : this.isArchived,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-      version: data.version.present ? data.version.value : this.version,
-      syncState: data.syncState.present ? data.syncState.value : this.syncState,
-      serverUpdatedAt: data.serverUpdatedAt.present
-          ? data.serverUpdatedAt.value
-          : this.serverUpdatedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('CustomerRow(')
-          ..write('id: $id, ')
-          ..write('name: $name, ')
-          ..write('phone: $phone, ')
-          ..write('notes: $notes, ')
-          ..write('isArchived: $isArchived, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('version: $version, ')
-          ..write('syncState: $syncState, ')
-          ..write('serverUpdatedAt: $serverUpdatedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    name,
-    phone,
-    notes,
-    isArchived,
-    createdAt,
-    updatedAt,
-    version,
-    syncState,
-    serverUpdatedAt,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is CustomerRow &&
-          other.id == this.id &&
-          other.name == this.name &&
-          other.phone == this.phone &&
-          other.notes == this.notes &&
-          other.isArchived == this.isArchived &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt &&
-          other.version == this.version &&
-          other.syncState == this.syncState &&
-          other.serverUpdatedAt == this.serverUpdatedAt);
-}
-
-class CustomersCompanion extends UpdateCompanion<CustomerRow> {
-  final Value<String> id;
-  final Value<String> name;
-  final Value<String?> phone;
-  final Value<String?> notes;
-  final Value<bool> isArchived;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
-  final Value<int> version;
-  final Value<String> syncState;
-  final Value<DateTime?> serverUpdatedAt;
-  final Value<int> rowid;
-  const CustomersCompanion({
-    this.id = const Value.absent(),
-    this.name = const Value.absent(),
-    this.phone = const Value.absent(),
-    this.notes = const Value.absent(),
-    this.isArchived = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-    this.version = const Value.absent(),
-    this.syncState = const Value.absent(),
-    this.serverUpdatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  });
-  CustomersCompanion.insert({
-    required String id,
-    required String name,
-    this.phone = const Value.absent(),
-    this.notes = const Value.absent(),
-    this.isArchived = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
-    this.version = const Value.absent(),
-    this.syncState = const Value.absent(),
-    this.serverUpdatedAt = const Value.absent(),
-    this.rowid = const Value.absent(),
-  }) : id = Value(id),
-       name = Value(name),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<CustomerRow> custom({
-    Expression<String>? id,
-    Expression<String>? name,
-    Expression<String>? phone,
-    Expression<String>? notes,
-    Expression<bool>? isArchived,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
-    Expression<int>? version,
-    Expression<String>? syncState,
-    Expression<DateTime>? serverUpdatedAt,
-    Expression<int>? rowid,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (name != null) 'name': name,
-      if (phone != null) 'phone': phone,
-      if (notes != null) 'notes': notes,
-      if (isArchived != null) 'is_archived': isArchived,
-      if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
-      if (version != null) 'version': version,
-      if (syncState != null) 'sync_state': syncState,
-      if (serverUpdatedAt != null) 'server_updated_at': serverUpdatedAt,
-      if (rowid != null) 'rowid': rowid,
-    });
-  }
-
-  CustomersCompanion copyWith({
-    Value<String>? id,
-    Value<String>? name,
-    Value<String?>? phone,
-    Value<String?>? notes,
-    Value<bool>? isArchived,
-    Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
-    Value<int>? version,
-    Value<String>? syncState,
-    Value<DateTime?>? serverUpdatedAt,
-    Value<int>? rowid,
-  }) {
-    return CustomersCompanion(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      phone: phone ?? this.phone,
-      notes: notes ?? this.notes,
-      isArchived: isArchived ?? this.isArchived,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      version: version ?? this.version,
-      syncState: syncState ?? this.syncState,
-      serverUpdatedAt: serverUpdatedAt ?? this.serverUpdatedAt,
-      rowid: rowid ?? this.rowid,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<String>(id.value);
-    }
-    if (name.present) {
-      map['name'] = Variable<String>(name.value);
-    }
-    if (phone.present) {
-      map['phone'] = Variable<String>(phone.value);
-    }
-    if (notes.present) {
-      map['notes'] = Variable<String>(notes.value);
-    }
-    if (isArchived.present) {
-      map['is_archived'] = Variable<bool>(isArchived.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    if (version.present) {
-      map['version'] = Variable<int>(version.value);
-    }
-    if (syncState.present) {
-      map['sync_state'] = Variable<String>(syncState.value);
-    }
-    if (serverUpdatedAt.present) {
-      map['server_updated_at'] = Variable<DateTime>(serverUpdatedAt.value);
-    }
-    if (rowid.present) {
-      map['rowid'] = Variable<int>(rowid.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('CustomersCompanion(')
-          ..write('id: $id, ')
-          ..write('name: $name, ')
-          ..write('phone: $phone, ')
-          ..write('notes: $notes, ')
-          ..write('isArchived: $isArchived, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt, ')
-          ..write('version: $version, ')
-          ..write('syncState: $syncState, ')
-          ..write('serverUpdatedAt: $serverUpdatedAt, ')
-          ..write('rowid: $rowid')
-          ..write(')'))
-        .toString();
-  }
-}
-
 class $DebtGroupsTable extends DebtGroups
     with TableInfo<$DebtGroupsTable, DebtGroupRow> {
   @override
@@ -1347,20 +731,6 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, DebtRow> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _customerIdMeta = const VerificationMeta(
-    'customerId',
-  );
-  @override
-  late final GeneratedColumn<String> customerId = GeneratedColumn<String>(
-    'customer_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES customers (id) ON DELETE RESTRICT',
-    ),
-  );
   static const VerificationMeta _groupIdMeta = const VerificationMeta(
     'groupId',
   );
@@ -1495,7 +865,6 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, DebtRow> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    customerId,
     groupId,
     title,
     principalAmount,
@@ -1524,14 +893,6 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, DebtRow> {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
     } else if (isInserting) {
       context.missing(_idMeta);
-    }
-    if (data.containsKey('customer_id')) {
-      context.handle(
-        _customerIdMeta,
-        customerId.isAcceptableOrUnknown(data['customer_id']!, _customerIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_customerIdMeta);
     }
     if (data.containsKey('group_id')) {
       context.handle(
@@ -1626,10 +987,6 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, DebtRow> {
         DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      customerId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}customer_id'],
-      )!,
       groupId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}group_id'],
@@ -1685,7 +1042,6 @@ class $DebtsTable extends Debts with TableInfo<$DebtsTable, DebtRow> {
 
 class DebtRow extends DataClass implements Insertable<DebtRow> {
   final String id;
-  final String customerId;
   final String? groupId;
   final String title;
   final int principalAmount;
@@ -1699,7 +1055,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
   final DateTime? serverUpdatedAt;
   const DebtRow({
     required this.id,
-    required this.customerId,
     this.groupId,
     required this.title,
     required this.principalAmount,
@@ -1716,7 +1071,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
-    map['customer_id'] = Variable<String>(customerId);
     if (!nullToAbsent || groupId != null) {
       map['group_id'] = Variable<String>(groupId);
     }
@@ -1742,7 +1096,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
   DebtsCompanion toCompanion(bool nullToAbsent) {
     return DebtsCompanion(
       id: Value(id),
-      customerId: Value(customerId),
       groupId: groupId == null && nullToAbsent
           ? const Value.absent()
           : Value(groupId),
@@ -1772,7 +1125,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return DebtRow(
       id: serializer.fromJson<String>(json['id']),
-      customerId: serializer.fromJson<String>(json['customerId']),
       groupId: serializer.fromJson<String?>(json['groupId']),
       title: serializer.fromJson<String>(json['title']),
       principalAmount: serializer.fromJson<int>(json['principalAmount']),
@@ -1791,7 +1143,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
-      'customerId': serializer.toJson<String>(customerId),
       'groupId': serializer.toJson<String?>(groupId),
       'title': serializer.toJson<String>(title),
       'principalAmount': serializer.toJson<int>(principalAmount),
@@ -1808,7 +1159,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
 
   DebtRow copyWith({
     String? id,
-    String? customerId,
     Value<String?> groupId = const Value.absent(),
     String? title,
     int? principalAmount,
@@ -1822,7 +1172,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
     Value<DateTime?> serverUpdatedAt = const Value.absent(),
   }) => DebtRow(
     id: id ?? this.id,
-    customerId: customerId ?? this.customerId,
     groupId: groupId.present ? groupId.value : this.groupId,
     title: title ?? this.title,
     principalAmount: principalAmount ?? this.principalAmount,
@@ -1840,9 +1189,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
   DebtRow copyWithCompanion(DebtsCompanion data) {
     return DebtRow(
       id: data.id.present ? data.id.value : this.id,
-      customerId: data.customerId.present
-          ? data.customerId.value
-          : this.customerId,
       groupId: data.groupId.present ? data.groupId.value : this.groupId,
       title: data.title.present ? data.title.value : this.title,
       principalAmount: data.principalAmount.present
@@ -1867,7 +1213,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
   String toString() {
     return (StringBuffer('DebtRow(')
           ..write('id: $id, ')
-          ..write('customerId: $customerId, ')
           ..write('groupId: $groupId, ')
           ..write('title: $title, ')
           ..write('principalAmount: $principalAmount, ')
@@ -1886,7 +1231,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
   @override
   int get hashCode => Object.hash(
     id,
-    customerId,
     groupId,
     title,
     principalAmount,
@@ -1904,7 +1248,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
       identical(this, other) ||
       (other is DebtRow &&
           other.id == this.id &&
-          other.customerId == this.customerId &&
           other.groupId == this.groupId &&
           other.title == this.title &&
           other.principalAmount == this.principalAmount &&
@@ -1920,7 +1263,6 @@ class DebtRow extends DataClass implements Insertable<DebtRow> {
 
 class DebtsCompanion extends UpdateCompanion<DebtRow> {
   final Value<String> id;
-  final Value<String> customerId;
   final Value<String?> groupId;
   final Value<String> title;
   final Value<int> principalAmount;
@@ -1935,7 +1277,6 @@ class DebtsCompanion extends UpdateCompanion<DebtRow> {
   final Value<int> rowid;
   const DebtsCompanion({
     this.id = const Value.absent(),
-    this.customerId = const Value.absent(),
     this.groupId = const Value.absent(),
     this.title = const Value.absent(),
     this.principalAmount = const Value.absent(),
@@ -1951,7 +1292,6 @@ class DebtsCompanion extends UpdateCompanion<DebtRow> {
   });
   DebtsCompanion.insert({
     required String id,
-    required String customerId,
     this.groupId = const Value.absent(),
     required String title,
     required int principalAmount,
@@ -1965,14 +1305,12 @@ class DebtsCompanion extends UpdateCompanion<DebtRow> {
     this.serverUpdatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
-       customerId = Value(customerId),
        title = Value(title),
        principalAmount = Value(principalAmount),
        createdAt = Value(createdAt),
        updatedAt = Value(updatedAt);
   static Insertable<DebtRow> custom({
     Expression<String>? id,
-    Expression<String>? customerId,
     Expression<String>? groupId,
     Expression<String>? title,
     Expression<int>? principalAmount,
@@ -1988,7 +1326,6 @@ class DebtsCompanion extends UpdateCompanion<DebtRow> {
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (customerId != null) 'customer_id': customerId,
       if (groupId != null) 'group_id': groupId,
       if (title != null) 'title': title,
       if (principalAmount != null) 'principal_amount': principalAmount,
@@ -2006,7 +1343,6 @@ class DebtsCompanion extends UpdateCompanion<DebtRow> {
 
   DebtsCompanion copyWith({
     Value<String>? id,
-    Value<String>? customerId,
     Value<String?>? groupId,
     Value<String>? title,
     Value<int>? principalAmount,
@@ -2022,7 +1358,6 @@ class DebtsCompanion extends UpdateCompanion<DebtRow> {
   }) {
     return DebtsCompanion(
       id: id ?? this.id,
-      customerId: customerId ?? this.customerId,
       groupId: groupId ?? this.groupId,
       title: title ?? this.title,
       principalAmount: principalAmount ?? this.principalAmount,
@@ -2043,9 +1378,6 @@ class DebtsCompanion extends UpdateCompanion<DebtRow> {
     final map = <String, Expression>{};
     if (id.present) {
       map['id'] = Variable<String>(id.value);
-    }
-    if (customerId.present) {
-      map['customer_id'] = Variable<String>(customerId.value);
     }
     if (groupId.present) {
       map['group_id'] = Variable<String>(groupId.value);
@@ -2090,7 +1422,6 @@ class DebtsCompanion extends UpdateCompanion<DebtRow> {
   String toString() {
     return (StringBuffer('DebtsCompanion(')
           ..write('id: $id, ')
-          ..write('customerId: $customerId, ')
           ..write('groupId: $groupId, ')
           ..write('title: $title, ')
           ..write('principalAmount: $principalAmount, ')
@@ -3572,24 +2903,11 @@ class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataRow> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
-  late final $CustomersTable customers = $CustomersTable(this);
   late final $DebtGroupsTable debtGroups = $DebtGroupsTable(this);
   late final $DebtsTable debts = $DebtsTable(this);
   late final $PaymentsTable payments = $PaymentsTable(this);
   late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
   late final $SyncMetadataTable syncMetadata = $SyncMetadataTable(this);
-  late final Index customersNameIdx = Index(
-    'customers_name_idx',
-    'CREATE INDEX customers_name_idx ON customers (name)',
-  );
-  late final Index customersArchivedIdx = Index(
-    'customers_archived_idx',
-    'CREATE INDEX customers_archived_idx ON customers (is_archived)',
-  );
-  late final Index customersSyncIdx = Index(
-    'customers_sync_idx',
-    'CREATE INDEX customers_sync_idx ON customers (updated_at)',
-  );
   late final Index debtGroupsSortIdx = Index(
     'debt_groups_sort_idx',
     'CREATE INDEX debt_groups_sort_idx ON debt_groups (sort_order, name)',
@@ -3601,10 +2919,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index debtGroupsSyncIdx = Index(
     'debt_groups_sync_idx',
     'CREATE INDEX debt_groups_sync_idx ON debt_groups (updated_at)',
-  );
-  late final Index debtsCustomerIdx = Index(
-    'debts_customer_idx',
-    'CREATE INDEX debts_customer_idx ON debts (customer_id)',
   );
   late final Index debtsGroupIdx = Index(
     'debts_group_idx',
@@ -3643,19 +2957,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-    customers,
     debtGroups,
     debts,
     payments,
     syncQueue,
     syncMetadata,
-    customersNameIdx,
-    customersArchivedIdx,
-    customersSyncIdx,
     debtGroupsSortIdx,
     debtGroupsArchivedIdx,
     debtGroupsSyncIdx,
-    debtsCustomerIdx,
     debtsGroupIdx,
     debtsDueDateIdx,
     debtsArchivedIdx,
@@ -3677,402 +2986,6 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ]);
 }
 
-typedef $$CustomersTableCreateCompanionBuilder = CustomersCompanion Function({
-  required String id,
-  required String name,
-  Value<String?> phone,
-  Value<String?> notes,
-  Value<bool> isArchived,
-  required DateTime createdAt,
-  required DateTime updatedAt,
-  Value<int> version,
-  Value<String> syncState,
-  Value<DateTime?> serverUpdatedAt,
-  Value<int> rowid,
-});
-typedef $$CustomersTableUpdateCompanionBuilder = CustomersCompanion Function({
-  Value<String> id,
-  Value<String> name,
-  Value<String?> phone,
-  Value<String?> notes,
-  Value<bool> isArchived,
-  Value<DateTime> createdAt,
-  Value<DateTime> updatedAt,
-  Value<int> version,
-  Value<String> syncState,
-  Value<DateTime?> serverUpdatedAt,
-  Value<int> rowid,
-});
-
-final class $$CustomersTableReferences
-    extends BaseReferences<_$AppDatabase, $CustomersTable, CustomerRow> {
-  $$CustomersTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static MultiTypedResultKey<$DebtsTable, List<DebtRow>> _debtsRefsTable(
-    _$AppDatabase db,
-  ) => MultiTypedResultKey.fromTable(
-    db.debts,
-    aliasName: 'customers__id__debts__customer_id',
-  );
-
-  $$DebtsTableProcessedTableManager get debtsRefs {
-    final manager = $$DebtsTableTableManager(
-      $_db,
-      $_db.debts,
-    ).filter((f) => f.customerId.id.sqlEquals($_itemColumn<String>('id')!));
-
-    final cache = $_typedResult.readTableOrNull(_debtsRefsTable($_db));
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: cache),
-    );
-  }
-}
-
-class $$CustomersTableFilterComposer
-    extends Composer<_$AppDatabase, $CustomersTable> {
-  $$CustomersTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get phone => $composableBuilder(
-    column: $table.phone,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get notes => $composableBuilder(
-    column: $table.notes,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get isArchived => $composableBuilder(
-    column: $table.isArchived,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get version => $composableBuilder(
-    column: $table.version,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get syncState => $composableBuilder(
-    column: $table.syncState,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get serverUpdatedAt => $composableBuilder(
-    column: $table.serverUpdatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  Expression<bool> debtsRefs(
-    Expression<bool> Function($$DebtsTableFilterComposer f) f,
-  ) {
-    final $$DebtsTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.debts,
-      getReferencedColumn: (t) => t.customerId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DebtsTableFilterComposer(
-            $db: $db,
-            $table: $db.debts,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$CustomersTableOrderingComposer
-    extends Composer<_$AppDatabase, $CustomersTable> {
-  $$CustomersTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<String> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get name => $composableBuilder(
-    column: $table.name,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get phone => $composableBuilder(
-    column: $table.phone,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get notes => $composableBuilder(
-    column: $table.notes,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get isArchived => $composableBuilder(
-    column: $table.isArchived,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get version => $composableBuilder(
-    column: $table.version,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get syncState => $composableBuilder(
-    column: $table.syncState,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get serverUpdatedAt => $composableBuilder(
-    column: $table.serverUpdatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$CustomersTableAnnotationComposer
-    extends Composer<_$AppDatabase, $CustomersTable> {
-  $$CustomersTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<String> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get name =>
-      $composableBuilder(column: $table.name, builder: (column) => column);
-
-  GeneratedColumn<String> get phone =>
-      $composableBuilder(column: $table.phone, builder: (column) => column);
-
-  GeneratedColumn<String> get notes =>
-      $composableBuilder(column: $table.notes, builder: (column) => column);
-
-  GeneratedColumn<bool> get isArchived => $composableBuilder(
-    column: $table.isArchived,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-
-  GeneratedColumn<int> get version =>
-      $composableBuilder(column: $table.version, builder: (column) => column);
-
-  GeneratedColumn<String> get syncState =>
-      $composableBuilder(column: $table.syncState, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get serverUpdatedAt => $composableBuilder(
-    column: $table.serverUpdatedAt,
-    builder: (column) => column,
-  );
-
-  Expression<T> debtsRefs<T extends Object>(
-    Expression<T> Function($$DebtsTableAnnotationComposer a) f,
-  ) {
-    final $$DebtsTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.id,
-      referencedTable: $db.debts,
-      getReferencedColumn: (t) => t.customerId,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$DebtsTableAnnotationComposer(
-            $db: $db,
-            $table: $db.debts,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return f(composer);
-  }
-}
-
-class $$CustomersTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $CustomersTable,
-          CustomerRow,
-          $$CustomersTableFilterComposer,
-          $$CustomersTableOrderingComposer,
-          $$CustomersTableAnnotationComposer,
-          $$CustomersTableCreateCompanionBuilder,
-          $$CustomersTableUpdateCompanionBuilder,
-          (CustomerRow, $$CustomersTableReferences),
-          CustomerRow,
-          PrefetchHooks Function({bool debtsRefs})
-        > {
-  $$CustomersTableTableManager(_$AppDatabase db, $CustomersTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$CustomersTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$CustomersTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$CustomersTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> id = const Value.absent(),
-                Value<String> name = const Value.absent(),
-                Value<String?> phone = const Value.absent(),
-                Value<String?> notes = const Value.absent(),
-                Value<bool> isArchived = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-                Value<int> version = const Value.absent(),
-                Value<String> syncState = const Value.absent(),
-                Value<DateTime?> serverUpdatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => CustomersCompanion(
-                id: id,
-                name: name,
-                phone: phone,
-                notes: notes,
-                isArchived: isArchived,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                version: version,
-                syncState: syncState,
-                serverUpdatedAt: serverUpdatedAt,
-                rowid: rowid,
-              ),
-          createCompanionCallback:
-              ({
-                required String id,
-                required String name,
-                Value<String?> phone = const Value.absent(),
-                Value<String?> notes = const Value.absent(),
-                Value<bool> isArchived = const Value.absent(),
-                required DateTime createdAt,
-                required DateTime updatedAt,
-                Value<int> version = const Value.absent(),
-                Value<String> syncState = const Value.absent(),
-                Value<DateTime?> serverUpdatedAt = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => CustomersCompanion.insert(
-                id: id,
-                name: name,
-                phone: phone,
-                notes: notes,
-                isArchived: isArchived,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-                version: version,
-                syncState: syncState,
-                serverUpdatedAt: serverUpdatedAt,
-                rowid: rowid,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map(
-                (e) => (
-                  e.readTable<$CustomersTable, CustomerRow>(table),
-                  $$CustomersTableReferences(db, table, e),
-                ),
-              )
-              .toList(),
-          prefetchHooksCallback: ({debtsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (debtsRefs) db.debts],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (debtsRefs)
-                    await $_getPrefetchedDataByColumns<
-                      CustomerRow,
-                      $CustomersTable,
-                      DebtRow,
-                      $DebtsTable
-                    >(
-                      currentTable: table,
-                      referencedTable: $$CustomersTableReferences
-                          ._debtsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$CustomersTableReferences(db, table, p0).debtsRefs,
-                      currentColumn: 'id',
-                      referencedColumn: 'customer_id',
-                      typedResults: items,
-                    ),
-                ];
-              },
-            );
-          },
-        ),
-      );
-}
-
-typedef $$CustomersTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $CustomersTable,
-      CustomerRow,
-      $$CustomersTableFilterComposer,
-      $$CustomersTableOrderingComposer,
-      $$CustomersTableAnnotationComposer,
-      $$CustomersTableCreateCompanionBuilder,
-      $$CustomersTableUpdateCompanionBuilder,
-      (CustomerRow, $$CustomersTableReferences),
-      CustomerRow,
-      PrefetchHooks Function({bool debtsRefs})
-    >;
 typedef $$DebtGroupsTableCreateCompanionBuilder = DebtGroupsCompanion Function({
   required String id,
   required String name,
@@ -4511,7 +3424,6 @@ typedef $$DebtGroupsTableProcessedTableManager =
     >;
 typedef $$DebtsTableCreateCompanionBuilder = DebtsCompanion Function({
   required String id,
-  required String customerId,
   Value<String?> groupId,
   required String title,
   required int principalAmount,
@@ -4527,7 +3439,6 @@ typedef $$DebtsTableCreateCompanionBuilder = DebtsCompanion Function({
 });
 typedef $$DebtsTableUpdateCompanionBuilder = DebtsCompanion Function({
   Value<String> id,
-  Value<String> customerId,
   Value<String?> groupId,
   Value<String> title,
   Value<int> principalAmount,
@@ -4545,23 +3456,6 @@ typedef $$DebtsTableUpdateCompanionBuilder = DebtsCompanion Function({
 final class $$DebtsTableReferences
     extends BaseReferences<_$AppDatabase, $DebtsTable, DebtRow> {
   $$DebtsTableReferences(super.$_db, super.$_table, super.$_typedResult);
-
-  static $CustomersTable _customerIdTable(_$AppDatabase db) =>
-      db.customers.createAlias('debts__customer_id__customers__id');
-
-  $$CustomersTableProcessedTableManager get customerId {
-    final $_column = $_itemColumn<String>('customer_id')!;
-
-    final manager = $$CustomersTableTableManager(
-      $_db,
-      $_db.customers,
-    ).filter((f) => f.id.sqlEquals($_column));
-    final item = $_typedResult.readTableOrNull(_customerIdTable($_db));
-    if (item == null) return manager;
-    return ProcessedTableManager(
-      manager.$state.copyWith(prefetchedData: [item]),
-    );
-  }
 
   static $DebtGroupsTable _groupIdTable(_$AppDatabase db) =>
       db.debtGroups.createAlias('debts__group_id__debt_groups__id');
@@ -4661,29 +3555,6 @@ class $$DebtsTableFilterComposer extends Composer<_$AppDatabase, $DebtsTable> {
     column: $table.serverUpdatedAt,
     builder: (column) => ColumnFilters(column),
   );
-
-  $$CustomersTableFilterComposer get customerId {
-    final $$CustomersTableFilterComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.customerId,
-      referencedTable: $db.customers,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CustomersTableFilterComposer(
-            $db: $db,
-            $table: $db.customers,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
 
   $$DebtGroupsTableFilterComposer get groupId {
     final $$DebtGroupsTableFilterComposer composer = $composerBuilder(
@@ -4798,29 +3669,6 @@ class $$DebtsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  $$CustomersTableOrderingComposer get customerId {
-    final $$CustomersTableOrderingComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.customerId,
-      referencedTable: $db.customers,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CustomersTableOrderingComposer(
-            $db: $db,
-            $table: $db.customers,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
   $$DebtGroupsTableOrderingComposer get groupId {
     final $$DebtGroupsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -4893,29 +3741,6 @@ class $$DebtsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  $$CustomersTableAnnotationComposer get customerId {
-    final $$CustomersTableAnnotationComposer composer = $composerBuilder(
-      composer: this,
-      getCurrentColumn: (t) => t.customerId,
-      referencedTable: $db.customers,
-      getReferencedColumn: (t) => t.id,
-      builder:
-          (
-            joinBuilder, {
-            $addJoinBuilderToRootComposer,
-            $removeJoinBuilderFromRootComposer,
-          }) => $$CustomersTableAnnotationComposer(
-            $db: $db,
-            $table: $db.customers,
-            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
-            joinBuilder: joinBuilder,
-            $removeJoinBuilderFromRootComposer:
-                $removeJoinBuilderFromRootComposer,
-          ),
-    );
-    return composer;
-  }
-
   $$DebtGroupsTableAnnotationComposer get groupId {
     final $$DebtGroupsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -4978,11 +3803,7 @@ class $$DebtsTableTableManager
           $$DebtsTableUpdateCompanionBuilder,
           (DebtRow, $$DebtsTableReferences),
           DebtRow,
-          PrefetchHooks Function({
-            bool customerId,
-            bool groupId,
-            bool paymentsRefs,
-          })
+          PrefetchHooks Function({bool groupId, bool paymentsRefs})
         > {
   $$DebtsTableTableManager(_$AppDatabase db, $DebtsTable table)
     : super(
@@ -4998,7 +3819,6 @@ class $$DebtsTableTableManager
           updateCompanionCallback:
               ({
                 Value<String> id = const Value.absent(),
-                Value<String> customerId = const Value.absent(),
                 Value<String?> groupId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<int> principalAmount = const Value.absent(),
@@ -5013,7 +3833,6 @@ class $$DebtsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => DebtsCompanion(
                 id: id,
-                customerId: customerId,
                 groupId: groupId,
                 title: title,
                 principalAmount: principalAmount,
@@ -5030,7 +3849,6 @@ class $$DebtsTableTableManager
           createCompanionCallback:
               ({
                 required String id,
-                required String customerId,
                 Value<String?> groupId = const Value.absent(),
                 required String title,
                 required int principalAmount,
@@ -5045,7 +3863,6 @@ class $$DebtsTableTableManager
                 Value<int> rowid = const Value.absent(),
               }) => DebtsCompanion.insert(
                 id: id,
-                customerId: customerId,
                 groupId: groupId,
                 title: title,
                 principalAmount: principalAmount,
@@ -5067,78 +3884,63 @@ class $$DebtsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback:
-              ({customerId = false, groupId = false, paymentsRefs = false}) {
-                return PrefetchHooks(
-                  db: db,
-                  explicitlyWatchedTables: [if (paymentsRefs) db.payments],
-                  addJoins:
-                      <
-                        T extends TableManagerState<
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic,
-                          dynamic
-                        >
-                      >(state) {
-                        if (customerId) {
-                          state = state.withJoin(
-                            currentTable: table,
-                            currentColumn: table.customerId,
-                            referencedTable: $$DebtsTableReferences
-                                ._customerIdTable(db),
-                            referencedColumn: $$DebtsTableReferences
-                                ._customerIdTable(db)
-                                .id,
-                          ) as T;
-                        }
-                        if (groupId) {
-                          state = state.withJoin(
-                            currentTable: table,
-                            currentColumn: table.groupId,
-                            referencedTable: $$DebtsTableReferences
-                                ._groupIdTable(db),
-                            referencedColumn: $$DebtsTableReferences
-                                ._groupIdTable(db)
-                                .id,
-                          ) as T;
-                        }
-
-                        return state;
-                      },
-                  getPrefetchedDataCallback: (items) async {
-                    return [
-                      if (paymentsRefs)
-                        await $_getPrefetchedDataByColumns<
-                          DebtRow,
-                          $DebtsTable,
-                          PaymentRow,
-                          $PaymentsTable
-                        >(
-                          currentTable: table,
-                          referencedTable: $$DebtsTableReferences
-                              ._paymentsRefsTable(db),
-                          managerFromTypedResult: (p0) =>
-                              $$DebtsTableReferences(
-                                db,
-                                table,
-                                p0,
-                              ).paymentsRefs,
-                          currentColumn: 'id',
-                          referencedColumn: 'debt_id',
-                          typedResults: items,
+          prefetchHooksCallback: ({groupId = false, paymentsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [if (paymentsRefs) db.payments],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (groupId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.groupId,
+                        referencedTable: $$DebtsTableReferences._groupIdTable(
+                          db,
                         ),
-                    ];
+                        referencedColumn: $$DebtsTableReferences
+                            ._groupIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
                   },
-                );
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (paymentsRefs)
+                    await $_getPrefetchedDataByColumns<
+                      DebtRow,
+                      $DebtsTable,
+                      PaymentRow,
+                      $PaymentsTable
+                    >(
+                      currentTable: table,
+                      referencedTable: $$DebtsTableReferences
+                          ._paymentsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$DebtsTableReferences(db, table, p0).paymentsRefs,
+                      currentColumn: 'id',
+                      referencedColumn: 'debt_id',
+                      typedResults: items,
+                    ),
+                ];
               },
+            );
+          },
         ),
       );
 }
@@ -5155,7 +3957,7 @@ typedef $$DebtsTableProcessedTableManager =
       $$DebtsTableUpdateCompanionBuilder,
       (DebtRow, $$DebtsTableReferences),
       DebtRow,
-      PrefetchHooks Function({bool customerId, bool groupId, bool paymentsRefs})
+      PrefetchHooks Function({bool groupId, bool paymentsRefs})
     >;
 typedef $$PaymentsTableCreateCompanionBuilder = PaymentsCompanion Function({
   required String id,
@@ -6038,8 +4840,6 @@ typedef $$SyncMetadataTableProcessedTableManager =
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
-  $$CustomersTableTableManager get customers =>
-      $$CustomersTableTableManager(_db, _db.customers);
   $$DebtGroupsTableTableManager get debtGroups =>
       $$DebtGroupsTableTableManager(_db, _db.debtGroups);
   $$DebtsTableTableManager get debts =>

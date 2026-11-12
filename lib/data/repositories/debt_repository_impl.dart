@@ -5,7 +5,6 @@ import '../../domain/entities/debt.dart';
 import '../../domain/repositories/debt_repository.dart';
 import '../../domain/validation/entity_validation.dart';
 import '../local/app_database.dart';
-import '../local/daos/customer_dao.dart';
 import '../local/daos/debt_dao.dart';
 import '../local/daos/debt_group_dao.dart';
 import '../local/daos/sync_queue_dao.dart';
@@ -21,7 +20,6 @@ class DebtRepositoryImpl implements DebtRepository {
     DateTime Function()? now,
   }) : _db = db,
        _debts = DebtDao(db),
-       _customers = CustomerDao(db),
        _groups = DebtGroupDao(db),
        _queue = syncQueueDao ?? SyncQueueDao(db),
        _uuid = uuid ?? const Uuid(),
@@ -29,7 +27,6 @@ class DebtRepositoryImpl implements DebtRepository {
 
   final AppDatabase _db;
   final DebtDao _debts;
-  final CustomerDao _customers;
   final DebtGroupDao _groups;
   final SyncQueueDao _queue;
   final Uuid _uuid;
@@ -57,18 +54,6 @@ class DebtRepositoryImpl implements DebtRepository {
   }
 
   @override
-  Stream<List<Debt>> watchByCustomer(
-    String customerId, {
-    bool includeArchived = false,
-  }) {
-    return _debts
-        .watchByCustomer(customerId, includeArchived: includeArchived)
-        .map(
-          (rows) => rows.map((row) => row.toDomain()).toList(growable: false),
-        );
-  }
-
-  @override
   Future<Debt?> findById(String id) async {
     final row = await _debts.findById(id);
     return row?.toDomain();
@@ -76,7 +61,6 @@ class DebtRepositoryImpl implements DebtRepository {
 
   @override
   Future<Debt> create({
-    required String customerId,
     String? groupId,
     required String title,
     required int principalAmount,
@@ -99,11 +83,10 @@ class DebtRepositoryImpl implements DebtRepository {
     final normalizedDueDate = normalizeDueDate(dueDate);
 
     return _db.transaction(() async {
-      await _ensureRelationsExist(customerId, groupId);
+      await _ensureGroupExists(groupId);
       final now = _now().toUtc();
       final row = DebtRow(
         id: _uuid.v4(),
-        customerId: customerId,
         groupId: groupId,
         title: normalizedTitle,
         principalAmount: normalizedPrincipal,
@@ -134,7 +117,6 @@ class DebtRepositoryImpl implements DebtRepository {
   Future<Debt> update({
     required String id,
     required int expectedVersion,
-    required String customerId,
     String? groupId,
     required String title,
     required int principalAmount,
@@ -163,12 +145,11 @@ class DebtRepositoryImpl implements DebtRepository {
         expectedVersion: expectedVersion,
         entityName: 'Hutang',
       );
-      await _ensureRelationsExist(customerId, groupId);
+      await _ensureGroupExists(groupId);
 
       final now = _now().toUtc();
       final row = DebtRow(
         id: existing.id,
-        customerId: customerId,
         groupId: groupId,
         title: normalizedTitle,
         principalAmount: normalizedPrincipal,
@@ -217,7 +198,6 @@ class DebtRepositoryImpl implements DebtRepository {
       final now = _now().toUtc();
       final row = DebtRow(
         id: existing.id,
-        customerId: existing.customerId,
         groupId: groupId,
         title: existing.title,
         principalAmount: existing.principalAmount,
@@ -265,7 +245,6 @@ class DebtRepositoryImpl implements DebtRepository {
       final now = _now().toUtc();
       final row = DebtRow(
         id: existing.id,
-        customerId: existing.customerId,
         groupId: existing.groupId,
         title: existing.title,
         principalAmount: existing.principalAmount,
@@ -290,18 +269,6 @@ class DebtRepositoryImpl implements DebtRepository {
       );
       return row.toDomain();
     });
-  }
-
-  Future<void> _ensureRelationsExist(String customerId, String? groupId) async {
-    final customer = await _customers.findById(customerId);
-    if (customer == null) {
-      throw const AppException(
-        code: AppErrorCode.validation,
-        message: 'Pelanggan tidak ditemukan.',
-      );
-    }
-
-    await _ensureGroupExists(groupId);
   }
 
   Future<void> _ensureGroupExists(String? groupId) async {

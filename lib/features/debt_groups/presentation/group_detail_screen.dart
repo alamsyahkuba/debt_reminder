@@ -6,7 +6,6 @@ import '../../../app/navigation.dart';
 import '../../../app/providers.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../domain/entities/customer.dart';
 import '../../../domain/entities/debt.dart';
 import '../../../domain/entities/debt_group.dart';
 import '../../../domain/entities/group_summary.dart';
@@ -42,8 +41,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
         GroupSummary.empty;
     final debts =
         ref.watch(debtsByGroupProvider(widget.groupId)).value ?? const <Debt>[];
-    final customers =
-        ref.watch(allCustomersProvider).value ?? const <Customer>[];
     final groups =
         ref.watch(groupListProvider(false)).value ?? const <DebtGroup>[];
 
@@ -69,7 +66,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
             group: group,
             summary: summary,
             debts: debts,
-            customers: customers,
             groups: groups,
           );
         },
@@ -82,14 +78,10 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     required DebtGroup group,
     required GroupSummary summary,
     required List<Debt> debts,
-    required List<Customer> customers,
     required List<DebtGroup> groups,
   }) {
     final theme = Theme.of(context);
     final color = groupColorFromHex(group.color, theme.colorScheme.primary);
-    final customerNames = <String, String>{
-      for (final customer in customers) customer.id: customer.name,
-    };
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -211,7 +203,6 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           for (final debt in debts)
             DebtListTile(
               debt: debt,
-              customerName: customerNames[debt.customerId],
               onMoveGroup: _busy ? null : () => _moveDebt(debt, groups),
             ),
       ],

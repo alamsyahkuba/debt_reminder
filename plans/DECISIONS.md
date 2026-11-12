@@ -220,7 +220,7 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 
 - **Tanggal:** 12 November 2026
 - **Status:** Disetujui owner; public RPC implemented in Sprint 01R; public
-  Flutter mode still pending
+  Flutter read-only mode/pull pending Sprint 07
 - **Konteks:** Owner memutuskan aplikasi hanya memiliki owner/admin dan publik.
   Publik harus dapat melihat data tanpa login.
 - **Keputusan:**
@@ -239,8 +239,8 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 ## D-014 — Hapus customer dan read-only device enrollment
 
 - **Tanggal:** 12 November 2026
-- **Status:** Disetujui owner; cloud removal done in Sprint 01R; local cleanup
-  pending Sprint 02R/03R
+- **Status:** Disetujui owner; cloud removal done in Sprint 01R and local
+  cleanup done in Sprint 02R/03R
 - **Konteks:** Owner menyederhanakan produk menjadi group, hutang, dan
   pembayaran, serta memilih public read langsung.
 - **Keputusan:**
@@ -255,8 +255,8 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 ## D-015 — Reset database dan local schema v2
 
 - **Tanggal:** 12 November 2026
-- **Status:** Disetujui owner; cloud reset done in Sprint 01R; local SQLite
-  reset pending Sprint 02R/03R
+- **Status:** Disetujui owner; cloud reset and local SQLite reset done in
+  Sprint 01R/02R
 - **Konteks:** Schema lama memuat customers/read_devices dan tidak sesuai
   produk baru. Belum ada data produksi.
 - **Keputusan:**

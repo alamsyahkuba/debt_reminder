@@ -237,7 +237,6 @@ class DebtGroupRepositoryImpl implements DebtGroupRepository {
       for (final debt in debts) {
         final updated = DebtRow(
           id: debt.id,
-          customerId: debt.customerId,
           groupId: null,
           title: debt.title,
           principalAmount: debt.principalAmount,

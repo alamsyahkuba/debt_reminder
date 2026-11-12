@@ -1,47 +1,54 @@
 # Sprint 02 — Local Database & Repository
 
-> **Revised 12 November 2026:** local schema must be reset without customers and
-> read-only device data. Public clients use pull-only; admin mutations use the
-> outbox.
+> **Sprint 02R complete (13 November 2026):** local schema reset without
+> customers; customer data layer and device-token artifacts removed. Public
+> clients use pull-only; admin mutations use the outbox.
 
 ## Goal
 Implement the revised Drift database, domain models, repositories, public pull,
 and local-first read/write foundation.
 
 ## Tasks
-- [ ] Define Drift tables for groups, debts, payments, sync queue, and sync
+- [x] Define Drift tables for groups, debts, payments, sync queue, and sync
       metadata. Do not define customers.
-- [ ] Remove `customer_id` from local debts.
-- [ ] Add local sync metadata and outbox table for admin mutations only.
-- [ ] Configure DB location, lifecycle, and reset/migration strategy.
-- [ ] Generate Drift code.
-- [ ] Create domain entities and repository interfaces for groups, debts, and
+- [x] Remove `customer_id` from local debts.
+- [x] Add local sync metadata and outbox table for admin mutations only.
+- [x] Configure DB location, lifecycle, and reset/migration strategy.
+- [x] Generate Drift code.
+- [x] Create domain entities and repository interfaces for groups, debts, and
       payments.
-- [ ] Implement local DAOs.
-- [ ] Implement repository reads as Drift streams.
-- [ ] Implement atomic admin writes + outbox insertion.
-- [ ] Implement public pull merge without creating outbox entries.
-- [ ] Remove customer repository/entity/DAO and customer screens/tests.
-- [ ] Add unit/repository tests for revised entities and public pull.
-- [ ] Add development seed data for groups, debts, and payments only.
+- [x] Implement local DAOs.
+- [x] Implement repository reads as Drift streams.
+- [x] Implement atomic admin writes + outbox insertion.
+- [ ] Implement public pull merge without creating outbox entries
+      (Sprint 07).
+- [x] Remove customer repository/entity/DAO and customer screens/tests.
+- [x] Add unit/repository tests for revised entities and public pull.
+- [x] Add development seed data for groups, debts, and payments only.
 
 ## Acceptance criteria
-- App opens with the revised local DB.
-- No customer table/entity/repository exists.
-- Local group/debt/payment data can be queried reactively.
-- Admin entity mutation and outbox insert are atomic.
-- Public pull does not create outbox entries.
-- DB reset/migration tests pass.
-- UI does not call Supabase directly.
+- [x] App opens with the revised local DB.
+- [x] No customer table/entity/repository exists.
+- [x] Local group/debt/payment data can be queried reactively.
+- [x] Admin entity mutation and outbox insert are atomic.
+- [ ] Public pull does not create outbox entries (Sprint 07).
+- [x] DB reset/migration tests pass.
+- [x] UI does not call Supabase directly.
 
-## Verification (existing implementation, superseded)
+## Verification (13 November 2026)
 
-| Check | Previous result |
+| Check | Result |
 |---|---|
-| `flutter test` | 34 tests under customer/device-enrollment model |
-| `flutter build apk --debug` | Passed under old schema |
-| Local schema | v1 with customers; not compliant with revised plan |
-| Public pull | Not implemented |
-| Outbox | Admin/customer writes only; must be revised |
+| `dart run build_runner build` | Passed; Drift schema v2 generated |
+| `dart format --output=none --set-exit-if-changed .` | Passed |
+| `flutter analyze` | Passed, no issues |
+| `flutter test` | Passed; 32 tests |
+| `flutter build apk --debug` | Passed |
+| Schema v2 | Passed; `customers` and `customer_id` absent |
+| Destructive v1→v2 migration | Passed; old customer schema dropped and recreated |
+| Atomic entity + outbox write | Passed; forced outbox failure rolled back entity |
+| Public pull | Not implemented yet; public pull/UI is Sprint 07 |
+| UI direct Supabase access | None |
 
-The existing implementation must be reset and the tests updated.
+Known limitation: public pull/UI mode is scheduled with Sprint 07; the local
+schema and repository boundary are ready.

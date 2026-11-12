@@ -42,25 +42,6 @@ class DebtDao {
     return query.watch();
   }
 
-  Stream<List<DebtRow>> watchByCustomer(
-    String customerId, {
-    bool includeArchived = false,
-  }) {
-    final query = _db.select(_db.debts);
-    query.where((table) {
-      var predicate = table.customerId.equals(customerId);
-      if (!includeArchived) {
-        predicate = predicate & table.isArchived.equals(false);
-      }
-      return predicate;
-    });
-    query.orderBy([
-      (table) => OrderingTerm.asc(table.dueDate),
-      (table) => OrderingTerm.asc(table.createdAt),
-    ]);
-    return query.watch();
-  }
-
   Future<List<DebtRow>> listByGroup(
     String groupId, {
     bool includeArchived = true,
@@ -89,7 +70,6 @@ class DebtDao {
         .insertOnConflictUpdate(
           DebtsCompanion(
             id: Value(row.id),
-            customerId: Value(row.customerId),
             groupId: Value(row.groupId),
             title: Value(row.title),
             principalAmount: Value(row.principalAmount),

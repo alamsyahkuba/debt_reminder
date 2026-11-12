@@ -1,42 +1,44 @@
 # Sprint 03 — Groups (Customer Scope Removed)
 
-> **Revised 12 November 2026:** customer management is removed. Group features
-> remain. The filename is kept to avoid creating a new plan file.
+> **Sprint 03R complete (13 November 2026):** customer management is removed.
+> Group features remain. The filename is kept to avoid creating a new plan file.
 
 ## Goal
 Implement and finish simple group management on the revised group/debt/payment
 model.
 
 ## Tasks
-- [ ] Group domain entity, validation, repository, DAO.
-- [ ] Group list screen with color/icon/sort order.
-- [ ] Group create/edit form.
-- [ ] Group detail summary and debt list.
-- [ ] Archive/restore group.
-- [ ] Delete group with explicit Unassigned debt behavior and confirmation.
-- [ ] Move debt to/from group action.
-- [ ] Remove all customer screens, providers, routes, repository, entity, DAO,
+- [x] Group domain entity, validation, repository, DAO.
+- [x] Group list screen with color/icon/sort order.
+- [x] Group create/edit form.
+- [x] Group detail summary and debt list.
+- [x] Archive/restore group.
+- [x] Delete group with explicit Unassigned debt behavior and confirmation.
+- [x] Move debt to/from group action.
+- [x] Remove all customer screens, providers, routes, repository, entity, DAO,
       and tests.
-- [ ] Remove customer references from group summaries and navigation.
-- [ ] Empty/loading/error/offline states for group screens.
-- [ ] Tests for group behavior and public read.
+- [x] Remove customer references from group summaries and navigation.
+- [x] Empty/loading/error/offline states for group screens.
+- [x] Tests for group behavior and customer-free data flow.
 
 ## Acceptance criteria
-- Group has no parent/subgroup.
-- Group can be created offline and appears immediately.
-- Group archive preserves debts.
-- Group delete never deletes debts.
-- There is no customer menu, screen, entity, or route.
-- Local group operations create outbox records.
-- Public users can read groups without mutation access.
+- [x] Group has no parent/subgroup.
+- [x] Group can be created offline and appears immediately.
+- [x] Group archive preserves debts.
+- [x] Group delete never deletes debts.
+- [x] There is no customer menu, screen, entity, or route.
+- [x] Local group operations create outbox records.
+- [ ] Public read-only UI mode and public pull — scheduled with Sprint 07.
 
-## Existing implementation (superseded in part)
+## Verification (13 November 2026)
 
-Group UI and repository behavior were implemented under the previous plan and
-can be retained selectively. Customer list/form/detail/search/archive and
-customer summaries are removed by the revised plan.
-
-## Verification
-
-The previous group/customer test suite is historical. Revised verification must
-run after customer removal and public read integration.
+| Check | Result |
+|---|---|
+| `flutter analyze` | Passed, no issues |
+| `flutter test` | Passed; 32 tests |
+| `flutter build apk --debug` | Passed |
+| Group create/edit/archive | Passed |
+| Group delete | Passed; debts moved to Unassigned, not deleted |
+| Customer removal | Passed; no customer files/routes/tests |
+| Group flow widget tests | Passed |
+| Public mode | Deferred to Sprint 07 |

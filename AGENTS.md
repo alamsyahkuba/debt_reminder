@@ -48,10 +48,10 @@ If any required file is missing, do not invent its contents. Report the missing 
 
 ### Current implementation note
 
-Sprint 01R has reworked the cloud schema: customers/`read_devices` are removed,
-public read-only RPCs exist, and RLS/tests are updated. The Flutter app and
-local Drift schema still contain the superseded customer model. Sprint 02R/03R
-must remove local customer data/UI/tests and reset SQLite before later sprints.
+Sprint 01R–03R are complete: the cloud schema, local Drift schema, repositories,
+UI, and tests no longer contain customers or device enrollment. Public read-only
+RPCs exist on the backend; public Flutter read-only mode and online pull remain
+part of Sprint 07. The project is ready for Sprint 04.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.
@@ -260,10 +260,13 @@ If the repository is empty or only contains planning files:
 4. Wait for owner approval unless the owner explicitly requested autonomous execution.
 5. Implement Sprint 00 only.
 
-If the repository already contains the superseded Sprint 00–03 implementation:
+If the repository contains customer/`read_devices`/device-enrollment artifacts:
 
 1. Do not continue to Sprint 04+ yet.
 2. Read the revised plan and `plans/STATUS.md`.
 3. Propose/perform the planned rework: remove customers and device enrollment,
    reset schemas, add public read-only RPCs, and update local repositories/UI/tests.
 4. Do not claim a sprint complete until the revised acceptance tests pass.
+
+If the rework is complete (no customer/device artifacts; revised tests pass),
+proceed with Sprint 04 only after owner approval.

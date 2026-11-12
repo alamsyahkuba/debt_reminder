@@ -32,7 +32,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('dashboard-screen')), findsOneWidget);
-    expect(await database.select(database.customers).get(), isEmpty);
+    expect(await database.select(database.debtGroups).get(), isEmpty);
   });
 
   testWidgets('flag development mengisi seed demo tanpa outbox', (
@@ -59,7 +59,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(await database.select(database.customers).get(), hasLength(1));
+    expect(await database.select(database.debtGroups).get(), hasLength(2));
+    expect(await database.select(database.debts).get(), hasLength(2));
+    expect(await database.select(database.payments).get(), hasLength(1));
     expect(await database.select(database.syncQueue).get(), isEmpty);
   });
 }

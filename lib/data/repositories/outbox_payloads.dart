@@ -1,47 +1,7 @@
-import '../../domain/entities/customer.dart';
 import '../../domain/entities/debt.dart';
 import '../../domain/entities/debt_group.dart';
 import '../../domain/entities/payment.dart';
 import 'repository_support.dart';
-
-Map<String, Object?> customerCreatePayload(Customer customer) {
-  return <String, Object?>{
-    'id': customer.id,
-    'name': customer.name,
-    'phone': customer.phone,
-    'notes': customer.notes,
-    'is_archived': customer.isArchived,
-    'created_at': timestampString(customer.createdAt),
-    'updated_at': timestampString(customer.updatedAt),
-    'version': customer.version,
-  };
-}
-
-Map<String, Object?> customerUpdatePayload(
-  Customer customer,
-  int expectedVersion,
-) {
-  return <String, Object?>{
-    'id': customer.id,
-    'expected_version': expectedVersion,
-    'name': customer.name,
-    'phone': customer.phone,
-    'notes': customer.notes,
-    'is_archived': customer.isArchived,
-    'updated_at': timestampString(customer.updatedAt),
-  };
-}
-
-Map<String, Object?> customerArchivePayload(
-  Customer customer,
-  int expectedVersion,
-) {
-  return <String, Object?>{
-    'id': customer.id,
-    'expected_version': expectedVersion,
-    'is_archived': customer.isArchived,
-  };
-}
 
 Map<String, Object?> debtGroupCreatePayload(DebtGroup group) {
   return <String, Object?>{
@@ -100,7 +60,6 @@ Map<String, Object?> debtGroupDeletePayload(
 Map<String, Object?> debtCreatePayload(Debt debt) {
   return <String, Object?>{
     'id': debt.id,
-    'customer_id': debt.customerId,
     'group_id': debt.groupId,
     'title': debt.title,
     'principal_amount': debt.principalAmount,
@@ -117,7 +76,6 @@ Map<String, Object?> debtUpdatePayload(Debt debt, int expectedVersion) {
   return <String, Object?>{
     'id': debt.id,
     'expected_version': expectedVersion,
-    'customer_id': debt.customerId,
     'group_id': debt.groupId,
     'title': debt.title,
     'principal_amount': debt.principalAmount,

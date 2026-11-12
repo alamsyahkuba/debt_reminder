@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/config/app_config.dart';
 import '../data/local/app_database.dart';
 import '../data/local/dev_seed.dart';
-import '../data/repositories/customer_repository_impl.dart';
 import '../data/repositories/debt_group_repository_impl.dart';
 import '../data/repositories/debt_repository_impl.dart';
 import '../data/repositories/payment_repository_impl.dart';
-import '../domain/repositories/customer_repository.dart';
 import '../domain/repositories/debt_group_repository.dart';
 import '../domain/repositories/debt_repository.dart';
 import '../domain/repositories/payment_repository.dart';
@@ -38,10 +36,6 @@ final databaseReadyProvider = FutureProvider<void>((ref) async {
   if (config.environment == AppEnvironment.development && config.seedDemoData) {
     await seedDevelopmentData(database);
   }
-});
-
-final customerRepositoryProvider = Provider<CustomerRepository>((ref) {
-  return CustomerRepositoryImpl(ref.watch(appDatabaseProvider));
 });
 
 final debtGroupRepositoryProvider = Provider<DebtGroupRepository>((ref) {
