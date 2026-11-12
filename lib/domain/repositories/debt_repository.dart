@@ -1,7 +1,12 @@
 import '../entities/debt.dart';
+import '../entities/debt_overview.dart';
 
 abstract interface class DebtRepository {
   Stream<List<Debt>> watchAll({bool includeArchived = false});
+
+  Stream<List<DebtOverview>> watchOverviews({bool includeArchived = false});
+
+  Stream<DebtOverview?> watchOverviewById(String id);
 
   Stream<List<Debt>> watchByGroup(
     String? groupId, {

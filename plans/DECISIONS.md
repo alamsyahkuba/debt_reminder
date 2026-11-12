@@ -268,3 +268,22 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
     outbox.
 - **Konsekuensi:** Data lama akan hilang; ini disetujui karena aplikasi belum
   release. Semua test dan dokumentasi harus disesuaikan.
+
+## D-016 — Status hutang diturunkan dari pembayaran dan due date
+
+- **Tanggal:** 13 November 2026
+- **Status:** Diadopsi untuk Sprint 04
+- **Konteks:** Status hutang tidak boleh menjadi sumber kebenaran terpisah yang
+  bisa tidak sinkron dengan pembayaran.
+- **Keputusan:**
+  - `paidAmount` adalah jumlah pembayaran per hutang.
+  - `outstandingAmount` = max(principal - paidAmount, 0).
+  - Status:
+    - `paid` jika paidAmount >= principal.
+    - `overdue` jika belum lunas dan due date sebelum hari ini.
+    - `partial` jika paidAmount > 0.
+    - `unpaid` jika belum ada pembayaran.
+  - UI menggunakan `DebtOverview` yang dihitung dari entity debt + total
+    pembayaran, bukan kolom status mutable.
+- **Konsekuensi:** Daftar/detail hutang dan dashboard harus memakai perhitungan
+  yang sama; payment history tetap append-only.

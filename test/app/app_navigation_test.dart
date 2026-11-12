@@ -3,8 +3,10 @@ import 'package:debt_reminder/app/navigation.dart';
 import 'package:debt_reminder/app/providers.dart';
 import 'package:debt_reminder/core/config/app_config.dart';
 import 'package:debt_reminder/domain/entities/debt_group.dart';
+import 'package:debt_reminder/domain/entities/debt_overview.dart';
 import 'package:debt_reminder/domain/entities/group_summary.dart';
 import 'package:debt_reminder/features/debt_groups/application/group_providers.dart';
+import 'package:debt_reminder/features/debts/application/debt_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +28,12 @@ Future<void> _pumpApp(WidgetTester tester) async {
         ),
         groupSummariesProvider.overrideWith(
           (ref) => Stream<Map<String, GroupSummary>>.value(const {}),
+        ),
+        debtOverviewsProvider.overrideWith(
+          (ref, includeArchived) => Stream<List<DebtOverview>>.value(const []),
+        ),
+        allGroupsProvider.overrideWith(
+          (ref) => Stream<List<DebtGroup>>.value(const []),
         ),
       ],
       child: const DebtReminderApp(),

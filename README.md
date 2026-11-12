@@ -22,8 +22,9 @@ pada 12 November 2026:
 
 Sprint 01R sudah menyelesaikan rework cloud: schema tanpa customers/read_devices,
 public read RPC, dan RLS read-only. Sprint 02R/03R sudah membersihkan schema
-lokal, repository, UI, dan test customer. Public Flutter pull/read-only mode
-tetap dijadwalkan Sprint 07. Proyek siap melanjutkan ke Sprint 04.
+lokal, repository, UI, dan test customer. Sprint 04 sudah menambahkan debt
+management lengkap tanpa customer. Public Flutter pull/read-only mode tetap
+dijadwalkan Sprint 07. Proyek siap melanjutkan ke Sprint 05.
 Lihat [`plans/STATUS.md`](plans/STATUS.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).

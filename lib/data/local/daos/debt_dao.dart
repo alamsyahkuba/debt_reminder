@@ -2,10 +2,80 @@ import 'package:drift/drift.dart';
 
 import '../app_database.dart';
 
+class DebtWithPaidRow {
+  const DebtWithPaidRow({required this.debt, required this.paidAmount});
+
+  final DebtRow debt;
+  final int paidAmount;
+}
+
 class DebtDao {
   DebtDao(this._db);
 
   final AppDatabase _db;
+
+  Stream<List<DebtWithPaidRow>> watchOverviews({bool includeArchived = false}) {
+    final archivedFilter = includeArchived ? '' : 'WHERE d.is_archived = 0';
+    final query = _db.customSelect(
+      '''
+      SELECT d.*, COALESCE(paid.paid_total, 0) AS paid_total
+      FROM debts d
+      LEFT JOIN (
+        SELECT debt_id, SUM(amount) AS paid_total
+        FROM payments
+        GROUP BY debt_id
+      ) paid ON paid.debt_id = d.id
+      $archivedFilter
+      ORDER BY d.due_date IS NULL, d.due_date, d.created_at DESC
+      ''',
+      readsFrom: {_db.debts, _db.payments},
+    );
+
+    return query.watch().map(
+      (rows) => rows.map(_mapOverview).toList(growable: false),
+    );
+  }
+
+  Stream<DebtWithPaidRow?> watchOverviewById(String id) {
+    final query = _db.customSelect(
+      '''
+      SELECT d.*, COALESCE(paid.paid_total, 0) AS paid_total
+      FROM debts d
+      LEFT JOIN (
+        SELECT debt_id, SUM(amount) AS paid_total
+        FROM payments
+        GROUP BY debt_id
+      ) paid ON paid.debt_id = d.id
+      WHERE d.id = ?
+      ''',
+      variables: [Variable.withString(id)],
+      readsFrom: {_db.debts, _db.payments},
+    );
+
+    return query.watchSingleOrNull().map(
+      (row) => row == null ? null : _mapOverview(row),
+    );
+  }
+
+  DebtWithPaidRow _mapOverview(QueryRow row) {
+    return DebtWithPaidRow(
+      debt: DebtRow(
+        id: row.read<String>('id'),
+        groupId: row.read<String?>('group_id'),
+        title: row.read<String>('title'),
+        principalAmount: row.read<int>('principal_amount'),
+        dueDate: row.read<DateTime?>('due_date'),
+        notes: row.read<String?>('notes'),
+        isArchived: row.read<int>('is_archived') == 1,
+        createdAt: row.read<DateTime>('created_at'),
+        updatedAt: row.read<DateTime>('updated_at'),
+        version: row.read<int>('version'),
+        syncState: row.read<String>('sync_state'),
+        serverUpdatedAt: row.read<DateTime?>('server_updated_at'),
+      ),
+      paidAmount: row.read<int>('paid_total'),
+    );
+  }
 
   Stream<List<DebtRow>> watchAll({bool includeArchived = false}) {
     final query = _db.select(_db.debts);

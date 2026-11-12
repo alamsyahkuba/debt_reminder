@@ -6,6 +6,8 @@ import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/debt_groups/presentation/group_detail_screen.dart';
 import '../features/debt_groups/presentation/group_form_screen.dart';
 import '../features/debt_groups/presentation/groups_screen.dart';
+import '../features/debts/presentation/debt_detail_screen.dart';
+import '../features/debts/presentation/debt_form_screen.dart';
 import '../features/debts/presentation/debts_screen.dart';
 import '../features/reminders/presentation/reminders_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
@@ -20,6 +22,22 @@ GoRouter createAppRouter() {
     initialLocation: AppRoutes.dashboard,
     routes: <RouteBase>[
       GoRoute(path: '/', redirect: (context, state) => AppRoutes.dashboard),
+      GoRoute(
+        path: AppRoutes.debtNew,
+        builder: (context, state) => const DebtFormScreen(),
+      ),
+      GoRoute(
+        path: '/debts/:debtId',
+        builder: (context, state) =>
+            DebtDetailScreen(debtId: state.pathParameters['debtId']!),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'edit',
+            builder: (context, state) =>
+                DebtFormScreen(debtId: state.pathParameters['debtId']!),
+          ),
+        ],
+      ),
       GoRoute(
         path: AppRoutes.groupNew,
         builder: (context, state) => const GroupFormScreen(),

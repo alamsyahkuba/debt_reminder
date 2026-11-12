@@ -5,7 +5,8 @@
 Plan revised on 12 November 2026: two roles (owner/admin and public), no
 customer entity, groups retained, all business data public, admin PIN retained,
 device enrollment removed, and database reset approved. Cloud rework (Sprint
-01R) and local rework (Sprint 02R/03R) are complete. Ready for Sprint 04.
+01R), local rework (Sprint 02R/03R), and Sprint 04 debt management are complete.
+Ready for Sprint 05.
 
 ## Sprint status
 
@@ -17,7 +18,8 @@ device enrollment removed, and database reset approved. Cloud rework (Sprint
       customers removed, 32 Flutter tests pass; public pull deferred to Sprint 07)
 - [x] Sprint 03 — Groups (Sprint 03R: group UI retained, customer UI/tests
       removed; public read-only UI deferred to Sprint 07)
-- [ ] Sprint 04 — Debt management
+- [x] Sprint 04 — Debt management (debt form/list/detail/search/filter/sort,
+      derived status, archive)
 - [ ] Sprint 05 — Payments & dashboard
 - [ ] Sprint 06 — Admin PIN & sessions
 - [ ] Sprint 07 — Offline sync
@@ -63,6 +65,18 @@ device enrollment removed, and database reset approved. Cloud rework (Sprint
 - Group flow and group-management tests pass.
 - Public read-only UI/pull behavior remains part of the sync/public-mode work in
   Sprint 07.
+
+### Sprint 04 — Debt management (complete)
+
+- Debt list with search by title/notes, group/status/due filters, and sorting.
+- Debt create/edit form without customer selector.
+- Debt detail with group, principal, paid, outstanding, due date, notes, and
+  payment history.
+- Derived `unpaid`/`partial`/`paid`/`overdue` status from payments and due date.
+- Archive/restore and move-group actions.
+- Group detail debt rows navigate to debt detail.
+- Repository/UI tests cover debt creation, search, status, payment history, and
+  archive.
 
 ## Required revision work
 
@@ -133,11 +147,13 @@ deno fmt --check / deno check / deno lint / deno test                           
 Flutter (Sprint 02R/03R):
 ```text
 flutter analyze                                                                                      no issues
-flutter test                                                                                         passed, 32 tests
+flutter test                                                                                         passed, 36 tests
 flutter build apk --debug                                                                            passed
   - schema v2 + no customers                                                                          passed
   - destructive v1→v2 migration                                                                      passed
-  - group/debt/payment repository + group flow tests                                                  passed
+  - group/debt/payment repository tests                                                               passed
+  - debt overview/status tests                                                                       passed
+  - group and debt flow widget tests                                                                 passed
 ```
 
 ## Blockers / known limitations
@@ -163,7 +179,8 @@ flutter build apk --debug                                                       
 - Group deletion moves debts to Unassigned and never deletes history.
 - Local-first with Drift and atomic outbox for admin mutations.
 - Database reset is approved because the app is pre-release.
-- See `plans/DECISIONS.md`, especially D-013, D-014, and D-015.
+- Debt paid/outstanding/status is derived from payments and due date.
+- See `plans/DECISIONS.md`, especially D-013, D-014, D-015, and D-016.
 
 ## Owner decisions still pending
 
@@ -178,6 +195,5 @@ retained, admin PIN retained, device enrollment removed, database reset.
 
 ## Next step
 
-Request owner approval to start Sprint 04 (Debt management) on the revised
-group/debt/payment model. Public read-only UI and pull behavior are implemented
-in Sprint 07.
+Request owner approval to start Sprint 05 (Payments & dashboard). Public
+read-only UI and pull behavior remain scheduled for Sprint 07.

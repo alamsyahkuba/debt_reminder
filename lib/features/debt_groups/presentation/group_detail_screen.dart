@@ -203,6 +203,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           for (final debt in debts)
             DebtListTile(
               debt: debt,
+              onTap: () => context.push(AppRoutes.debtDetail(debt.id)),
               onMoveGroup: _busy ? null : () => _moveDebt(debt, groups),
             ),
       ],

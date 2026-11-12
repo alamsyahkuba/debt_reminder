@@ -11,6 +11,10 @@ abstract final class AppRoutes {
   static const String groupNew = '/groups/new';
   static String groupDetail(String id) => '/groups/$id';
   static String groupEdit(String id) => '/groups/$id/edit';
+
+  static const String debtNew = '/debts/new';
+  static String debtDetail(String id) => '/debts/$id';
+  static String debtEdit(String id) => '/debts/$id/edit';
 }
 
 @immutable

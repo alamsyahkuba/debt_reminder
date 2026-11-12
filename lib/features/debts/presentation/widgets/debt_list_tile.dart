@@ -8,12 +8,14 @@ class DebtListTile extends StatelessWidget {
   const DebtListTile({
     required this.debt,
     this.groupName,
+    this.onTap,
     this.onMoveGroup,
     super.key,
   });
 
   final Debt debt;
   final String? groupName;
+  final VoidCallback? onTap;
   final VoidCallback? onMoveGroup;
 
   @override
@@ -30,6 +32,7 @@ class DebtListTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
+        onTap: onTap,
         leading: CircleAvatar(
           backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
           child: Icon(

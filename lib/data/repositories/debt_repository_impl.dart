@@ -2,6 +2,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/errors/app_exception.dart';
 import '../../domain/entities/debt.dart';
+import '../../domain/entities/debt_overview.dart';
 import '../../domain/repositories/debt_repository.dart';
 import '../../domain/validation/entity_validation.dart';
 import '../local/app_database.dart';
@@ -31,6 +32,38 @@ class DebtRepositoryImpl implements DebtRepository {
   final SyncQueueDao _queue;
   final Uuid _uuid;
   final DateTime Function() _now;
+
+  @override
+  Stream<List<DebtOverview>> watchOverviews({bool includeArchived = false}) {
+    return _debts
+        .watchOverviews(includeArchived: includeArchived)
+        .map(
+          (rows) => rows
+              .map(
+                (row) => DebtOverview.fromDebt(
+                  row.debt.toDomain(),
+                  paidAmount: row.paidAmount,
+                  today: _now(),
+                ),
+              )
+              .toList(growable: false),
+        );
+  }
+
+  @override
+  Stream<DebtOverview?> watchOverviewById(String id) {
+    return _debts
+        .watchOverviewById(id)
+        .map(
+          (row) => row == null
+              ? null
+              : DebtOverview.fromDebt(
+                  row.debt.toDomain(),
+                  paidAmount: row.paidAmount,
+                  today: _now(),
+                ),
+        );
+  }
 
   @override
   Stream<List<Debt>> watchAll({bool includeArchived = false}) {
