@@ -75,11 +75,12 @@ kembali ke mode publik/read-only.
 - Admin only.
 
 ### Admin PIN
-- Numeric keypad atau secure input.
-- Rate-limit feedback.
-- No PIN in logs.
+- Secure input 6 digit; PIN tidak pernah ditampilkan atau dicatat.
+- Verifikasi dilakukan server; offline unlock tidak tersedia.
+- Rate-limit feedback (5 percobaan gagal, lock 15 menit).
 - Error generic enough not to expose internals.
-- Session expiry/lock option.
+- Session expiry 15 menit, lock manual, dan perubahan PIN.
+- Sesi aktif membuka aksi mutasi; tanpa sesi aplikasi bersifat read-only.
 
 ### Settings
 - Reminder schedule.

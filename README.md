@@ -24,9 +24,10 @@ Sprint 01R sudah menyelesaikan rework cloud: schema tanpa customers/read_devices
 public read RPC, dan RLS read-only. Sprint 02R/03R sudah membersihkan schema
 lokal, repository, UI, dan test customer. Sprint 04 menambahkan debt management
 lengkap tanpa customer. Sprint 05 menambahkan form pembayaran, penolakan
-overpayment, histori append-only, dan dashboard turunan. Public Flutter
-pull/read-only mode tetap dijadwalkan Sprint 07. Proyek siap melanjutkan ke
-Sprint 06.
+overpayment, histori append-only, dan dashboard turunan. Sprint 06 menambahkan
+PIN admin 6 digit, sesi server 15 menit, rate limit, secure storage, route
+guard, dan perubahan PIN. Public Flutter pull/read-only mode tetap dijadwalkan
+Sprint 07. Proyek siap melanjutkan ke Sprint 07.
 Lihat [`plans/STATUS.md`](plans/STATUS.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
@@ -45,7 +46,9 @@ flutter pub get
 flutter run
 ```
 
-Aplikasi dapat berjalan tanpa konfigurasi Supabase pada tahap fondasi ini.
+Aplikasi tetap dapat membaca data lokal tanpa konfigurasi Supabase. Login admin
+membutuhkan `SUPABASE_URL`, anon key, dan Edge Function `admin-pin` yang sudah
+dikonfigurasi; lihat [`supabase/README.md`](supabase/README.md).
 
 ## Konfigurasi environment
 

@@ -319,10 +319,12 @@ select extensions.throws_ok(
 );
 select extensions.lives_ok(
   $sql$
-    insert into public.admin_settings (pin_hash, pin_hash_algorithm)
-    values (repeat('a', 64), 'argon2id')
+    update public.admin_settings
+    set pin_hash = repeat('a', 64),
+        pin_hash_algorithm = 'argon2id'
+    where id = '00000000-0000-0000-0000-000000000001'::uuid
   $sql$,
-  'baris admin_settings dapat dibuat'
+  'baris admin_settings dapat diperbarui'
 );
 select extensions.throws_ok(
   $sql$

@@ -4,10 +4,13 @@ import 'package:debt_reminder/data/local/app_database.dart';
 import 'package:debt_reminder/data/repositories/debt_group_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/debt_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/payment_repository_impl.dart';
+import 'package:debt_reminder/features/admin/application/admin_providers.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/fake_admin_session_store.dart';
 
 DateTime _fixedNow() => DateTime.utc(2026, 11, 12, 10);
 
@@ -50,7 +53,12 @@ class _Harness {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(database)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          adminSessionStoreProvider.overrideWithValue(
+            FakeAdminSessionStore.unlocked(),
+          ),
+        ],
         child: const DebtReminderApp(),
       ),
     );

@@ -11,11 +11,13 @@ import '../../../domain/entities/debt.dart';
 import '../../../domain/entities/debt_group.dart';
 import '../../../domain/entities/debt_overview.dart';
 import '../../../domain/entities/payment.dart';
+import '../../../shared/widgets/admin_locked_banner.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_state.dart';
 import '../../../shared/widgets/metric_card.dart';
+import '../../admin/application/admin_providers.dart';
 import '../application/debt_providers.dart';
 import 'widgets/debt_status_chip.dart';
 
@@ -40,6 +42,7 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
         ref.watch(paymentsByDebtProvider(widget.debtId)).value ??
         const <Payment>[];
     final groups = ref.watch(allGroupsProvider).value ?? const <DebtGroup>[];
+    final isAdmin = ref.watch(adminUnlockedProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Detail Hutang')),
@@ -64,6 +67,7 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
             overview: overview,
             payments: payments,
             groups: groups,
+            canManage: isAdmin,
           );
         },
       ),
@@ -75,6 +79,7 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
     required DebtOverview overview,
     required List<Payment> payments,
     required List<DebtGroup> groups,
+    required bool canManage,
   }) {
     final theme = Theme.of(context);
     final debt = overview.debt;
@@ -95,6 +100,7 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       children: <Widget>[
+        const AdminLockedBanner(),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -137,44 +143,45 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            OutlinedButton.icon(
-              key: const Key('debt-edit-button'),
-              onPressed: _busy
-                  ? null
-                  : () => context.push(AppRoutes.debtEdit(debt.id)),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit'),
-            ),
-            FilledButton.icon(
-              key: const Key('debt-add-payment-button'),
-              onPressed: _busy || debt.isArchived
-                  ? null
-                  : () => context.push(AppRoutes.paymentNew(debt.id)),
-              icon: const Icon(Icons.payments_outlined),
-              label: const Text('Catat Pembayaran'),
-            ),
-            OutlinedButton.icon(
-              key: const Key('debt-move-group-button'),
-              onPressed: _busy ? null : () => _moveGroup(debt, groups),
-              icon: const Icon(Icons.drive_file_move_outline),
-              label: const Text('Pindah group'),
-            ),
-            OutlinedButton.icon(
-              key: const Key('debt-archive-button'),
-              onPressed: _busy ? null : () => _toggleArchive(overview),
-              icon: Icon(
-                debt.isArchived
-                    ? Icons.unarchive_outlined
-                    : Icons.archive_outlined,
+        if (canManage)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                key: const Key('debt-edit-button'),
+                onPressed: _busy
+                    ? null
+                    : () => context.push(AppRoutes.debtEdit(debt.id)),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Edit'),
               ),
-              label: Text(debt.isArchived ? 'Pulihkan' : 'Arsipkan'),
-            ),
-          ],
-        ),
+              FilledButton.icon(
+                key: const Key('debt-add-payment-button'),
+                onPressed: _busy || debt.isArchived
+                    ? null
+                    : () => context.push(AppRoutes.paymentNew(debt.id)),
+                icon: const Icon(Icons.payments_outlined),
+                label: const Text('Catat Pembayaran'),
+              ),
+              OutlinedButton.icon(
+                key: const Key('debt-move-group-button'),
+                onPressed: _busy ? null : () => _moveGroup(debt, groups),
+                icon: const Icon(Icons.drive_file_move_outline),
+                label: const Text('Pindah group'),
+              ),
+              OutlinedButton.icon(
+                key: const Key('debt-archive-button'),
+                onPressed: _busy ? null : () => _toggleArchive(overview),
+                icon: Icon(
+                  debt.isArchived
+                      ? Icons.unarchive_outlined
+                      : Icons.archive_outlined,
+                ),
+                label: Text(debt.isArchived ? 'Pulihkan' : 'Arsipkan'),
+              ),
+            ],
+          ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
@@ -229,6 +236,10 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
   }
 
   Future<void> _moveGroup(Debt debt, List<DebtGroup> groups) async {
+    if (!_ensureAdmin()) {
+      return;
+    }
+
     final selected = await showModalBottomSheet<String>(
       context: context,
       builder: (sheetContext) {
@@ -289,6 +300,10 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
   }
 
   Future<void> _toggleArchive(DebtOverview overview) async {
+    if (!_ensureAdmin()) {
+      return;
+    }
+
     final archiving = !overview.debt.isArchived;
     final confirmed = await showConfirmDialog(
       context,
@@ -333,6 +348,15 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
         setState(() => _busy = false);
       }
     }
+  }
+
+  bool _ensureAdmin() {
+    if (ref.read(adminUnlockedProvider)) {
+      return true;
+    }
+
+    _showMessage('Buka Admin untuk mengubah data.');
+    return false;
   }
 
   void _showMessage(String message) {

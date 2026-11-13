@@ -6,10 +6,12 @@ import '../../../app/navigation.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../domain/entities/debt_group.dart';
 import '../../../domain/entities/group_summary.dart';
+import '../../../shared/widgets/admin_locked_banner.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_state.dart';
 import '../../../shared/widgets/local_data_notice.dart';
+import '../../admin/application/admin_providers.dart';
 import '../application/group_providers.dart';
 import 'group_visuals.dart';
 
@@ -29,23 +31,26 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
     final summaries =
         ref.watch(groupSummariesProvider).value ??
         const <String, GroupSummary>{};
+    final isAdmin = ref.watch(adminUnlockedProvider);
 
     return Scaffold(
       key: const Key('groups-screen'),
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('groups-add-button'),
-        onPressed: () => context.push(AppRoutes.groupNew),
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah Group'),
-      ),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton.extended(
+              key: const Key('groups-add-button'),
+              onPressed: () => context.push(AppRoutes.groupNew),
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah Group'),
+            )
+          : null,
       body: groups.when(
         loading: () => const LoadingState(label: 'Memuat group...'),
         error: (error, stackTrace) => ErrorState(
           message: 'Group tidak dapat dimuat dari database lokal.',
           onRetry: () => ref.invalidate(groupListProvider(_showArchived)),
         ),
-        data: (items) => _buildBody(context, items, summaries),
+        data: (items) => _buildBody(context, items, summaries, isAdmin),
       ),
     );
   }
@@ -54,12 +59,14 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
     BuildContext context,
     List<DebtGroup> groups,
     Map<String, GroupSummary> summaries,
+    bool isAdmin,
   ) {
     final theme = Theme.of(context);
 
     return CustomScrollView(
       slivers: <Widget>[
         const SliverToBoxAdapter(child: LocalDataNotice()),
+        const SliverToBoxAdapter(child: AdminLockedBanner()),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -93,8 +100,8 @@ class _GroupsScreenState extends ConsumerState<GroupsScreen> {
               message: _showArchived
                   ? 'Group yang diarsipkan akan muncul di sini.'
                   : 'Buat group untuk mengelompokkan hutang dengan rapi.',
-              actionLabel: _showArchived ? null : 'Tambah Group',
-              onAction: _showArchived
+              actionLabel: _showArchived || !isAdmin ? null : 'Tambah Group',
+              onAction: _showArchived || !isAdmin
                   ? null
                   : () => context.push(AppRoutes.groupNew),
             ),

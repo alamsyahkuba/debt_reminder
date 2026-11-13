@@ -9,11 +9,13 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../domain/entities/debt.dart';
 import '../../../domain/entities/debt_group.dart';
 import '../../../domain/entities/group_summary.dart';
+import '../../../shared/widgets/admin_locked_banner.dart';
 import '../../../shared/widgets/confirm_dialog.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_state.dart';
 import '../../../shared/widgets/metric_card.dart';
+import '../../admin/application/admin_providers.dart';
 import '../../debts/application/debt_providers.dart';
 import '../../debts/presentation/widgets/debt_list_tile.dart';
 import '../application/group_providers.dart';
@@ -43,6 +45,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
         ref.watch(debtsByGroupProvider(widget.groupId)).value ?? const <Debt>[];
     final groups =
         ref.watch(groupListProvider(false)).value ?? const <DebtGroup>[];
+    final isAdmin = ref.watch(adminUnlockedProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(groupAsync.value?.name ?? 'Group Hutang')),
@@ -67,6 +70,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
             summary: summary,
             debts: debts,
             groups: groups,
+            canManage: isAdmin,
           );
         },
       ),
@@ -79,6 +83,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     required GroupSummary summary,
     required List<Debt> debts,
     required List<DebtGroup> groups,
+    required bool canManage,
   }) {
     final theme = Theme.of(context);
     final color = groupColorFromHex(group.color, theme.colorScheme.primary);
@@ -86,6 +91,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
       children: <Widget>[
+        const AdminLockedBanner(),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -132,39 +138,40 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            OutlinedButton.icon(
-              key: const Key('group-edit-button'),
-              onPressed: _busy
-                  ? null
-                  : () => context.push(AppRoutes.groupEdit(group.id)),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit'),
-            ),
-            OutlinedButton.icon(
-              key: const Key('group-archive-button'),
-              onPressed: _busy ? null : () => _toggleArchive(group),
-              icon: Icon(
-                group.isArchived
-                    ? Icons.unarchive_outlined
-                    : Icons.archive_outlined,
+        if (canManage)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                key: const Key('group-edit-button'),
+                onPressed: _busy
+                    ? null
+                    : () => context.push(AppRoutes.groupEdit(group.id)),
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Edit'),
               ),
-              label: Text(group.isArchived ? 'Pulihkan' : 'Arsipkan'),
-            ),
-            TextButton.icon(
-              key: const Key('group-delete-button'),
-              style: TextButton.styleFrom(
-                foregroundColor: theme.colorScheme.error,
+              OutlinedButton.icon(
+                key: const Key('group-archive-button'),
+                onPressed: _busy ? null : () => _toggleArchive(group),
+                icon: Icon(
+                  group.isArchived
+                      ? Icons.unarchive_outlined
+                      : Icons.archive_outlined,
+                ),
+                label: Text(group.isArchived ? 'Pulihkan' : 'Arsipkan'),
               ),
-              onPressed: _busy ? null : () => _deleteGroup(group),
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Hapus'),
-            ),
-          ],
-        ),
+              TextButton.icon(
+                key: const Key('group-delete-button'),
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                ),
+                onPressed: _busy ? null : () => _deleteGroup(group),
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Hapus'),
+              ),
+            ],
+          ),
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
@@ -204,13 +211,19 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
             DebtListTile(
               debt: debt,
               onTap: () => context.push(AppRoutes.debtDetail(debt.id)),
-              onMoveGroup: _busy ? null : () => _moveDebt(debt, groups),
+              onMoveGroup: canManage && !_busy
+                  ? () => _moveDebt(debt, groups)
+                  : null,
             ),
       ],
     );
   }
 
   Future<void> _toggleArchive(DebtGroup group) async {
+    if (!_ensureAdmin()) {
+      return;
+    }
+
     final archiving = !group.isArchived;
     final confirmed = await showConfirmDialog(
       context,
@@ -243,6 +256,10 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
   }
 
   Future<void> _deleteGroup(DebtGroup group) async {
+    if (!_ensureAdmin()) {
+      return;
+    }
+
     final confirmed = await showConfirmDialog(
       context,
       title: 'Hapus group?',
@@ -270,6 +287,10 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
   }
 
   Future<void> _moveDebt(Debt debt, List<DebtGroup> groups) async {
+    if (!_ensureAdmin()) {
+      return;
+    }
+
     final selected = await showModalBottomSheet<String>(
       context: context,
       builder: (sheetContext) {
@@ -340,6 +361,15 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
         setState(() => _busy = false);
       }
     }
+  }
+
+  bool _ensureAdmin() {
+    if (ref.read(adminUnlockedProvider)) {
+      return true;
+    }
+
+    _showMessage('Buka Admin untuk mengubah data.');
+    return false;
   }
 
   void _showMessage(String message) {

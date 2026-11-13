@@ -8,10 +8,12 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../domain/entities/debt_group.dart';
 import '../../../domain/entities/debt_overview.dart';
 import '../../../domain/entities/debt_status.dart';
+import '../../../shared/widgets/admin_locked_banner.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_state.dart';
 import '../../../shared/widgets/local_data_notice.dart';
+import '../../admin/application/admin_providers.dart';
 import '../application/debt_providers.dart';
 import 'widgets/debt_status_chip.dart';
 
@@ -66,23 +68,26 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
   Widget build(BuildContext context) {
     final overviews = ref.watch(debtOverviewsProvider(false));
     final groups = ref.watch(allGroupsProvider).value ?? const <DebtGroup>[];
+    final isAdmin = ref.watch(adminUnlockedProvider);
 
     return Scaffold(
       key: const Key('debts-screen'),
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('debts-add-button'),
-        onPressed: () => context.push(AppRoutes.debtNew),
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah Hutang'),
-      ),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton.extended(
+              key: const Key('debts-add-button'),
+              onPressed: () => context.push(AppRoutes.debtNew),
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah Hutang'),
+            )
+          : null,
       body: overviews.when(
         loading: () => const LoadingState(label: 'Memuat hutang...'),
         error: (error, stackTrace) => ErrorState(
           message: 'Hutang tidak dapat dimuat dari database lokal.',
           onRetry: () => ref.invalidate(debtOverviewsProvider(false)),
         ),
-        data: (items) => _buildBody(context, items, groups),
+        data: (items) => _buildBody(context, items, groups, isAdmin),
       ),
     );
   }
@@ -91,6 +96,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
     BuildContext context,
     List<DebtOverview> overviews,
     List<DebtGroup> groups,
+    bool isAdmin,
   ) {
     final theme = Theme.of(context);
     final groupNames = <String, String>{
@@ -112,6 +118,7 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
     return CustomScrollView(
       slivers: <Widget>[
         const SliverToBoxAdapter(child: LocalDataNotice()),
+        const SliverToBoxAdapter(child: AdminLockedBanner()),
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -257,8 +264,8 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
               message: hasFilters
                   ? 'Ubah pencarian atau filter untuk melihat hutang lain.'
                   : 'Catat hutang pertama untuk mulai memantau pembayaran.',
-              actionLabel: hasFilters ? null : 'Tambah Hutang',
-              onAction: hasFilters
+              actionLabel: hasFilters || !isAdmin ? null : 'Tambah Hutang',
+              onAction: hasFilters || !isAdmin
                   ? null
                   : () => context.push(AppRoutes.debtNew),
             ),

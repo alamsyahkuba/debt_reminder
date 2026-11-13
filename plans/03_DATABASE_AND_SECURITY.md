@@ -52,7 +52,8 @@ berupa adjustment/reversal yang tercatat.
 ### `admin_settings`
 - Single logical row, fixed UUID.
 - `pin_hash text not null`
-- `pin_hash_algorithm text not null`
+- `pin_hash_algorithm text not null` (`uninitialized` sebelum PIN pertama dibuat,
+  lalu `pbkdf2_sha256`)
 - `updated_at timestamptz not null`
 - Optional `pin_changed_at`, failed attempt metadata.
 
@@ -162,6 +163,8 @@ Target revisi: Drift schema baru setelah reset.
 - Rate-limit PIN verification; constant-time comparison bila relevan.
 - Jangan pernah mengembalikan PIN hash.
 - Admin token short-lived, signed, revocable, dan bound ke device bila feasible.
+- Token admin dikirim melalui header `x-admin-session`; header `Authorization`
+  tetap dipakai untuk JWT Supabase/anon key di gateway.
 - Client-side `isAdmin=true` bukan otorisasi.
 
 ### PIN

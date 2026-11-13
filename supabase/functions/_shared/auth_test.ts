@@ -1,15 +1,18 @@
 import assert from "node:assert/strict";
 
 import {
+  ADMIN_SUBJECT,
   ADMIN_TOKEN_AUDIENCE,
   ADMIN_TOKEN_ISSUER,
   ADMIN_TOKEN_TTL_SECONDS,
   AdminAuthError,
   type AdminAuthErrorCode,
   type AdminSessionStore,
+  getAdminToken,
   getBearerToken,
   hashToken,
   requireAdminSession,
+  signAdminToken,
   verifyAdminToken,
 } from "./auth.ts";
 
@@ -84,7 +87,7 @@ function authError(code: AdminAuthErrorCode) {
 
 function requestWithToken(token: string): Request {
   return new Request("http://localhost/admin", {
-    headers: { authorization: `Bearer ${token}` },
+    headers: { "x-admin-session": token },
   });
 }
 
@@ -189,6 +192,35 @@ Deno.test("getBearerToken rejects missing and malformed headers", () => {
   );
 });
 
+Deno.test("getAdminToken reads only the custom session header", () => {
+  assert.equal(
+    getAdminToken(requestWithToken("admin-token")),
+    "admin-token",
+  );
+  assert.throws(
+    () => getAdminToken(new Request("http://localhost")),
+    authError("missing_token"),
+  );
+  assert.throws(
+    () =>
+      getAdminToken(
+        new Request("http://localhost", {
+          headers: { authorization: "Bearer admin-token" },
+        }),
+      ),
+    authError("missing_token"),
+  );
+  assert.throws(
+    () =>
+      getAdminToken(
+        new Request("http://localhost", {
+          headers: { "x-admin-session": "bad token" },
+        }),
+      ),
+    authError("invalid_token"),
+  );
+});
+
 Deno.test("hashToken is deterministic sha256 hex", async () => {
   const token = await signToken();
   const first = await hashToken(token);
@@ -227,4 +259,55 @@ Deno.test("requireAdminSession rejects a revoked session", async () => {
     authError("session_revoked"),
   );
   assert.deepEqual(touched, []);
+});
+
+Deno.test("signAdminToken creates a verifiable short-lived token", async () => {
+  const signed = await signAdminToken({
+    secret: SECRET,
+    sessionId: SESSION_ID,
+    deviceId: "device-1",
+    issuedAt: NOW,
+  });
+  const claims = await verifyAdminToken(signed.token, SECRET, NOW);
+
+  assert.deepEqual(claims, {
+    subject: ADMIN_SUBJECT,
+    role: "admin",
+    sessionId: SESSION_ID,
+    deviceId: "device-1",
+    issuedAt: NOW_SECONDS,
+    expiresAt: NOW_SECONDS + ADMIN_TOKEN_TTL_SECONDS,
+  });
+  assert.equal(
+    signed.expiresAt.getTime(),
+    (NOW_SECONDS + ADMIN_TOKEN_TTL_SECONDS) * 1000,
+  );
+});
+
+Deno.test("signAdminToken rejects invalid options", async () => {
+  await assert.rejects(() =>
+    signAdminToken({
+      secret: SECRET,
+      sessionId: "not-a-uuid",
+      deviceId: "device-1",
+      issuedAt: NOW,
+    })
+  );
+  await assert.rejects(() =>
+    signAdminToken({
+      secret: SECRET,
+      sessionId: SESSION_ID,
+      deviceId: "device-1",
+      issuedAt: NOW,
+      ttlSeconds: ADMIN_TOKEN_TTL_SECONDS + 1,
+    })
+  );
+  await assert.rejects(() =>
+    signAdminToken({
+      secret: "short",
+      sessionId: SESSION_ID,
+      deviceId: "device-1",
+      issuedAt: NOW,
+    })
+  );
 });

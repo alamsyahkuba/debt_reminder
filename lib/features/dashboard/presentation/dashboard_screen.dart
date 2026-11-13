@@ -10,10 +10,12 @@ import '../../../domain/entities/debt_group.dart';
 import '../../../domain/entities/debt_overview.dart';
 import '../../../domain/entities/debt_status.dart';
 import '../../../domain/entities/group_summary.dart';
+import '../../../shared/widgets/admin_locked_banner.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_state.dart';
 import '../../../shared/widgets/local_data_notice.dart';
 import '../../../shared/widgets/metric_card.dart';
+import '../../admin/application/admin_providers.dart';
 import '../../debt_groups/application/group_providers.dart';
 import '../../debt_groups/presentation/group_visuals.dart';
 import '../../debts/application/debt_providers.dart';
@@ -30,6 +32,7 @@ class DashboardScreen extends ConsumerWidget {
     final summaries =
         ref.watch(groupSummariesProvider).value ??
         const <String, GroupSummary>{};
+    final isAdmin = ref.watch(adminUnlockedProvider);
 
     return Scaffold(
       key: const Key('dashboard-screen'),
@@ -48,6 +51,7 @@ class DashboardScreen extends ConsumerWidget {
           overviews: overviews,
           groups: groups,
           groupSummaries: summaries,
+          isAdmin: isAdmin,
         ),
       ),
     );
@@ -59,11 +63,13 @@ class _DashboardContent extends StatelessWidget {
     required this.overviews,
     required this.groups,
     required this.groupSummaries,
+    required this.isAdmin,
   });
 
   final List<DebtOverview> overviews;
   final List<DebtGroup> groups;
   final Map<String, GroupSummary> groupSummaries;
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +89,7 @@ class _DashboardContent extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 96),
       children: <Widget>[
         const LocalDataNotice(),
+        const AdminLockedBanner(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Column(
@@ -143,7 +150,7 @@ class _DashboardContent extends StatelessWidget {
               ),
               if (overviews.isEmpty) ...<Widget>[
                 const SizedBox(height: 20),
-                const _NoDebtCard(),
+                _NoDebtCard(isAdmin: isAdmin),
               ],
             ],
           ),
@@ -387,7 +394,9 @@ class _UpcomingDebtTile extends StatelessWidget {
 }
 
 class _NoDebtCard extends StatelessWidget {
-  const _NoDebtCard();
+  const _NoDebtCard({required this.isAdmin});
+
+  final bool isAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -407,19 +416,23 @@ class _NoDebtCard extends StatelessWidget {
             Text('Belum ada hutang', style: theme.textTheme.titleSmall),
             const SizedBox(height: 4),
             Text(
-              'Catat hutang pertama untuk melihat ringkasan di dashboard.',
+              isAdmin
+                  ? 'Catat hutang pertama untuk melihat ringkasan di dashboard.'
+                  : 'Buka Admin untuk mencatat hutang pertama.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 12),
-            FilledButton.icon(
-              key: const Key('dashboard-add-debt-button'),
-              onPressed: () => context.push(AppRoutes.debtNew),
-              icon: const Icon(Icons.add),
-              label: const Text('Tambah Hutang'),
-            ),
+            if (isAdmin) ...<Widget>[
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                key: const Key('dashboard-add-debt-button'),
+                onPressed: () => context.push(AppRoutes.debtNew),
+                icon: const Icon(Icons.add),
+                label: const Text('Tambah Hutang'),
+              ),
+            ],
           ],
         ),
       ),

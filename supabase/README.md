@@ -3,10 +3,11 @@
 Folder ini berisi schema PostgreSQL, RLS, idempotency helpers, public read RPCs,
 dan Edge Function shared utilities untuk aplikasi Catatan Hutang.
 
-> **Status implementasi:** cloud schema, public read RPC, dan local Flutter/
-> Drift customer cleanup sudah selesai. Migration lama customers/read_devices
-> dihapus dan local Supabase sudah di-reset. Cloud project belum di-push.
-> Public Flutter pull/read-only mode dijadwalkan Sprint 07.
+> **Status implementasi:** cloud schema, public read RPC, local Flutter/Drift
+> customer cleanup, payment/dashboard, dan admin PIN/session sudah selesai.
+> Migration lama customers/read_devices dihapus dan local Supabase sudah
+> di-reset. Cloud project belum di-push. Public Flutter pull/read-only mode dan
+> sync mutation endpoints dijadwalkan Sprint 07.
 
 ## Prasyarat
 
@@ -162,22 +163,60 @@ Token admin (diimplementasikan pada Sprint 06):
 - claim `session_id`, `device_id`, `iat`, `exp`
 - ditandatangani `ADMIN_SESSION_JWT_SECRET` (minimal 32 karakter)
 - token disimpan di client secure storage; server hanya menyimpan hash.
+- Token dikirim melalui header `x-admin-session`, bukan `Authorization`.
+  `Authorization: Bearer <anon-key>` tetap dipakai agar gateway Supabase dapat
+  memverifikasi request. Ini menghindari konflik verifikasi JWT gateway.
 
-Salin `supabase/functions/.env.example` menjadi
-`supabase/functions/.env` untuk development lokal. Jangan commit nilai secret.
+Salin `supabase/functions/.env.example` menjadi `supabase/functions/.env` untuk
+development lokal. Jangan commit nilai secret.
+
+## Admin PIN Edge Function
+
+Nama function: `admin-pin` (`supabase/functions/admin-pin/`).
+
+Request `POST` dengan JSON:
+
+```json
+{"action":"verify","pin":"123456","device_id":"opaque-device-id"}
+{"action":"change","current_pin":"123456","new_pin":"654321"}
+{"action":"logout"}
+```
+
+Aturan:
+
+- PIN numerik 6 digit.
+- 5 percobaan gagal mengunci verifikasi 15 menit (dapat diatur lewat
+  `ADMIN_PIN_MAX_ATTEMPTS` dan `ADMIN_PIN_LOCK_SECONDS`).
+- Sesi admin berlaku 15 menit, disimpan sebagai SHA-256 token di
+  `admin_sessions`, dan dapat dicabut.
+- `change` dan `logout` wajib menyertakan `x-admin-session`.
+- PIN di-hash dengan PBKDF2-HMAC-SHA256, salt acak, dan `ADMIN_PIN_PEPPER`.
+- Bootstrap pertama memakai `ADMIN_INITIAL_PIN`; rate limit tetap berlaku karena
+  `admin_settings` dibuat dalam keadaan `uninitialized`. Hapus secret bootstrap
+  setelah PIN berhasil dibuat.
+- Audit log mencatat verifikasi, kegagalan, perubahan PIN, dan logout tanpa
+  menyimpan PIN/token.
+- Response tidak pernah mengembalikan PIN hash atau secret.
+
+Menjalankan function lokal:
+
+```bash
+npx --yes supabase@3.1.0 functions serve admin-pin --env-file supabase/functions/.env
+```
 
 Test helper:
 
 ```bash
 cd supabase/functions
 deno fmt --check
-deno check _shared/*.ts
+deno check _shared/*.ts admin-pin/*.ts
 deno lint
 deno test
 ```
 
-Test device enrollment sudah dihapus. Test sekarang mencakup public read RPC,
-anon denial, idempotency, dan admin/session foundation.
+Test mencakup public read RPC, anon denial, idempotency, PIN hashing, JWT
+signing/verification, rate limit, session lifecycle, invalid/expired token,
+PIN change/logout, dan audit.
 
 ## Migration, reset, dan deployment
 
@@ -193,11 +232,17 @@ Setelah rework cloud selesai dan owner menyetujui:
 ```bash
 npx --yes supabase@3.1.0 link --project-ref <project-ref>
 npx --yes supabase@3.1.0 db push
+npx --yes supabase@3.1.0 secrets set \
+  ADMIN_SESSION_JWT_SECRET=<min-32-characters> \
+  ADMIN_PIN_PEPPER=<min-32-characters> \
+  ADMIN_INITIAL_PIN=<6-digit-bootstrap-pin>
+npx --yes supabase@3.1.0 functions deploy admin-pin
 ```
+
+Hapus `ADMIN_INITIAL_PIN` dari secrets setelah PIN pertama berhasil dibuat.
 
 ## Out of scope saat ini
 
-- PIN verification dan session issuance (Sprint 06).
 - Sync mutation endpoints (Sprint 07).
 - Perangkat read-only dan device enrollment (dihapus).
 - Data pelanggan (dihapus).

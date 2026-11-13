@@ -314,3 +314,34 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   Perubahan kebijakan overpayment harus disetujui owner dan dilakukan di
   repository, test, dan dokumentasi sekaligus. Sync indicator belum menjadi
   bagian Sprint 05; indikator outbox menyusul di Sprint 07.
+
+## D-018 — PIN admin, sesi server, dan header token admin
+
+- **Tanggal:** 13 November 2026
+- **Status:** Diadopsi untuk Sprint 06
+- **Konteks:** PIN harus diverifikasi server agar client tidak dapat memberi
+  dirinya sendiri akses admin. Gateway Supabase memverifikasi header
+  `Authorization` sebagai JWT Supabase, sehingga token admin kustom tidak dapat
+  memakai header tersebut.
+- **Keputusan:**
+  - PIN numerik 6 digit; 5 percobaan gagal mengunci verifikasi 15 menit.
+  - Sesi admin berlaku 15 menit, dapat dicabut, dan dapat di-lock dari UI.
+  - PIN di-hash dengan PBKDF2-HMAC-SHA256 (210.000 iterasi), salt acak, dan
+    `ADMIN_PIN_PEPPER` server-side.
+  - Token sesi adalah JWT HS256 yang ditandatangani
+    `ADMIN_SESSION_JWT_SECRET`; server hanya menyimpan SHA-256 token.
+  - Token admin dikirim melalui header `x-admin-session`.
+    `Authorization: Bearer <anon-key>` tetap dipakai untuk gateway Supabase.
+  - Bootstrap pertama memakai `ADMIN_INITIAL_PIN`; baris `admin_settings`
+    dimulai dengan algoritma `uninitialized` agar rate limit juga berlaku
+    sebelum PIN pertama dibuat.
+  - Offline unlock tidak disediakan. Verifikasi PIN selalu membutuhkan server;
+    local UI guard bukan otorisasi cloud.
+  - Route guard hanya UX. Setiap endpoint mutasi wajib memanggil
+    `requireAdminSession` di server.
+  - Audit log mencatat verifikasi, kegagalan, perubahan PIN, dan logout tanpa
+    menyimpan PIN/token.
+- **Konsekuensi:** Jika `ADMIN_PIN_PEPPER` dirotasi, PIN lama tidak valid dan
+  harus di-bootstrap/diubah. `ADMIN_INITIAL_PIN` harus dihapus setelah setup.
+  Semua mutation endpoint Sprint 07 wajib menggunakan header dan helper yang
+  sama. PIN/sesi tidak dapat dipakai offline untuk otorisasi cloud.

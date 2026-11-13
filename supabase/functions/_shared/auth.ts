@@ -15,11 +15,13 @@
  * sees the signing secret and the service role key never leaves the server.
  */
 
-import { sha256Hex } from "./crypto.ts";
+import { base64UrlEncode, sha256Hex } from "./crypto.ts";
 
 export const ADMIN_TOKEN_ISSUER = "debt-reminder";
 export const ADMIN_TOKEN_AUDIENCE = "debt-reminder-admin";
 export const ADMIN_TOKEN_TTL_SECONDS = 15 * 60;
+export const ADMIN_SUBJECT = "admin";
+export const ADMIN_TOKEN_HEADER = "x-admin-session";
 
 const CLOCK_SKEW_SECONDS = 60;
 const MIN_SECRET_LENGTH = 32;
@@ -95,11 +97,36 @@ export function getBearerToken(request: Request): string {
   return token;
 }
 
+/**
+ * Reads the custom admin session header.
+ *
+ * Supabase's Edge Function gateway verifies the `Authorization` header as a
+ * Supabase JWT. The custom admin token must therefore use a separate header so
+ * the gateway can validate the anon key without rejecting the admin session.
+ */
+export function getAdminToken(request: Request): string {
+  const header = request.headers.get(ADMIN_TOKEN_HEADER);
+
+  if (!header) {
+    throw new AdminAuthError(
+      "missing_token",
+      "Header sesi admin wajib diisi.",
+    );
+  }
+
+  const token = header.trim();
+  if (token.length === 0 || /\s/.test(token)) {
+    throw new AdminAuthError("invalid_token", "Token admin tidak valid.");
+  }
+
+  return token;
+}
+
 export async function requireAdminSession(
   request: Request,
   options: RequireAdminSessionOptions,
 ): Promise<AuthenticatedAdmin> {
-  const token = getBearerToken(request);
+  const token = getAdminToken(request);
   const now = options.now ?? new Date();
   const claims = await verifyAdminToken(token, options.secret, now);
   const tokenHash = await hashToken(token);
@@ -253,6 +280,98 @@ export async function verifyAdminToken(
 
 export function hashToken(token: string): Promise<string> {
   return sha256Hex(token);
+}
+
+export interface SignAdminTokenOptions {
+  secret: string;
+  sessionId: string;
+  deviceId: string;
+  subject?: string;
+  issuedAt?: Date;
+  ttlSeconds?: number;
+}
+
+export interface SignedAdminToken {
+  token: string;
+  expiresAt: Date;
+}
+
+export async function signAdminToken(
+  options: SignAdminTokenOptions,
+): Promise<SignedAdminToken> {
+  if (options.secret.length < MIN_SECRET_LENGTH) {
+    throw new AdminAuthError(
+      "invalid_token",
+      "Konfigurasi sesi admin tidak valid.",
+    );
+  }
+
+  if (!UUID_PATTERN.test(options.sessionId)) {
+    throw new AdminAuthError("invalid_token", "Session id tidak valid.");
+  }
+
+  const deviceId = options.deviceId.trim();
+  if (deviceId.length === 0 || deviceId.length > 200) {
+    throw new AdminAuthError("invalid_token", "Device id tidak valid.");
+  }
+
+  const subject = (options.subject ?? ADMIN_SUBJECT).trim();
+  if (subject.length === 0 || subject.length > 200) {
+    throw new AdminAuthError("invalid_token", "Subject admin tidak valid.");
+  }
+
+  const ttlSeconds = options.ttlSeconds ?? ADMIN_TOKEN_TTL_SECONDS;
+  if (
+    !Number.isSafeInteger(ttlSeconds) ||
+    ttlSeconds < 60 ||
+    ttlSeconds > ADMIN_TOKEN_TTL_SECONDS
+  ) {
+    throw new AdminAuthError(
+      "invalid_token",
+      "Masa berlaku token tidak valid.",
+    );
+  }
+
+  const issuedAt = options.issuedAt ?? new Date();
+  const iat = Math.floor(issuedAt.getTime() / 1000);
+  const exp = iat + ttlSeconds;
+  const encodedHeader = encodeJson({ alg: "HS256", typ: "JWT" });
+  const encodedPayload = encodeJson({
+    iss: ADMIN_TOKEN_ISSUER,
+    aud: ADMIN_TOKEN_AUDIENCE,
+    sub: subject,
+    role: "admin",
+    session_id: options.sessionId.toLowerCase(),
+    device_id: deviceId,
+    iat,
+    exp,
+  });
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(options.secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`),
+  );
+
+  return {
+    token: `${encodedHeader}.${encodedPayload}.${
+      base64UrlEncode(new Uint8Array(signature))
+    }`,
+    expiresAt: new Date(exp * 1000),
+  };
+}
+
+function encodeJson(value: unknown): string {
+  return base64UrlEncode(
+    new TextEncoder().encode(JSON.stringify(value)),
+  );
 }
 
 function decodeJsonObject(

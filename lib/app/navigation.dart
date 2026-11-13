@@ -8,6 +8,9 @@ abstract final class AppRoutes {
   static const String settings = '/settings';
   static const String admin = '/admin';
 
+  static String adminFrom(String location) =>
+      '$admin?returnTo=${Uri.encodeComponent(location)}';
+
   static const String groupNew = '/groups/new';
   static String groupDetail(String id) => '/groups/$id';
   static String groupEdit(String id) => '/groups/$id/edit';
