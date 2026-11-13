@@ -22,11 +22,11 @@ void main() {
   });
 
   test(
-    'schema versi 3 membuka database dan mengaktifkan foreign keys',
+    'schema versi 4 membuka database dan mengaktifkan foreign keys',
     () async {
       await database.ensureOpen();
 
-      expect(database.schemaVersion, 3);
+      expect(database.schemaVersion, 4);
 
       final pragma = await database
           .customSelect('PRAGMA foreign_keys')
@@ -51,6 +51,7 @@ void main() {
         'payments',
         'sync_queue',
         'sync_metadata',
+        'local_settings',
       ]),
     );
     expect(tableNames, isNot(contains('customers')));
@@ -104,7 +105,7 @@ void main() {
     expect(payments, isEmpty);
   });
 
-  test('database v1 lama di-reset ke schema v3 tanpa customer', () async {
+  test('database v1 lama di-reset ke schema v4 tanpa customer', () async {
     final directory = await Directory.systemTemp.createTemp(
       'debt_reminder_migration_test',
     );
@@ -125,7 +126,7 @@ void main() {
     final upgraded = AppDatabase(NativeDatabase(file));
     await upgraded.ensureOpen();
 
-    expect(upgraded.schemaVersion, 3);
+    expect(upgraded.schemaVersion, 4);
 
     final tables = await upgraded
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")

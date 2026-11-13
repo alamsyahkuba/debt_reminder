@@ -5,9 +5,10 @@ dan Edge Function shared utilities untuk aplikasi Catatan Hutang.
 
 > **Status implementasi:** cloud schema, public read + pagination RPC, local
 > Flutter/Drift customer cleanup, payment/dashboard, admin PIN/session, dan
-> admin sync sudah selesai. Migration lama customers/read_devices dihapus dan
-> local Supabase sudah di-reset. Cloud project belum di-push. WorkManager/
-> background sync belum diverifikasi di perangkat fisik.
+> admin sync sudah selesai. Reminder lokal Sprint 08 tidak menambah tabel atau
+> endpoint server. Migration lama customers/read_devices dihapus dan local
+> Supabase sudah di-reset. Cloud project belum di-push. WorkManager/background
+> sync dan pengiriman notifikasi belum diverifikasi di perangkat fisik.
 
 ## Prasyarat
 

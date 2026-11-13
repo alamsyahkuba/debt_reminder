@@ -28,8 +28,9 @@ overpayment, histori append-only, dan dashboard turunan. Sprint 06 menambahkan
 PIN admin 6 digit, sesi server 15 menit, rate limit, secure storage, route
 guard, dan perubahan PIN. Sprint 07 menambahkan public pull paginasi, outbox
 sync idempoten, retry/backoff, conflict resolution, status sync, manual sync,
-connectivity trigger, dan WorkManager best-effort. Proyek siap melanjutkan ke
-Sprint 08.
+connectivity trigger, dan WorkManager best-effort. Sprint 08 menambahkan
+reminder lokal H-3/H-1/H, permission notifikasi, fallback exact alarm, timezone,
+dan rekonsiliasi jadwal. Proyek siap melanjutkan ke Sprint 09.
 Lihat [`plans/STATUS.md`](plans/STATUS.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
@@ -37,7 +38,9 @@ Spesifikasi produk dan sprint ada di [`plans/`](plans/).
 ## Prasyarat
 
 - Flutter stable 3.47.7 atau versi kompatibel (Dart 3.13.5).
-- Android SDK dan toolchain yang lolos `flutter doctor`.
+- Android SDK dengan platform 37 dan toolchain yang lolos `flutter doctor`.
+- Build Android memakai `compileSdk 37` dan core library desugaring untuk
+  `flutter_local_notifications`.
 - Untuk menjalankan: emulator Android atau perangkat fisik dengan USB
   debugging.
 
@@ -82,18 +85,31 @@ dibundel sebagai asset.
 Jangan pernah menaruh Supabase `service_role` key di aplikasi, repository, atau
 argumen build client.
 
+
+## Reminder
+
+- Admin dapat mengaktifkan H-3, H-1, dan/atau hari H serta memilih waktu lokal.
+- Jadwal dikelola lokal dan direkonsiliasi saat startup, resume, atau data
+  hutang/pembayaran berubah.
+- Hutang lunas dan diarsipkan tidak memiliki reminder aktif.
+- Jika izin notifikasi atau exact alarm tidak tersedia, aplikasi menjelaskan
+  fallback-nya.
+- Public mode hanya menampilkan tanggal jatuh tempo dan tidak dapat mengubah
+  konfigurasi reminder.
+
 ## Database lokal
 
-Drift/SQLite schema v3 memakai tabel bisnis:
+Drift/SQLite schema v4 memakai tabel bisnis:
 
 - `debt_groups`
 - `debts`
 - `payments`
 - `sync_queue` (termasuk `conflict_data`)
 - `sync_metadata`
+- `local_settings` (preferensi reminder perangkat)
 
 Tidak ada tabel `customers`, `customer_id`, atau `read_devices`. Migrasi
-v1→v3 bersifat destruktif karena aplikasi belum release; database lama
+v1→v4 bersifat destruktif karena aplikasi belum release; database lama
 di-reset.
 
 - UI membaca data melalui repository dan Drift stream; jangan query Supabase
@@ -108,6 +124,8 @@ di-reset.
   lokal dari halaman Pengaturan.
 - Sinkronisasi berjalan foreground, saat konektivitas kembali, manual, dan
   best-effort WorkManager 15 menit.
+- Reminder lokal dijadwalkan dari preferensi perangkat; notifikasi tidak
+  membutuhkan internet dan bukan bukti pembayaran.
 - Kode Drift dihasilkan dengan:
 
   ```bash

@@ -8,12 +8,14 @@ import 'package:debt_reminder/domain/entities/group_summary.dart';
 import 'package:debt_reminder/features/admin/application/admin_providers.dart';
 import 'package:debt_reminder/features/debt_groups/application/group_providers.dart';
 import 'package:debt_reminder/features/debts/application/debt_providers.dart';
+import 'package:debt_reminder/features/reminders/application/reminder_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import '../support/fake_admin_session_store.dart';
+import '../support/fake_reminder_preferences_repository.dart';
 
 const AppConfig _testConfig = AppConfig(
   environment: AppEnvironment.development,
@@ -40,6 +42,9 @@ Future<void> _pumpApp(WidgetTester tester) async {
         ),
         adminSessionStoreProvider.overrideWithValue(
           FakeAdminSessionStore.unlocked(),
+        ),
+        reminderPreferencesRepositoryProvider.overrideWithValue(
+          FakeReminderPreferencesRepository(),
         ),
       ],
       child: const DebtReminderApp(),

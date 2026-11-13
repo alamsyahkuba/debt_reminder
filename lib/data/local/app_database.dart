@@ -106,28 +106,46 @@ class SyncMetadata extends Table {
   Set<Column<Object>> get primaryKey => {key};
 }
 
+@DataClassName('LocalSettingRow')
+class LocalSettings extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}
+
 @DriftDatabase(
-  tables: <Type>[DebtGroups, Debts, Payments, SyncQueue, SyncMetadata],
+  tables: <Type>[
+    DebtGroups,
+    Debts,
+    Payments,
+    SyncQueue,
+    SyncMetadata,
+    LocalSettings,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'debt_reminder'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) => _createSchema(migrator),
     onUpgrade: (migrator, from, to) async {
       // The app is pre-release and the local database reset is approved.
-      // Older versions lacked the sync conflict data and public-read schema.
+      // Older versions lacked reminder settings and sync conflict metadata.
       await customStatement('DROP TABLE IF EXISTS payments');
       await customStatement('DROP TABLE IF EXISTS debts');
       await customStatement('DROP TABLE IF EXISTS debt_groups');
       await customStatement('DROP TABLE IF EXISTS customers');
       await customStatement('DROP TABLE IF EXISTS sync_queue');
       await customStatement('DROP TABLE IF EXISTS sync_metadata');
+      await customStatement('DROP TABLE IF EXISTS local_settings');
       await _createSchema(migrator);
     },
     beforeOpen: (details) async {

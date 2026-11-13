@@ -48,13 +48,14 @@ If any required file is missing, do not invent its contents. Report the missing 
 
 ### Current implementation note
 
-Sprint 01R–07 are complete: the cloud schema, local Drift schema, repositories,
+Sprint 01R–08 are complete: the cloud schema, local Drift schema, repositories,
 UI, and tests no longer contain customers or device enrollment. Debt management,
 derived status, append-only payments, overpayment rejection, the dashboard,
-server-verified admin PIN/session, public pull, and idempotent outbox sync are
-implemented. Conflict resolution and sync status UI are available. Reminders are
-the next sprint. Cloud deployment and physical-device WorkManager verification
-remain outstanding.
+server-verified admin PIN/session, public pull, idempotent outbox sync, and local
+due-date reminders are implemented. Conflict resolution, sync status, and admin
+reminder management are available. QA and release hardening are next. Cloud
+deployment, physical-device WorkManager, and physical-device notification
+verification remain outstanding.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.

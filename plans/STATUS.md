@@ -6,8 +6,8 @@ Plan revised on 12 November 2026: two roles (owner/admin and public), no
 customer entity, groups retained, all business data public, admin PIN retained,
 device enrollment removed, and database reset approved. Cloud rework (Sprint
 01R), local rework (Sprint 02R/03R), Sprint 04 debt management, Sprint 05
-payments/dashboard, Sprint 06 admin PIN/session, and Sprint 07 offline sync are
-complete. Ready for Sprint 08.
+payments/dashboard, Sprint 06 admin PIN/session, Sprint 07 offline sync, and
+Sprint 08 local reminders are complete. Ready for Sprint 09.
 
 ## Sprint status
 
@@ -27,7 +27,8 @@ complete. Ready for Sprint 08.
       secure session, route guards, PIN change, audit)
 - [x] Sprint 07 — Offline sync (public pull, outbox sync, idempotency,
       retry/backoff, conflict resolution, sync status, background best-effort)
-- [ ] Sprint 08 — Reminders
+- [x] Sprint 08 — Local reminders (H-3/H-1/H, permissions, timezone,
+      reconcile, admin UI)
 - [ ] Sprint 09 — QA, hardening & release
 
 ## Implementation status by area
@@ -55,10 +56,11 @@ complete. Ready for Sprint 08.
 
 ### Sprint 02 — Local database & repository (Sprint 02R complete)
 
-- Drift schema v3 (v2 in Sprint 02, conflict data added in Sprint 07) has
-  `debt_groups`, `debts`, `payments`, `sync_queue`, and `sync_metadata`; no
-  customers and no `customer_id`.
-- Destructive v1→v3 migration resets old data; migration test passes.
+- Drift schema v4 (v2 in Sprint 02, sync conflict data in Sprint 07, local
+  reminder settings in Sprint 08) has `debt_groups`, `debts`, `payments`,
+  `sync_queue`, `sync_metadata`, and `local_settings`; no customers and no
+  `customer_id`.
+- Destructive v1→v4 migration resets old data; migration test passes.
 - Customer entity/DAO/repository, customer payloads, and provider were removed.
 - Debt repository and payloads no longer contain customer references.
 - 32 Flutter tests and APK build pass.
@@ -142,10 +144,30 @@ complete. Ready for Sprint 08.
   admin re-authenticates.
 - Stale versions return a conflict with server version and snapshot. Settings UI
   offers “Muat ulang server” or “Pertahankan lokal”, then resumes sync.
-- Drift schema v3 adds `sync_queue.conflict_data`; payment sync metadata updates
-  are allowed without allowing financial field edits.
+- Drift schema v4 adds `sync_queue.conflict_data` and `local_settings` for
+  reminder preferences; payment sync metadata updates are allowed without
+  allowing financial field edits.
 - Sync status is visible on the dashboard and Settings, with pending/conflict/
   failed counts, last successful timestamps, error state, and manual sync.
+
+### Sprint 08 — Local reminders (complete)
+
+- Notification channel `debt_due_reminders` and Android permissions for
+  notifications, boot rescheduling, and exact alarms are configured.
+- Reminder preferences are device-local in `local_settings`: enabled flag,
+  offsets H-3/H-1/H, and local time (default 09:00). Nothing is synced.
+- Scheduler uses `DebtOverview` so only active debts with outstanding amounts
+  are eligible; paid and archived debts are excluded.
+- Reconciliation cancels and reschedules all local reminders at startup, on
+  resume, and whenever debt/payment data changes.
+- Timezone is initialized from the device; timezone changes are picked up on
+  resume and rescheduling.
+- Exact alarms are used when permitted; otherwise the UI explains the fallback
+  to inexact scheduling.
+- Admin UI supports enable/disable, offsets, time, permission requests, upcoming
+  schedule preview, and manual reschedule.
+- Public mode only shows upcoming due dates and has no reminder controls.
+- Notification copy explicitly says a notification is not payment proof.
 
 ## Required revision work
 
@@ -195,15 +217,15 @@ Local (Sprint 02R/03R) — done:
 ## Documentation outside plans updated
 
 - `AGENTS.md` — revised roles/data/public-read/security/rework rules and current
-  implementation status through Sprint 07.
-- `README.md` — product status, local DB target, public read policy, payments,
-  dashboard, admin session, and offline sync.
+  implementation status through Sprint 08.
+- `README.md` — product status, local DB target, public read policy, reminders,
+  payments, dashboard, admin session, and offline sync.
 - `supabase/README.md` — public RPC pagination, admin PIN/sync Edge Functions,
   token header, and deployment secrets.
 
 ## Test evidence
 
-Backend Sprint 07:
+Backend (no schema changes in Sprint 08; rerun):
 ```text
 supabase db reset                                                                                    passed
 supabase test db                                                                                     passed, 163 pgTAP assertions
@@ -222,11 +244,11 @@ admin-sync integration                                                          
   - audit registry                                                                                    rows appended
 ```
 
-Flutter (Sprint 07):
+Flutter (Sprint 08):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 68 tests
+flutter test                                                                                     passed, 81 tests
 flutter build apk --debug                                                                        passed
   - public pull pagination/no-outbox tests                                                        passed
   - pending local row preservation                                                                 passed
@@ -237,16 +259,21 @@ flutter build apk --debug                                                       
   - public/admin HTTP client parsing                                                              passed
   - sync settings/conflict UI                                                                     passed
   - settings test cleanup with bounded settle                                                      passed
+  - reminder scheduling/cancellation/due-date/timezone tests                                       passed
+  - reminder admin/public UI and permission-denied tests                                            passed
 ```
 
 ## Blockers / known limitations
 
 - Cloud and local schemas are reworked; no customers/read_devices/customer_id.
-- No Android device was connected during Sprint 04/05/06/07 verification.
+- No Android device was connected during Sprint 04/05/06/07/08 verification.
 - Cloud Supabase, `admin-pin`, and `admin-sync` Edge Functions have not been
   linked, deployed, or configured with production secrets.
 - WorkManager/background sync compiles but has not been verified on a physical
   Android device; foreground/manual sync remains the reliable path.
+- Local notification delivery, notification permission prompts, exact-alarm
+  settings, boot rescheduling, and timezone changes need physical-device
+  verification.
 - The `sync_settings_test.dart` widget test requires explicit empty Supabase
   config and must unmount its ProviderScope before closing Drift; teardown is
   bounded and verified.
@@ -266,6 +293,12 @@ flutter build apk --debug                                                       
   owner decision.
 - Public read is intentionally world-readable to anyone with the anon key.
 - Initial PIN bootstrap depends on `ADMIN_INITIAL_PIN`; remove it after setup.
+- Android build now requires compileSdk 37 and core-library desugaring because
+  of `flutter_local_notifications`; future AGP/Flutter upgrades must preserve
+  this.
+- AGP 9.1 emits a warning that compileSdk 37 is above its recommended maximum
+  (36). The debug APK builds successfully, but the toolchain combination should
+  be revisited before a release build.
 
 ## Decisions
 
@@ -288,7 +321,9 @@ flutter build apk --debug                                                       
 - Public pull uses keyset pagination and never writes outbox. Admin sync is
   dependency-ordered, idempotent, retries transient errors, and surfaces version
   conflicts with reload/keep-local resolution.
-- See `plans/DECISIONS.md`, especially D-013 through D-019.
+- Local reminders use device-local preferences and local notifications only;
+  public mode cannot configure them.
+- See `plans/DECISIONS.md`, especially D-013 through D-020.
 
 ## Owner decisions still pending
 
@@ -297,7 +332,8 @@ flutter build apk --debug                                                       
 - [x] Overpayment policy: default reject implemented in Sprint 05; owner may
       revise before release.
 - [ ] Confirm archive/delete policy for debts (group delete already defined).
-- [ ] Confirm exact reminder schedule and whether exact alarms are required.
+- [x] Reminder schedule implemented as H-3/H-1/H with local time (default
+      09:00) and exact-alarm fallback; owner may revise defaults.
 - [ ] Confirm whether device-level app lock/local SQLite encryption is required.
 - [ ] Confirm whether offline local-only unlock is required; currently admin PIN
       verification requires the server.
@@ -307,6 +343,5 @@ retained, admin PIN retained, device enrollment removed, database reset.
 
 ## Next step
 
-Request owner approval to start Sprint 08 (Reminders). Public pull, admin sync,
-conflict resolution, and sync status are implemented; device-level WorkManager
-verification remains outstanding.
+Request owner approval to start Sprint 09 (QA, hardening & release). Reminder
+and WorkManager behavior still need physical Android verification.

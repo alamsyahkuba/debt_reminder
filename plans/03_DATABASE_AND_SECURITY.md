@@ -143,6 +143,7 @@ Target revisi: Drift schema baru setelah reset.
 - `sync_queue` untuk mutation admin.
 - `sync_metadata` untuk cursor pull publik/admin.
 - `sync_queue.conflict_data` menyimpan snapshot/versi server untuk resolusi.
+- `local_settings` menyimpan preferensi reminder perangkat; tidak disinkronkan.
 - `PRAGMA foreign_keys = ON`; group deletion set `debts.group_id` null.
 - Public mode tidak membuat outbox.
 - Schema lama (customers/read_devices) harus dihapus. Karena aplikasi belum

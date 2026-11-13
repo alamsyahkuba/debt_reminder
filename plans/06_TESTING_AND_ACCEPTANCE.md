@@ -75,6 +75,11 @@ operations are preserved when that session expires.
 - Permission denied state is explained.
 - Notification behavior documented for Android battery/background constraints.
 
+Implemented in Sprint 08 with device-local preferences, local notifications,
+timezone-aware scheduling, exact-alarm fallback, startup/resume reconciliation,
+and public read-only due-date display. Physical-device notification delivery
+remains a manual verification item.
+
 ## 3. Reset acceptance
 - Fresh local Supabase applies revised migrations.
 - Reset removes customers/read_devices/customer_id.

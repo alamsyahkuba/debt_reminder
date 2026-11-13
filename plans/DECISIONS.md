@@ -385,3 +385,32 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   debt pending/conflict agar FK tidak mengubah data unsynced. Incremental pull
   tidak menghapus baris. Background worker perlu diverifikasi di perangkat
   Android nyata.
+
+## D-020 — Reminder lokal berbasis preferensi perangkat
+
+- **Tanggal:** 14 November 2026
+- **Status:** Diadopsi untuk Sprint 08
+- **Konteks:** Reminder harus bekerja tanpa internet, tidak boleh mengubah data
+  bisnis, dan konfigurasinya hanya boleh dilakukan admin.
+- **Keputusan:**
+  - Preferensi reminder disimpan di `local_settings` (SQLite) dan tidak
+    disinkronkan: enabled, offset H-3/H-1/H, dan waktu lokal (default 09:00).
+  - Scheduler memakai `DebtOverview` aktif; hanya hutang dengan sisa > 0 dan
+    due date yang dijadwalkan.
+  - Rekonsiliasi melakukan cancel-all lalu schedule ulang saat startup, resume,
+    atau data hutang/pembayaran berubah. Ini menangani due-date change,
+    pembayaran lunas, archive, dan timezone change.
+  - Zona waktu perangkat dibaca lewat `flutter_timezone`; fallback aman ke
+    default timezone package bila plugin tidak tersedia.
+  - Exact alarm dipakai bila diizinkan; jika tidak, scheduler memakai inexact
+    alarm dan UI menjelaskan bahwa notifikasi dapat tertunda.
+  - Notifikasi memakai channel lokal dan teks yang menegaskan bukan bukti
+    pembayaran.
+  - Public mode hanya menampilkan daftar jatuh tempo; kontrol reminder hanya
+    muncul saat admin unlocked.
+  - Drift schema dinaikkan ke v4 dengan reset destruktif.
+- **Konsekuensi:** Perilaku notifikasi, permission prompt, exact alarm, boot
+  rescheduling, dan timezone change perlu diverifikasi di perangkat Android
+  fisik. Build Android memerlukan compileSdk 37 dan core-library desugaring
+  untuk `flutter_local_notifications`. Reminder lokal tidak menyinkronkan
+  preferensi antarperangkat.
