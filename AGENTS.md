@@ -48,12 +48,13 @@ If any required file is missing, do not invent its contents. Report the missing 
 
 ### Current implementation note
 
-Sprint 01R–06 are complete: the cloud schema, local Drift schema, repositories,
+Sprint 01R–07 are complete: the cloud schema, local Drift schema, repositories,
 UI, and tests no longer contain customers or device enrollment. Debt management,
-derived status, append-only payments, overpayment rejection, the dashboard, and
-server-verified admin PIN/session are implemented. Public read-only RPCs exist
-on the backend; public Flutter read-only mode, online pull, and sync mutation
-endpoints remain part of Sprint 07. The project is ready for Sprint 07.
+derived status, append-only payments, overpayment rejection, the dashboard,
+server-verified admin PIN/session, public pull, and idempotent outbox sync are
+implemented. Conflict resolution and sync status UI are available. Reminders are
+the next sprint. Cloud deployment and physical-device WorkManager verification
+remain outstanding.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.

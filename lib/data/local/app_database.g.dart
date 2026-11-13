@@ -2124,6 +2124,17 @@ class $SyncQueueTable extends SyncQueue
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _conflictDataMeta = const VerificationMeta(
+    'conflictData',
+  );
+  @override
+  late final GeneratedColumn<String> conflictData = GeneratedColumn<String>(
+    'conflict_data',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     operationId,
@@ -2136,6 +2147,7 @@ class $SyncQueueTable extends SyncQueue
     status,
     lastErrorCode,
     nextRetryAt,
+    conflictData,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2230,6 +2242,15 @@ class $SyncQueueTable extends SyncQueue
         ),
       );
     }
+    if (data.containsKey('conflict_data')) {
+      context.handle(
+        _conflictDataMeta,
+        conflictData.isAcceptableOrUnknown(
+          data['conflict_data']!,
+          _conflictDataMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2279,6 +2300,10 @@ class $SyncQueueTable extends SyncQueue
         DriftSqlType.dateTime,
         data['${effectivePrefix}next_retry_at'],
       ),
+      conflictData: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}conflict_data'],
+      ),
     );
   }
 
@@ -2299,6 +2324,7 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
   final String status;
   final String? lastErrorCode;
   final DateTime? nextRetryAt;
+  final String? conflictData;
   const SyncQueueRow({
     required this.operationId,
     required this.entityType,
@@ -2310,6 +2336,7 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
     required this.status,
     this.lastErrorCode,
     this.nextRetryAt,
+    this.conflictData,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2327,6 +2354,9 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
     }
     if (!nullToAbsent || nextRetryAt != null) {
       map['next_retry_at'] = Variable<DateTime>(nextRetryAt);
+    }
+    if (!nullToAbsent || conflictData != null) {
+      map['conflict_data'] = Variable<String>(conflictData);
     }
     return map;
   }
@@ -2347,6 +2377,9 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
       nextRetryAt: nextRetryAt == null && nullToAbsent
           ? const Value.absent()
           : Value(nextRetryAt),
+      conflictData: conflictData == null && nullToAbsent
+          ? const Value.absent()
+          : Value(conflictData),
     );
   }
 
@@ -2366,6 +2399,7 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
       status: serializer.fromJson<String>(json['status']),
       lastErrorCode: serializer.fromJson<String?>(json['lastErrorCode']),
       nextRetryAt: serializer.fromJson<DateTime?>(json['nextRetryAt']),
+      conflictData: serializer.fromJson<String?>(json['conflictData']),
     );
   }
   @override
@@ -2382,6 +2416,7 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
       'status': serializer.toJson<String>(status),
       'lastErrorCode': serializer.toJson<String?>(lastErrorCode),
       'nextRetryAt': serializer.toJson<DateTime?>(nextRetryAt),
+      'conflictData': serializer.toJson<String?>(conflictData),
     };
   }
 
@@ -2396,6 +2431,7 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
     String? status,
     Value<String?> lastErrorCode = const Value.absent(),
     Value<DateTime?> nextRetryAt = const Value.absent(),
+    Value<String?> conflictData = const Value.absent(),
   }) => SyncQueueRow(
     operationId: operationId ?? this.operationId,
     entityType: entityType ?? this.entityType,
@@ -2409,6 +2445,7 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
         ? lastErrorCode.value
         : this.lastErrorCode,
     nextRetryAt: nextRetryAt.present ? nextRetryAt.value : this.nextRetryAt,
+    conflictData: conflictData.present ? conflictData.value : this.conflictData,
   );
   SyncQueueRow copyWithCompanion(SyncQueueCompanion data) {
     return SyncQueueRow(
@@ -2432,6 +2469,9 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
       nextRetryAt: data.nextRetryAt.present
           ? data.nextRetryAt.value
           : this.nextRetryAt,
+      conflictData: data.conflictData.present
+          ? data.conflictData.value
+          : this.conflictData,
     );
   }
 
@@ -2447,7 +2487,8 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
           ..write('retryCount: $retryCount, ')
           ..write('status: $status, ')
           ..write('lastErrorCode: $lastErrorCode, ')
-          ..write('nextRetryAt: $nextRetryAt')
+          ..write('nextRetryAt: $nextRetryAt, ')
+          ..write('conflictData: $conflictData')
           ..write(')'))
         .toString();
   }
@@ -2464,6 +2505,7 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
     status,
     lastErrorCode,
     nextRetryAt,
+    conflictData,
   );
   @override
   bool operator ==(Object other) =>
@@ -2478,7 +2520,8 @@ class SyncQueueRow extends DataClass implements Insertable<SyncQueueRow> {
           other.retryCount == this.retryCount &&
           other.status == this.status &&
           other.lastErrorCode == this.lastErrorCode &&
-          other.nextRetryAt == this.nextRetryAt);
+          other.nextRetryAt == this.nextRetryAt &&
+          other.conflictData == this.conflictData);
 }
 
 class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
@@ -2492,6 +2535,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
   final Value<String> status;
   final Value<String?> lastErrorCode;
   final Value<DateTime?> nextRetryAt;
+  final Value<String?> conflictData;
   final Value<int> rowid;
   const SyncQueueCompanion({
     this.operationId = const Value.absent(),
@@ -2504,6 +2548,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
     this.status = const Value.absent(),
     this.lastErrorCode = const Value.absent(),
     this.nextRetryAt = const Value.absent(),
+    this.conflictData = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SyncQueueCompanion.insert({
@@ -2517,6 +2562,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
     this.status = const Value.absent(),
     this.lastErrorCode = const Value.absent(),
     this.nextRetryAt = const Value.absent(),
+    this.conflictData = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : operationId = Value(operationId),
        entityType = Value(entityType),
@@ -2535,6 +2581,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
     Expression<String>? status,
     Expression<String>? lastErrorCode,
     Expression<DateTime>? nextRetryAt,
+    Expression<String>? conflictData,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2548,6 +2595,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
       if (status != null) 'status': status,
       if (lastErrorCode != null) 'last_error_code': lastErrorCode,
       if (nextRetryAt != null) 'next_retry_at': nextRetryAt,
+      if (conflictData != null) 'conflict_data': conflictData,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2563,6 +2611,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
     Value<String>? status,
     Value<String?>? lastErrorCode,
     Value<DateTime?>? nextRetryAt,
+    Value<String?>? conflictData,
     Value<int>? rowid,
   }) {
     return SyncQueueCompanion(
@@ -2576,6 +2625,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
       status: status ?? this.status,
       lastErrorCode: lastErrorCode ?? this.lastErrorCode,
       nextRetryAt: nextRetryAt ?? this.nextRetryAt,
+      conflictData: conflictData ?? this.conflictData,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2613,6 +2663,9 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
     if (nextRetryAt.present) {
       map['next_retry_at'] = Variable<DateTime>(nextRetryAt.value);
     }
+    if (conflictData.present) {
+      map['conflict_data'] = Variable<String>(conflictData.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2632,6 +2685,7 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueRow> {
           ..write('status: $status, ')
           ..write('lastErrorCode: $lastErrorCode, ')
           ..write('nextRetryAt: $nextRetryAt, ')
+          ..write('conflictData: $conflictData, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4364,6 +4418,7 @@ typedef $$SyncQueueTableCreateCompanionBuilder = SyncQueueCompanion Function({
   Value<String> status,
   Value<String?> lastErrorCode,
   Value<DateTime?> nextRetryAt,
+  Value<String?> conflictData,
   Value<int> rowid,
 });
 typedef $$SyncQueueTableUpdateCompanionBuilder = SyncQueueCompanion Function({
@@ -4377,6 +4432,7 @@ typedef $$SyncQueueTableUpdateCompanionBuilder = SyncQueueCompanion Function({
   Value<String> status,
   Value<String?> lastErrorCode,
   Value<DateTime?> nextRetryAt,
+  Value<String?> conflictData,
   Value<int> rowid,
 });
 
@@ -4436,6 +4492,11 @@ class $$SyncQueueTableFilterComposer
 
   ColumnFilters<DateTime> get nextRetryAt => $composableBuilder(
     column: $table.nextRetryAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get conflictData => $composableBuilder(
+    column: $table.conflictData,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4498,6 +4559,11 @@ class $$SyncQueueTableOrderingComposer
     column: $table.nextRetryAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get conflictData => $composableBuilder(
+    column: $table.conflictData,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SyncQueueTableAnnotationComposer
@@ -4548,6 +4614,11 @@ class $$SyncQueueTableAnnotationComposer
     column: $table.nextRetryAt,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get conflictData => $composableBuilder(
+    column: $table.conflictData,
+    builder: (column) => column,
+  );
 }
 
 class $$SyncQueueTableTableManager
@@ -4591,6 +4662,7 @@ class $$SyncQueueTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String?> lastErrorCode = const Value.absent(),
                 Value<DateTime?> nextRetryAt = const Value.absent(),
+                Value<String?> conflictData = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncQueueCompanion(
                 operationId: operationId,
@@ -4603,6 +4675,7 @@ class $$SyncQueueTableTableManager
                 status: status,
                 lastErrorCode: lastErrorCode,
                 nextRetryAt: nextRetryAt,
+                conflictData: conflictData,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -4617,6 +4690,7 @@ class $$SyncQueueTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<String?> lastErrorCode = const Value.absent(),
                 Value<DateTime?> nextRetryAt = const Value.absent(),
+                Value<String?> conflictData = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SyncQueueCompanion.insert(
                 operationId: operationId,
@@ -4629,6 +4703,7 @@ class $$SyncQueueTableTableManager
                 status: status,
                 lastErrorCode: lastErrorCode,
                 nextRetryAt: nextRetryAt,
+                conflictData: conflictData,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

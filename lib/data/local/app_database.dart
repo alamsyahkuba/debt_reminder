@@ -90,6 +90,7 @@ class SyncQueue extends Table {
   TextColumn get status => text().withDefault(const Constant('pending'))();
   TextColumn get lastErrorCode => text().nullable()();
   DateTimeColumn get nextRetryAt => dateTime().nullable()();
+  TextColumn get conflictData => text().nullable()();
 
   @override
   Set<Column<Object>> get primaryKey => {operationId};
@@ -113,15 +114,14 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'debt_reminder'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) => _createSchema(migrator),
     onUpgrade: (migrator, from, to) async {
       // The app is pre-release and the local database reset is approved.
-      // Version 1 contained customers; drop everything and recreate the
-      // public-read schema instead of migrating customer data.
+      // Older versions lacked the sync conflict data and public-read schema.
       await customStatement('DROP TABLE IF EXISTS payments');
       await customStatement('DROP TABLE IF EXISTS debts');
       await customStatement('DROP TABLE IF EXISTS debt_groups');
@@ -140,6 +140,15 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('''
       CREATE TRIGGER payments_no_update
       BEFORE UPDATE ON payments
+      WHEN NOT (
+        NEW.id IS OLD.id
+        AND NEW.debt_id IS OLD.debt_id
+        AND NEW.amount IS OLD.amount
+        AND NEW.paid_at IS OLD.paid_at
+        AND NEW.notes IS OLD.notes
+        AND NEW.operation_id IS OLD.operation_id
+        AND NEW.created_at IS OLD.created_at
+      )
       BEGIN
         SELECT RAISE(ABORT, 'payments are append-only');
       END;

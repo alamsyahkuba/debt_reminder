@@ -47,11 +47,15 @@
 
 ### Offline
 - App opens and shows cached data without network.
-- CRUD admin works offline after PIN/local unlock.
+- CRUD admin works offline after a valid admin session/local unlock policy.
 - Queue survives app force-close/restart.
 - Retry works after internet returns.
 - Conflict is visible and not silently discarded.
 - Public pull failure keeps cache readable.
+
+Note: offline local-only PIN unlock is still an owner decision; current UI
+requires an online server session before starting local edits. Existing outbox
+operations are preserved when that session expires.
 
 ### Security
 - No service role key in APK/source.

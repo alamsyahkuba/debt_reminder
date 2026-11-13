@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(16);
+select extensions.plan(26);
 
 set local role service_role;
 
@@ -13,6 +13,14 @@ values (
   '#00695C',
   'family',
   1
+);
+
+insert into public.debt_groups (id, name, sort_order, updated_at)
+values (
+  'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  'Tetangga',
+  2,
+  pg_catalog.now() + interval '1 second'
 );
 
 insert into public.debts (
@@ -56,9 +64,33 @@ select extensions.ok(
   has_function_privilege('anon', 'public.public_payments()', 'execute'),
   'anon dapat execute public_payments'
 );
+select extensions.ok(
+  has_function_privilege(
+    'anon',
+    'public.public_debt_groups_page(timestamptz, uuid, integer)',
+    'execute'
+  ),
+  'anon dapat execute public_debt_groups_page'
+);
+select extensions.ok(
+  has_function_privilege(
+    'anon',
+    'public.public_debts_page(timestamptz, uuid, integer)',
+    'execute'
+  ),
+  'anon dapat execute public_debts_page'
+);
+select extensions.ok(
+  has_function_privilege(
+    'anon',
+    'public.public_payments_page(timestamptz, uuid, integer)',
+    'execute'
+  ),
+  'anon dapat execute public_payments_page'
+);
 select extensions.is(
   (select count(*)::integer from public.public_debt_groups()),
-  1,
+  2,
   'public_debt_groups mengembalikan group'
 );
 select extensions.is(
@@ -114,6 +146,62 @@ select extensions.ok(
     where row_to_json(p)::jsonb ? 'operation_id'
   ),
   'public_payments tidak membocorkan operation_id'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.public_debt_groups_page(null, null, 1)
+  ),
+  1,
+  'page group pertama mengembalikan satu baris'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.public_debt_groups_page(
+      (select updated_at from public.public_debt_groups_page(null, null, 1)),
+      (select id from public.public_debt_groups_page(null, null, 1)),
+      10
+    )
+  ),
+  1,
+  'page group kedua memakai cursor keyset'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.public_debts_page(null, null, 10)
+  ),
+  1,
+  'page hutang mengembalikan data'
+);
+select extensions.is(
+  (
+    select count(*)::integer
+    from public.public_payments_page(null, null, 10)
+  ),
+  1,
+  'page pembayaran mengembalikan data'
+);
+select extensions.throws_ok(
+  $sql$select * from public.public_debt_groups_page(null, null, 0)$sql$,
+  '22023',
+  null,
+  'limit page tidak valid ditolak'
+);
+select extensions.throws_ok(
+  $sql$select * from public.public_debts_page(now(), null, 10)$sql$,
+  '22023',
+  null,
+  'cursor page tidak lengkap ditolak'
+);
+select extensions.ok(
+  not exists (
+    select 1
+    from public.public_debts_page(null, null, 10) d
+    where row_to_json(d)::jsonb ? 'version'
+  ),
+  'page hutang tidak membocorkan version'
 );
 
 select extensions.throws_ok(

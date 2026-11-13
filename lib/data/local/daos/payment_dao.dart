@@ -33,6 +33,36 @@ class PaymentDao {
     await _db.into(_db.payments).insert(row);
   }
 
+  Future<void> insertIfAbsent(PaymentRow row) async {
+    await _db.into(_db.payments).insert(row, mode: InsertMode.insertOrIgnore);
+  }
+
+  Future<PaymentRow?> findById(String id) {
+    return (_db.select(
+      _db.payments,
+    )..where((table) => table.id.equals(id))).getSingleOrNull();
+  }
+
+  Future<void> markSynced({
+    required String id,
+    required DateTime serverUpdatedAt,
+  }) async {
+    await (_db.update(
+      _db.payments,
+    )..where((table) => table.id.equals(id))).write(
+      PaymentsCompanion(
+        syncState: const Value('synced'),
+        serverUpdatedAt: Value(serverUpdatedAt),
+      ),
+    );
+  }
+
+  Future<List<PaymentRow>> listAll() {
+    return (_db.select(
+      _db.payments,
+    )..orderBy([(table) => OrderingTerm.asc(table.createdAt)])).get();
+  }
+
   Future<int> totalPaidForDebt(String debtId) async {
     final sum = _db.payments.amount.sum();
     final query = _db.selectOnly(_db.payments)

@@ -22,11 +22,11 @@ void main() {
   });
 
   test(
-    'schema versi 2 membuka database dan mengaktifkan foreign keys',
+    'schema versi 3 membuka database dan mengaktifkan foreign keys',
     () async {
       await database.ensureOpen();
 
-      expect(database.schemaVersion, 2);
+      expect(database.schemaVersion, 3);
 
       final pragma = await database
           .customSelect('PRAGMA foreign_keys')
@@ -67,6 +67,17 @@ void main() {
     expect(columnNames, isNot(contains('customer_id')));
   });
 
+  test('sync_queue memiliki conflict_data untuk resolusi konflik', () async {
+    await database.ensureOpen();
+
+    final columns = await database
+        .customSelect('PRAGMA table_info(sync_queue)')
+        .get();
+    final columnNames = columns.map((row) => row.read<String>('name')).toSet();
+
+    expect(columnNames, contains('conflict_data'));
+  });
+
   test('foreign key menolak pembayaran tanpa hutang', () async {
     await database.ensureOpen();
 
@@ -93,7 +104,7 @@ void main() {
     expect(payments, isEmpty);
   });
 
-  test('database v1 lama di-reset ke schema v2 tanpa customer', () async {
+  test('database v1 lama di-reset ke schema v3 tanpa customer', () async {
     final directory = await Directory.systemTemp.createTemp(
       'debt_reminder_migration_test',
     );
@@ -114,7 +125,7 @@ void main() {
     final upgraded = AppDatabase(NativeDatabase(file));
     await upgraded.ensureOpen();
 
-    expect(upgraded.schemaVersion, 2);
+    expect(upgraded.schemaVersion, 3);
 
     final tables = await upgraded
         .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")

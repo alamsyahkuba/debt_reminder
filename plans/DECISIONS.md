@@ -318,7 +318,8 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 ## D-018 — PIN admin, sesi server, dan header token admin
 
 - **Tanggal:** 13 November 2026
-- **Status:** Diadopsi untuk Sprint 06
+- **Status:** Server session diadopsi untuk Sprint 06; offline local-only unlock
+  masih menunggu konfirmasi owner.
 - **Konteks:** PIN harus diverifikasi server agar client tidak dapat memberi
   dirinya sendiri akses admin. Gateway Supabase memverifikasi header
   `Authorization` sebagai JWT Supabase, sehingga token admin kustom tidak dapat
@@ -335,8 +336,11 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   - Bootstrap pertama memakai `ADMIN_INITIAL_PIN`; baris `admin_settings`
     dimulai dengan algoritma `uninitialized` agar rate limit juga berlaku
     sebelum PIN pertama dibuat.
-  - Offline unlock tidak disediakan. Verifikasi PIN selalu membutuhkan server;
-    local UI guard bukan otorisasi cloud.
+  - Verifikasi PIN untuk sesi cloud selalu membutuhkan server; local UI guard
+    bukan otorisasi cloud.
+  - Build saat ini tidak menyediakan offline local-only unlock. Jika owner
+    memilih mengaktifkannya, unlock hanya boleh membuka edit cache lokal dan
+    tidak boleh mengotorisasi cloud mutation.
   - Route guard hanya UX. Setiap endpoint mutasi wajib memanggil
     `requireAdminSession` di server.
   - Audit log mencatat verifikasi, kegagalan, perubahan PIN, dan logout tanpa
@@ -344,4 +348,40 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 - **Konsekuensi:** Jika `ADMIN_PIN_PEPPER` dirotasi, PIN lama tidak valid dan
   harus di-bootstrap/diubah. `ADMIN_INITIAL_PIN` harus dihapus setelah setup.
   Semua mutation endpoint Sprint 07 wajib menggunakan header dan helper yang
-  sama. PIN/sesi tidak dapat dipakai offline untuk otorisasi cloud.
+  sama. PIN/sesi tidak pernah mengotorisasi cloud mutation secara offline.
+
+## D-019 — Pull publik, outbox sync, dan resolusi konflik
+
+- **Tanggal:** 13 November 2026
+- **Status:** Diadopsi untuk Sprint 07
+- **Konteks:** Aplikasi harus tetap read-only untuk publik, mengirim mutasi admin
+  secara idempoten, dan tidak menimpa perubahan finansial secara diam-diam.
+- **Keputusan:**
+  - Public pull memakai RPC paginasi keyset `(updated_at, id)` untuk group/debt
+    dan `(created_at, id)` untuk payment, dengan limit 1–500.
+  - Pull publik tidak pernah membuat/mengubah outbox dan tidak menimpa baris
+    lokal dengan `sync_state` pending/conflict.
+  - Semua mutasi admin dikirim satu per satu melalui `admin-sync`; server
+    memverifikasi `x-admin-session`, lalu `admin_apply_mutation` melakukan
+    idempotency, validasi, version check, mutasi, dan audit dalam satu transaksi.
+  - Urutan dependency: group create/update/archive → debt → payment → group
+    delete. Item yang dependency-nya belum synced dilewati.
+  - Network/5xx memakai exponential backoff + jitter; auth failure menyimpan
+    queue dan berhenti sampai admin login kembali; validation failure ditandai
+    gagal tanpa retry otomatis.
+  - Konflik versi menyimpan `server_version`, `server_updated_at`, dan
+    `server_row` di `sync_queue.conflict_data`. UI menyediakan:
+    - “Muat ulang server”: terapkan snapshot server.
+    - “Pertahankan lokal”: set versi lokal ke versi server, enqueue operasi baru,
+      lalu sync ulang.
+  - Drift schema dinaikkan ke v3 dengan reset destruktif karena aplikasi belum
+    release.
+  - Sinkronisasi foreground dipicu start/resume/connectivity/manual. WorkManager
+    periodik 15 menit bersifat best-effort.
+- **Konsekuensi:** Public RPC tidak mengekspos `version`; baris hasil pull dari
+  perangkat lain dapat memunculkan konflik pada edit admin pertama dan harus
+  diselesaikan lewat UI. Full manual pull melakukan rekonsiliasi group yang
+  sudah dihapus server, tetapi mempertahankan group yang masih direferensikan
+  debt pending/conflict agar FK tidak mengubah data unsynced. Incremental pull
+  tidak menghapus baris. Background worker perlu diverifikasi di perangkat
+  Android nyata.

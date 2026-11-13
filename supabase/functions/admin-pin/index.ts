@@ -3,10 +3,8 @@ import {
   DEFAULT_PIN_MAX_ATTEMPTS,
   handleAdminPinRequest,
 } from "./handler.ts";
-import {
-  createSupabaseAdminClient,
-  SupabaseAdminPinStore,
-} from "./supabase_store.ts";
+import { SupabaseAdminPinStore } from "./supabase_store.ts";
+import { createSupabaseAdminClient } from "../_shared/supabase_client.ts";
 import { validateInitialPin, validatePepper } from "../_shared/pin.ts";
 
 const supabaseUrl = requireEnv("SUPABASE_URL");

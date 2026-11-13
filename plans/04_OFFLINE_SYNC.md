@@ -3,6 +3,10 @@
 > **Revisi 12 November 2026:** read-only device enrollment dihapus. Publik
 > membaca data melalui RPC read-only tanpa login/enrollment. Admin mutation
 > tetap melalui outbox dan Edge Functions.
+>
+> **Status Sprint 07:** public pull paginasi, outbox sync idempoten, retry,
+> conflict resolution, foreground/connectivity/manual sync, dan WorkManager
+> best-effort sudah diimplementasikan. Detail keputusan ada di D-019.
 
 ## 1. Data flow
 
@@ -104,8 +108,8 @@ Jangan membuat outbox item di luar transaksi entity.
 
 ## 10. Offline admin behavior
 
-- Local PIN unlock dapat membuka edit cache offline.
-- Tandai perubahan sebagai pending sync.
+- Offline local-only unlock belum tersedia; PIN diverifikasi server saat online.
+- Setelah sesi valid, edit offline diizinkan dan ditandai pending sync.
 - Server-side authorization diperiksa saat sync.
 - Jika sesi expired, outbox tetap utuh dan admin diminta autentikasi online.
 - Jangan membuang local operations setelah auth failure.
@@ -116,3 +120,18 @@ Jangan membuat outbox item di luar transaksi entity.
 - Public pull tidak membuat operasi tulis.
 - Jika RPC publik gagal, tampilkan status offline/error dan tetap baca cache.
 - Data bisnis yang tampil adalah data cache terakhir yang berhasil dipull.
+
+## 12. Implementasi Sprint 07
+
+- Pull publik memakai `public_*_page` dengan cursor keyset dan limit 1–500.
+- `sync_queue.status`: `pending`, `processing`, `conflict`, `failed`.
+- `sync_queue.conflict_data` menyimpan snapshot/versi server untuk resolusi.
+- Worker mengurutkan group create/update/archive → debt → payment → group delete.
+- Backoff eksponensial + jitter untuk network/5xx; auth failure berhenti tanpa
+  membuang queue; validation failure ditandai gagal.
+- Settings menampilkan pending/conflict/failed, timestamp terakhir, error, manual
+  sync, dan aksi reload/keep-local.
+- Foreground sync dipicu start/resume/connectivity; WorkManager periodik 15
+  menit bersifat best-effort dan belum diverifikasi di perangkat fisik.
+- Public RPC tidak mengekspos `version`; konflik pertama setelah pull dari
+  perangkat lain diselesaikan lewat UI.

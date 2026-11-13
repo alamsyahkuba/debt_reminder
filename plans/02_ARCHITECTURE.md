@@ -90,11 +90,17 @@ Tidak ada folder `features/customers`.
 
 - Repository adalah satu-satunya entry point data untuk feature.
 - Read stream/query berasal dari Drift.
-- Public pull menggunakan RPC read-only dan hasilnya disimpan ke Drift.
+- Public pull menggunakan paginated keyset RPC read-only dan hasilnya disimpan
+  ke Drift tanpa membuat outbox.
 - Write lokal harus atomik: update local entity + insert outbox dalam transaksi
   SQLite yang sama.
-- Remote admin writes melalui Edge Functions.
+- Remote admin writes melalui `admin-sync` Edge Function dengan
+  `x-admin-session`; server idempotency/version-check/mutasi/audit atomik.
 - Setelah remote success, update sync metadata/local record.
+- Konflik version disimpan di outbox beserta snapshot server dan ditampilkan
+  untuk reload atau keep-local resolution.
+- Foreground sync dipicu startup/resume/connectivity/manual; WorkManager
+  periodik adalah best-effort.
 - Tidak boleh ada network request langsung dari widget.
 - Domain entities tidak bergantung pada Drift/Supabase model.
 - Public repository/use case tidak boleh menulis atau membuat outbox.

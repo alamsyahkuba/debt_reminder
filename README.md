@@ -26,8 +26,10 @@ lokal, repository, UI, dan test customer. Sprint 04 menambahkan debt management
 lengkap tanpa customer. Sprint 05 menambahkan form pembayaran, penolakan
 overpayment, histori append-only, dan dashboard turunan. Sprint 06 menambahkan
 PIN admin 6 digit, sesi server 15 menit, rate limit, secure storage, route
-guard, dan perubahan PIN. Public Flutter pull/read-only mode tetap dijadwalkan
-Sprint 07. Proyek siap melanjutkan ke Sprint 07.
+guard, dan perubahan PIN. Sprint 07 menambahkan public pull paginasi, outbox
+sync idempoten, retry/backoff, conflict resolution, status sync, manual sync,
+connectivity trigger, dan WorkManager best-effort. Proyek siap melanjutkan ke
+Sprint 08.
 Lihat [`plans/STATUS.md`](plans/STATUS.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
@@ -82,23 +84,30 @@ argumen build client.
 
 ## Database lokal
 
-Drift/SQLite schema v2 memakai tabel bisnis:
+Drift/SQLite schema v3 memakai tabel bisnis:
 
 - `debt_groups`
 - `debts`
 - `payments`
-- `sync_queue`
+- `sync_queue` (termasuk `conflict_data`)
 - `sync_metadata`
 
-Tidak ada tabel `customers`, `customer_id`, atau `read_devices`. Migrasi v1→v2
-bersifat destruktif karena aplikasi belum release; database lama di-reset.
+Tidak ada tabel `customers`, `customer_id`, atau `read_devices`. Migrasi
+v1→v3 bersifat destruktif karena aplikasi belum release; database lama
+di-reset.
 
 - UI membaca data melalui repository dan Drift stream; jangan query Supabase
   langsung dari widget.
 - Mutasi admin dan outbox entry disimpan dalam satu transaksi SQLite.
-- Public mode hanya pull dan tidak membuat outbox.
+- Public pull memakai RPC read-only paginasi dan tidak membuat outbox.
+- Admin sync mengirim outbox lewat Edge Function `admin-sync` dengan sesi
+  admin; group → debt → payment, lalu group delete.
 - Pembayaran bersifat append-only, termasuk trigger SQLite yang menolak
-  UPDATE/DELETE.
+  perubahan field finansial. Metadata sync tetap boleh diperbarui.
+- Konflik versi disimpan dan dapat dimuat ulang dari server atau dipertahankan
+  lokal dari halaman Pengaturan.
+- Sinkronisasi berjalan foreground, saat konektivitas kembali, manual, dan
+  best-effort WorkManager 15 menit.
 - Kode Drift dihasilkan dengan:
 
   ```bash

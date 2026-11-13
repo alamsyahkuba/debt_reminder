@@ -13,6 +13,13 @@ class SyncMetadataDao {
     return row?.value;
   }
 
+  Stream<String?> watchValue(String key) {
+    return (_db.select(_db.syncMetadata)
+          ..where((table) => table.key.equals(key)))
+        .watchSingleOrNull()
+        .map((row) => row?.value);
+  }
+
   Future<void> setValue({
     required String key,
     required String value,

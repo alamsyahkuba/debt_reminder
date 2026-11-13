@@ -1,6 +1,6 @@
 /** Supabase-backed store for the admin PIN Edge Function. */
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
   AdminAuditEntry,
@@ -10,19 +10,6 @@ import type {
 } from "./handler.ts";
 
 const ADMIN_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
-
-export function createSupabaseAdminClient(
-  url: string,
-  serviceRoleKey: string,
-): SupabaseClient {
-  return createClient(url, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-}
 
 export class SupabaseAdminPinStore implements AdminPinStore {
   constructor(private readonly client: SupabaseClient) {}

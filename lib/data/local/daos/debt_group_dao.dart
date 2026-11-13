@@ -102,6 +102,47 @@ class DebtGroupDao {
     )..where((table) => table.id.equals(id))).go();
   }
 
+  Future<void> markSynced({
+    required String id,
+    required int version,
+    required DateTime serverUpdatedAt,
+  }) async {
+    await (_db.update(
+      _db.debtGroups,
+    )..where((table) => table.id.equals(id))).write(
+      DebtGroupsCompanion(
+        version: Value(version),
+        syncState: const Value('synced'),
+        serverUpdatedAt: Value(serverUpdatedAt),
+      ),
+    );
+  }
+
+  Future<void> markConflict(String id) async {
+    await (_db.update(_db.debtGroups)..where((table) => table.id.equals(id)))
+        .write(const DebtGroupsCompanion(syncState: Value('conflict')));
+  }
+
+  Future<void> prepareConflictRetry({
+    required String id,
+    required int serverVersion,
+    required DateTime serverUpdatedAt,
+  }) async {
+    await (_db.update(
+      _db.debtGroups,
+    )..where((table) => table.id.equals(id))).write(
+      DebtGroupsCompanion(
+        version: Value(serverVersion),
+        syncState: const Value('pending'),
+        serverUpdatedAt: Value(serverUpdatedAt),
+      ),
+    );
+  }
+
+  Future<List<DebtGroupRow>> listAll() {
+    return _db.select(_db.debtGroups).get();
+  }
+
   Future<void> upsert(DebtGroupRow row) async {
     await _db
         .into(_db.debtGroups)

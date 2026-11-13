@@ -116,6 +116,11 @@ Aturan:
 - RPC menggunakan `security definer` dengan `search_path` tetap.
 - `grant execute` hanya ke `anon`.
 - RPC hanya SELECT; tidak ada mutation.
+- Pull memakai RPC paginasi keyset:
+  - `public_debt_groups_page(p_after_updated_at, p_after_id, p_limit)`
+  - `public_debts_page(p_after_updated_at, p_after_id, p_limit)`
+  - `public_payments_page(p_after_created_at, p_after_id, p_limit)`
+- `p_limit` dibatasi 1–500; cursor harus lengkap atau kosong.
 - Field internal tidak diekspos: `version`, `operation_id`, `sync_state`,
   `server_updated_at`, audit metadata, session/token.
 - Base table RLS aktif; anon tidak mendapat grant langsung.
@@ -137,6 +142,7 @@ Target revisi: Drift schema baru setelah reset.
   UPDATE/DELETE.
 - `sync_queue` untuk mutation admin.
 - `sync_metadata` untuk cursor pull publik/admin.
+- `sync_queue.conflict_data` menyimpan snapshot/versi server untuk resolusi.
 - `PRAGMA foreign_keys = ON`; group deletion set `debts.group_id` null.
 - Public mode tidak membuat outbox.
 - Schema lama (customers/read_devices) harus dihapus. Karena aplikasi belum
@@ -166,6 +172,8 @@ Target revisi: Drift schema baru setelah reset.
 - Token admin dikirim melalui header `x-admin-session`; header `Authorization`
   tetap dipakai untuk JWT Supabase/anon key di gateway.
 - Client-side `isAdmin=true` bukan otorisasi.
+- `admin_apply_mutation` melakukan idempotency, version check, mutasi, audit, dan
+  response dalam satu transaksi service-role.
 
 ### PIN
 - PIN low entropy; gunakan server-side pepper dan password hashing yang sesuai.

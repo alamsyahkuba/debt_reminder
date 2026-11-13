@@ -3,11 +3,11 @@
 Folder ini berisi schema PostgreSQL, RLS, idempotency helpers, public read RPCs,
 dan Edge Function shared utilities untuk aplikasi Catatan Hutang.
 
-> **Status implementasi:** cloud schema, public read RPC, local Flutter/Drift
-> customer cleanup, payment/dashboard, dan admin PIN/session sudah selesai.
-> Migration lama customers/read_devices dihapus dan local Supabase sudah
-> di-reset. Cloud project belum di-push. Public Flutter pull/read-only mode dan
-> sync mutation endpoints dijadwalkan Sprint 07.
+> **Status implementasi:** cloud schema, public read + pagination RPC, local
+> Flutter/Drift customer cleanup, payment/dashboard, admin PIN/session, dan
+> admin sync sudah selesai. Migration lama customers/read_devices dihapus dan
+> local Supabase sudah di-reset. Cloud project belum di-push. WorkManager/
+> background sync belum diverifikasi di perangkat fisik.
 
 ## Prasyarat
 
@@ -88,6 +88,15 @@ tetap, dan hanya memberikan `execute` kepada `anon`.
 - paid_at
 - notes
 - created_at
+
+### Paginated pull RPCs
+- `public_debt_groups_page(p_after_updated_at, p_after_id, p_limit)`
+- `public_debts_page(p_after_updated_at, p_after_id, p_limit)`
+- `public_payments_page(p_after_created_at, p_after_id, p_limit)`
+
+Keyset pagination memakai `(updated_at, id)` untuk group/debt dan
+`(created_at, id)` untuk payment. `p_limit` dibatasi 1–500. Cursor harus
+dikirim lengkap atau tidak sama sekali.
 
 Aturan:
 
@@ -201,22 +210,52 @@ Aturan:
 Menjalankan function lokal:
 
 ```bash
-npx --yes supabase@3.1.0 functions serve admin-pin --env-file supabase/functions/.env
+npx --yes supabase@3.1.0 functions serve admin-pin admin-sync --env-file supabase/functions/.env
 ```
+
+## Admin Sync Edge Function
+
+Nama function: `admin-sync` (`supabase/functions/admin-sync/`).
+
+Request `POST` dengan header `x-admin-session`:
+
+```json
+{
+  "operation_id": "uuid",
+  "operation": "create|update|archive|delete|payment_create",
+  "entity_type": "debt_group|debt|payment",
+  "entity_id": "uuid",
+  "payload": {}
+}
+```
+
+Alur:
+
+1. Validasi allowlist field dan tipe operasi.
+2. Verifikasi sesi admin server-side.
+3. Hash payload kanonik.
+4. Panggil `admin_apply_mutation` dengan service role.
+5. PostgreSQL melakukan idempotency registry, version check, mutasi, audit, dan
+   menyimpan response dalam satu transaksi.
+6. Replay mengembalikan response lama; stale version mengembalikan 409 beserta
+   `server_version`, `server_updated_at`, dan `server_row`.
+
+Urutan dependency dilakukan di client: group create/update/archive → debt →
+payment → group delete.
 
 Test helper:
 
 ```bash
 cd supabase/functions
 deno fmt --check
-deno check _shared/*.ts admin-pin/*.ts
+deno check _shared/*.ts admin-pin/*.ts admin-sync/*.ts
 deno lint
 deno test
 ```
 
-Test mencakup public read RPC, anon denial, idempotency, PIN hashing, JWT
-signing/verification, rate limit, session lifecycle, invalid/expired token,
-PIN change/logout, dan audit.
+Test mencakup public read/pagination, anon denial, idempotency, PIN hashing,
+JWT signing/verification, rate limit, session lifecycle, invalid/expired token,
+PIN change/logout, audit, payload validation, version conflict, dan replay.
 
 ## Migration, reset, dan deployment
 
@@ -237,14 +276,14 @@ npx --yes supabase@3.1.0 secrets set \
   ADMIN_PIN_PEPPER=<min-32-characters> \
   ADMIN_INITIAL_PIN=<6-digit-bootstrap-pin>
 npx --yes supabase@3.1.0 functions deploy admin-pin
+npx --yes supabase@3.1.0 functions deploy admin-sync
 ```
 
 Hapus `ADMIN_INITIAL_PIN` dari secrets setelah PIN pertama berhasil dibuat.
 
 ## Out of scope saat ini
 
-- Sync mutation endpoints (Sprint 07).
 - Perangkat read-only dan device enrollment (dihapus).
 - Data pelanggan (dihapus).
 - Seed/demo data produksi.
-- Public Flutter pull/read-only mode (Sprint 07).
+- Deployment cloud dan verifikasi perangkat fisik.
