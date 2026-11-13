@@ -30,7 +30,9 @@ guard, dan perubahan PIN. Sprint 07 menambahkan public pull paginasi, outbox
 sync idempoten, retry/backoff, conflict resolution, status sync, manual sync,
 connectivity trigger, dan WorkManager best-effort. Sprint 08 menambahkan
 reminder lokal H-3/H-1/H, permission notifikasi, fallback exact alarm, timezone,
-dan rekonsiliasi jadwal. Proyek siap melanjutkan ke Sprint 09.
+dan rekonsiliasi jadwal. Sprint 09 direncanakan mencakup hard delete terbatas,
+full-pull reconciliation, backup/export JSON, dan release hardening; implementasi
+belum dimulai dan membutuhkan kredensial cloud/signing serta perangkat fisik.
 Lihat [`plans/STATUS.md`](plans/STATUS.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
@@ -120,6 +122,8 @@ di-reset.
   admin; group → debt → payment, lalu group delete.
 - Pembayaran bersifat append-only, termasuk trigger SQLite yang menolak
   perubahan field finansial. Metadata sync tetap boleh diperbarui.
+- Hard delete debt hanya untuk hutang tanpa payment; hutang dengan payment harus
+  diarsipkan. Backup/export JSON admin-only direncanakan untuk Sprint 09.
 - Konflik versi disimpan dan dapat dimuat ulang dari server atau dipertahankan
   lokal dari halaman Pengaturan.
 - Sinkronisasi berjalan foreground, saat konektivitas kembali, manual, dan
@@ -139,8 +143,8 @@ flutter run --dart-define=SEED_DEMO_DATA=true
 ```
 
 Seed demo tidak membuat outbox dan tidak boleh dipakai dengan database cloud
-nyata. Database lokal belum dienkripsi; keputusan app lock/encryption masih
-menunggu owner.
+nyata. Database lokal tidak dienkripsi; app lock tidak dipakai di v1 dan
+keterbatasan ini didokumentasikan pada release notes.
 
 ## Kualitas kode
 

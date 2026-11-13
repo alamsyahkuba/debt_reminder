@@ -31,7 +31,8 @@
 - Admin creates group offline; it appears immediately.
 - Group syncs exactly once after reconnect.
 - Debt can be assigned/moved between groups.
-- Group deletion follows explicit policy and never silently deletes debts.
+- Group deletion moves debts to Unassigned before deleting the group.
+- Hard delete requires confirmation and audit.
 - Archived group remains available for historical debt.
 - Group totals match underlying debts/payments.
 - Tidak ada subgroup.
@@ -43,6 +44,7 @@
 - Duplicate sync retry does not duplicate payment.
 - Paid/outstanding totals are correct.
 - Payment history remains append-only.
+- Debt hard delete is blocked when payments exist.
 - Public can read debt/payment data.
 
 ### Offline
@@ -52,6 +54,10 @@
 - Retry works after internet returns.
 - Conflict is visible and not silently discarded.
 - Public pull failure keeps cache readable.
+- Hard-deleted rows are removed from other devices by full-pull reconciliation;
+  pending/conflict rows are preserved.
+- Backup JSON exports only business fields; restore-merge validates and does not
+  overwrite existing records.
 
 Note: offline local-only PIN unlock is still an owner decision; current UI
 requires an online server session before starting local edits. Existing outbox
@@ -67,6 +73,11 @@ operations are preserved when that session expires.
 - Public RPC does not expose internal metadata.
 - Tidak ada customer table/entity/UI.
 - Tidak ada read_devices/device enrollment.
+
+### Release/security
+- No app lock/SQLite encryption is documented as a v1 limitation.
+- No PIN recovery UI; server-side reset runbook is documented.
+- Public business data sign-off is recorded.
 
 ### Reminder
 - Reminder schedule is created for eligible debts.

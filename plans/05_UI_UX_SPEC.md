@@ -64,7 +64,8 @@ kembali ke mode publik/read-only.
 - Paid total and outstanding amount.
 - Due date and notes.
 - Payment history.
-- Admin: edit, record payment, move group, archive.
+- Admin: edit, record payment, move group, archive, dan hard delete hanya jika
+  belum ada payment.
 - Tidak ada informasi customer.
 
 ### Payment form
@@ -84,8 +85,9 @@ kembali ke mode publik/read-only.
 
 ### Settings
 - Reminder schedule (admin-only controls live on the Reminder screen).
-- Admin PIN change.
+- Admin PIN change (tanpa recovery UI).
 - Sync now.
+- Backup/export JSON dan restore-merge admin-only.
 - Pending operations and last sync.
 - App version dan privacy note.
 - Tidak ada menu perangkat read-only.
@@ -107,3 +109,10 @@ kembali ke mode publik/read-only.
 - Confirm destructive/archive actions.
 - No subgroup UI.
 - Public mode tidak menampilkan aksi mutation.
+
+### Backup/export
+- Admin memilih export JSON berisi group, hutang, dan pembayaran.
+- File dibagikan melalui share sheet/file picker.
+- Restore-merge menampilkan preview, validasi referensi, dan tidak menimpa data
+  yang sudah ada.
+- Export disarankan sebelum hard delete.

@@ -96,6 +96,9 @@ Jangan membuat outbox item di luar transaksi entity.
 - Apply remote changes dalam transaksi SQLite.
 - Jangan menimpa unsynced local edits tanpa conflict resolution.
 - Maintain archive/tombstone markers.
+- Hard delete di server dideteksi melalui full-pull reconciliation (startup maksimal
+  sekali per 24 jam dan manual sync); baris `synced` yang hilang dihapus, baris
+  `pending`/`conflict` dipertahankan.
 - Public pull tidak boleh mengubah outbox admin.
 
 ## 9. Retry and background work
@@ -135,3 +138,12 @@ Jangan membuat outbox item di luar transaksi entity.
   menit bersifat best-effort dan belum diverifikasi di perangkat fisik.
 - Public RPC tidak mengekspos `version`; konflik pertama setelah pull dari
   perangkat lain diselesaikan lewat UI.
+
+## 13. Keputusan Sprint 09
+
+- Offline-first admin CRUD tetap dipertahankan; bukan online-only.
+- Hard delete debt hanya jika belum ada payment; payment tetap append-only.
+- Full-pull reconciliation menangani baris yang sudah dihapus server.
+- Backup/export JSON tidak disinkronkan; restore-merge hanya menambahkan data
+  yang belum ada dan tidak menimpa cloud secara otomatis.
+- Tidak ada app lock/SQLite encryption atau PIN recovery UI di v1.

@@ -37,6 +37,9 @@ bila diperlukan, ditulis di `title` atau `notes`.
 Paid amount dihitung dari payments. Debt status diturunkan di query/domain,
 bukan disimpan sebagai mutable status.
 
+Hard delete debt hanya diizinkan jika belum memiliki payment. Debt yang sudah
+memiliki payment hanya boleh diarsipkan; payment tidak pernah dihapus.
+
 ### `payments`
 - `id uuid primary key`
 - `debt_id uuid not null references debts(id)`
@@ -47,7 +50,8 @@ bukan disimpan sebagai mutable status.
 - `created_at timestamptz not null`
 
 Payments are append-only. Enforce no duplicate `operation_id`. Koreksi harus
-berupa adjustment/reversal yang tercatat.
+berupa adjustment/reversal yang tercatat. Debt dengan payment tidak boleh
+hard-delete.
 
 ### `admin_settings`
 - Single logical row, fixed UUID.
@@ -127,6 +131,10 @@ Aturan:
 - Anon tidak memiliki INSERT/UPDATE/DELETE.
 - Archived records dapat dibaca publik; UI default menyembunyikan arsip dan
   menyediakan filter histori.
+- Hard delete menyebabkan baris hilang dari server; client menjalankan full-pull
+  reconciliation saat startup (maksimal sekali per 24 jam) dan manual sync.
+  Baris lokal `synced` yang tidak ada di server dihapus; `pending`/`conflict`
+  dipertahankan.
 - Admin tetap dapat membaca melalui sesi admin; mutation tetap lewat Edge
   Function.
 
@@ -144,6 +152,8 @@ Target revisi: Drift schema baru setelah reset.
 - `sync_metadata` untuk cursor pull publik/admin.
 - `sync_queue.conflict_data` menyimpan snapshot/versi server untuk resolusi.
 - `local_settings` menyimpan preferensi reminder perangkat; tidak disinkronkan.
+- Backup/export JSON hanya berisi field bisnis group/debt/payment; metadata
+  internal, session, audit, `version`, dan `operation_id` tidak diekspor.
 - `PRAGMA foreign_keys = ON`; group deletion set `debts.group_id` null.
 - Public mode tidak membuat outbox.
 - Schema lama (customers/read_devices) harus dihapus. Karena aplikasi belum
@@ -179,6 +189,8 @@ Target revisi: Drift schema baru setelah reset.
 ### PIN
 - PIN low entropy; gunakan server-side pepper dan password hashing yang sesuai.
 - Rate limit dan lockout.
+- Tidak ada PIN recovery UI di v1; reset hanya melalui prosedur operator/
+  server-side dan `ADMIN_INITIAL_PIN` hanya untuk bootstrap.
 - Response tidak boleh membocorkan detail internal.
 - Offline unlock hanya kenyamanan lokal; bukan otorisasi cloud.
 - Saat reconnect, server tetap meminta sesi admin valid untuk mutation.
@@ -197,7 +209,8 @@ Owner sudah memutuskan:
 1. Semua data bisnis publik.
 2. Data pelanggan tidak ada.
 3. Public read hanya read-only melalui RPC.
-4. Device-level app lock/local SQLite encryption masih pending.
+4. Device-level app lock/local SQLite encryption tidak dipakai di v1 dan harus
+   didokumentasikan sebagai keterbatasan.
 
 ## 5. RLS checklist
 

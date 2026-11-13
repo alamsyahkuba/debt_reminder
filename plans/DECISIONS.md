@@ -172,7 +172,8 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   - UI tidak boleh menulis langsung ke Drift; gunakan repository.
   - Perubahan schema berikutnya wajib menaikkan `schemaVersion`, menambahkan
     migration, dan test migration.
-  - SQLite lokal belum dienkripsi; keputusan app lock/encryption menunggu owner.
+  - SQLite lokal tidak dienkripsi di v1; app lock/encryption tidak dipakai dan
+    keterbatasannya didokumentasikan (lihat D-023).
 
 > **Direvisi 12 November 2026:** schema lokal di-reset tanpa customers dan
 > `read_devices`. Lihat D-015.
@@ -414,3 +415,68 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   fisik. Build Android memerlukan compileSdk 37 dan core-library desugaring
   untuk `flutter_local_notifications`. Reminder lokal tidak menyinkronkan
   preferensi antarperangkat.
+
+## D-021 — Offline-first tetap, hard delete terbatas, dan full-pull reconciliation
+
+- **Tanggal:** 14 November 2026
+- **Status:** Disetujui owner untuk Sprint 09
+- **Konteks:** Owner sempat mempertimbangkan CRUD online-only, tetapi memilih
+  mempertahankan offline-first karena arsitektur outbox sudah terbukti dan
+  aplikasi harus tetap berguna tanpa internet.
+- **Keputusan:**
+  - Admin CRUD tetap menulis ke SQLite + outbox secara atomik; server
+    authorization tetap wajib saat sync.
+  - Hard delete group mengikuti kebijakan yang ada: hutang dipindahkan ke
+    Unassigned, lalu group dihapus.
+  - Hard delete debt hanya boleh jika debt belum memiliki payment. Debt yang
+    sudah memiliki payment hanya boleh diarsipkan.
+  - Payment tetap append-only dan tidak pernah dihapus.
+  - Hard delete memerlukan konfirmasi eksplisit dan audit server.
+  - Public pull menjalankan full reconciliation saat startup (maksimal sekali
+    per 24 jam) dan saat manual sync. Baris lokal `synced` yang tidak ada lagi
+    di server dihapus; baris `pending`/`conflict` tidak dihapus otomatis.
+- **Konsekuensi:** Perlu mutation delete di backend/local/UI, full-pull
+  reconciliation untuk debt/group, dan test hard delete. Data yang sudah
+  dihapus tidak dapat dipulihkan dari aplikasi; backup/export harus tersedia
+  sebelum aksi delete.
+
+## D-022 — Backup/export JSON dan restore-merge yang aman
+
+- **Tanggal:** 14 November 2026
+- **Status:** Disetujui owner untuk Sprint 09
+- **Konteks:** Hard delete dan permintaan owner membutuhkan mekanisme backup
+  yang tidak membocorkan metadata internal dan tidak menimpa data cloud secara
+  diam-diam.
+- **Keputusan:**
+  - Backup/export berupa JSON dengan `schema_version`, `exported_at`,
+    `debt_groups`, `debts`, dan `payments`.
+  - File hanya berisi field bisnis; `version`, `operation_id`, sync metadata,
+    session, audit, dan token tidak diekspor.
+  - Export tersedia untuk admin dan disimpan melalui share sheet/file picker.
+  - Restore/import bersifat admin-only, divalidasi, dan **merge by ID**: data
+    yang belum ada ditambahkan, data yang sudah ada tidak ditimpa atau dihapus,
+    dan payment duplikat diabaikan.
+  - Restore lokal tidak menimpa cloud secara otomatis. Full destructive
+    replace/cloud restore di luar scope v1 dan memerlukan keputusan terpisah.
+  - UI menyarankan export sebelum hard delete.
+- **Konsekuensi:** Backup dapat memulihkan data lokal yang hilang, tetapi bukan
+  pengganti disaster recovery cloud. Restore harus memiliki preview, validasi
+  referensi group→debt→payment, dan konfirmasi.
+
+## D-023 — Tanpa app lock, tanpa PIN recovery UI
+
+- **Tanggal:** 14 November 2026
+- **Status:** Disetujui owner untuk v1
+- **Keputusan:**
+  - Tidak ada device-level app lock atau enkripsi SQLite tambahan di v1.
+    Keterbatasan ini harus didokumentasikan.
+  - Tidak ada fitur PIN recovery di aplikasi. Jika PIN hilang, owner harus
+    melakukan reset server-side melalui prosedur operator/secret yang
+    terdokumentasi.
+  - `ADMIN_INITIAL_PIN` hanya untuk bootstrap dan harus dihapus setelah PIN
+    pertama berhasil dibuat.
+  - Semua data bisnis tetap publik melalui RPC read-only; internal metadata
+    tetap privat.
+- **Konsekuensi:** Kehilangan PIN berarti admin tidak dapat masuk sampai reset
+  server dilakukan. Kehilangan perangkat tidak dilindungi app lock lokal;
+  dokumentasikan risiko ini pada release notes.

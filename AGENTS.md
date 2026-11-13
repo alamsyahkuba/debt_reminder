@@ -30,8 +30,15 @@ If any required file is missing, do not invent its contents. Report the missing 
 - Public users do not log in and do not have an account.
 - Admin entry: Drawer → Admin → PIN.
 - Cloud data is shared.
-- App is offline-first using Drift/SQLite.
+- App is offline-first using Drift/SQLite; admin CRUD remains offline-first with
+  atomic outbox and server authorization at sync.
 - Supabase PostgreSQL is the cloud source of truth.
+- Hard delete is limited: group delete moves debts to Unassigned; debt hard
+  delete only when it has no payments; payments are never deleted.
+- Admin JSON backup/export is expected; restore-merge must not overwrite
+  existing data or internal metadata.
+- No app lock/local SQLite encryption and no PIN recovery UI in v1; document
+  both limitations and the server-side PIN reset runbook.
 - Business data is limited to **debt groups, debts, and payments**.
 - There is **no customer entity, customer module, or `customer_id`**.
 - A debt may identify a borrower only through its `title` and/or `notes`.
@@ -167,7 +174,9 @@ silently reinterpret the product.
 - Groups are flat; never add `parent_id`, subgroup navigation, or recursive group UI unless approved.
 - A debt may have one group or be Unassigned (`group_id = null`).
 - Group archive preserves its debts and history.
-- Group deletion must follow the approved policy: move debts to Unassigned, never delete debts.
+- Group deletion must follow the approved policy: move debts to Unassigned, never delete debts in the group.
+- Hard delete a debt only when it has no payments; debt with payments must be archived.
+- Payments are never hard-deleted.
 - Moving a debt between groups must be auditable/syncable.
 - Group totals must be derived from underlying debts/payments, not manually maintained counters unless a verified cache is used.
 - Debt status and outstanding amount must be derived consistently from principal, payments, and due date.
@@ -180,7 +189,7 @@ silently reinterpret the product.
 - Online PIN verification is performed by a server endpoint.
 - Store session/token securely on device and enforce expiry.
 - Lock/logout must clear local session material.
-- Offline unlock is only a local convenience for editing cached data; it does not authorize cloud mutations.
+- Offline unlock is only a local convenience for editing cached data; it does not authorize cloud mutations. v1 does not implement offline local-only unlock; a valid server session is required before local edits are queued.
 - When syncing admin operations, server authorization is mandatory.
 - If the admin session expires, preserve the outbox and request re-authentication; never discard local work.
 - Do not add read-only device enrollment, device tokens, or `read_devices`; public read does not require enrollment.

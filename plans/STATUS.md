@@ -7,7 +7,9 @@ customer entity, groups retained, all business data public, admin PIN retained,
 device enrollment removed, and database reset approved. Cloud rework (Sprint
 01R), local rework (Sprint 02R/03R), Sprint 04 debt management, Sprint 05
 payments/dashboard, Sprint 06 admin PIN/session, Sprint 07 offline sync, and
-Sprint 08 local reminders are complete. Ready for Sprint 09.
+Sprint 08 local reminders are complete. Sprint 09 plan has been expanded with
+owner decisions for hard delete, full-pull reconciliation, backup/export, and
+release security. Implementation has not started; release inputs are pending.
 
 ## Sprint status
 
@@ -29,7 +31,8 @@ Sprint 08 local reminders are complete. Ready for Sprint 09.
       retry/backoff, conflict resolution, sync status, background best-effort)
 - [x] Sprint 08 — Local reminders (H-3/H-1/H, permissions, timezone,
       reconcile, admin UI)
-- [ ] Sprint 09 — QA, hardening & release
+- [ ] Sprint 09 — QA, hardening & release (hard delete, full-pull
+      reconciliation, backup/export, release build, device verification)
 
 ## Implementation status by area
 
@@ -286,11 +289,15 @@ flutter build apk --debug                                                       
   SQLite handles concurrent connections, but this needs device verification.
 - Local management controls are read-only when locked, but local UI guards are
   not a substitute for server authorization.
+- Hard delete, full-pull deletion reconciliation, and backup/export are planned
+  for Sprint 09 and are not implemented yet.
+- Release identity, signing credentials, cloud project access, and physical
+  Android verification are still required before release.
 - Offline local-only unlock is currently disabled pending owner confirmation. A
   valid server session is required before offline edits can be queued; if it
   expires, local work already in the outbox is preserved.
-- Local SQLite is not encrypted; device-level app lock/encryption remains an
-  owner decision.
+- Local SQLite is not encrypted and no device-level app lock is used in v1;
+  this is a documented limitation (D-023).
 - Public read is intentionally world-readable to anyone with the anon key.
 - Initial PIN bootstrap depends on `ADMIN_INITIAL_PIN`; remove it after setup.
 - Android build now requires compileSdk 37 and core-library desugaring because
@@ -323,25 +330,39 @@ flutter build apk --debug                                                       
   conflicts with reload/keep-local resolution.
 - Local reminders use device-local preferences and local notifications only;
   public mode cannot configure them.
-- See `plans/DECISIONS.md`, especially D-013 through D-020.
+- Offline-first admin CRUD remains; server authorization is required at sync.
+  Hard delete is limited to groups and debts without payments; full pull
+  reconciles deleted rows. Backup/export is admin-only JSON with safe
+  restore-merge. No app lock or PIN recovery UI in v1.
+- See `plans/DECISIONS.md`, especially D-013 through D-023.
 
-## Owner decisions still pending
+## Owner decisions
 
 - [x] Confirm PIN policy: 6 digits, 5 failed attempts, 15-minute lockout and
       session; selected by owner for Sprint 06.
 - [x] Overpayment policy: default reject implemented in Sprint 05; owner may
       revise before release.
-- [ ] Confirm archive/delete policy for debts (group delete already defined).
+- [x] Archive/delete policy: debt hard delete only when no payments; debt with
+      payments can only be archived; group delete moves debts to Unassigned.
+- [x] Backup/export: admin-only JSON export plus safe restore-merge.
+- [x] No app lock/local SQLite encryption in v1.
+- [x] All business data remains public via read-only RPC; internal metadata stays private.
+- [x] No PIN recovery UI in v1; server-side operator reset only.
 - [x] Reminder schedule implemented as H-3/H-1/H with local time (default
       09:00) and exact-alarm fallback; owner may revise defaults.
-- [ ] Confirm whether device-level app lock/local SQLite encryption is required.
-- [ ] Confirm whether offline local-only unlock is required; currently admin PIN
-      verification requires the server.
+- [x] No offline local-only unlock in v1; offline edits require a valid server
+      session and are queued through the outbox.
 
 Resolved 12 November 2026: public read all business data, no customers, groups
 retained, admin PIN retained, device enrollment removed, database reset.
 
+Resolved 14 November 2026: offline-first CRUD retained; limited hard delete;
+full-pull deletion reconciliation; admin JSON backup/export with safe
+restore-merge; no app lock; no PIN recovery UI; public business data final.
+
 ## Next step
 
-Request owner approval to start Sprint 09 (QA, hardening & release). Reminder
-and WorkManager behavior still need physical Android verification.
+Set cloud/release credentials and provide a physical Android device, then start
+Sprint 09 implementation: hard delete + reconciliation, backup/export, security
+and release verification. Reminder and WorkManager behavior still need
+physical-device verification.
