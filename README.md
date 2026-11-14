@@ -95,7 +95,9 @@ Admin dapat membuka **Semua Hutang → Tambah Banyak** untuk mengisi beberapa
 hutang sekaligus:
 
 - 1–50 baris per batch, satu group untuk seluruh batch.
-- Jatuh tempo default opsional dan dapat dioverride per baris.
+- Jatuh tempo default otomatis mengisi baris; checklist **per bulan** membuat
+  baris 1 = tanggal default, baris berikutnya +1 bulan.
+- Tanggal dapat dioverride per baris.
 - Baris kosong diabaikan; baris terisi sebagian ditolak.
 - Satu transaksi SQLite menyimpan semua hutang dan satu outbox `debt_batch`.
 - Satu RPC server atomik `admin_bulk_create_debts` membuat seluruh batch atau

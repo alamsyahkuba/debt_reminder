@@ -170,7 +170,8 @@ pengujian langsung.
 1. Pastikan migration `20261114140000_bulk_debt_insert.sql` dan Edge Function
    `admin-sync` versi baru sudah dideploy.
 2. Login admin, buka **Semua Hutang → Tambah Banyak**.
-3. Simpan 1, 5, dan 50 baris dengan satu group; uji jatuh tempo default dan
+3. Simpan 1, 5, dan 50 baris dengan satu group; uji jatuh tempo default
+   otomatis, checklist per bulan (baris 1 = default, berikutnya +1 bulan), dan
    override per baris.
 4. Pastikan daftar hutang, dashboard, dan group summary langsung bertambah.
 5. Offline: simpan batch, restart aplikasi, reconnect; pastikan satu outbox
@@ -185,7 +186,8 @@ Checklist:
 
 - [ ] Admin-only bulk screen dan route guard.
 - [ ] 1, 5, dan 50 baris tersimpan benar.
-- [ ] Group batch dan tanggal default/override benar.
+- [ ] Group batch, tanggal default otomatis, jadwal per bulan, dan override
+      benar.
 - [ ] Satu transaksi lokal + satu outbox `debt_batch`.
 - [ ] Server batch atomik dan replay idempoten.
 - [ ] Offline → reconnect → restart → synced.

@@ -543,8 +543,10 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 - **Keputusan owner:**
   - Input manual multi-baris di layar `/debts/bulk`.
   - Maksimal 50 hutang per batch.
-  - Satu group untuk seluruh batch; tanggal default opsional dan dapat
-    dioverride per baris.
+  - Satu group untuk seluruh batch; tanggal default opsional otomatis mengisi
+    baris dan dapat dioverride per baris.
+  - Checklist **jatuh tempo per bulan**: baris 1 memakai tanggal default,
+    baris berikutnya +1 bulan bertahap.
   - Satu RPC server atomik untuk seluruh batch.
   - Dialog konfirmasi jika batch berisi lebih dari satu hutang.
 - **Implementasi:**

@@ -277,8 +277,10 @@ for v1 distribution.
 ### Sprint 12 — Bulk insert hutang (implemented locally)
 
 - Admin-only **Tambah Banyak** screen at `/debts/bulk` supports 1–50 manual
-  rows, one group per batch, optional default due date with per-row override,
-  empty-row skipping, inline validation, and a confirmation dialog for >1 row.
+  rows, one group per batch, optional default due date that auto-fills rows,
+  a monthly checkbox (row 1 = default, following rows +1 month), per-row
+  override, empty-row skipping, inline validation, and a confirmation dialog
+  for >1 row.
 - `DebtRepository.createMany` writes all debts and one `debt_batch` outbox
   operation in one SQLite transaction. Any invalid row rolls back the batch.
 - The sync worker processes `debt_group` → `debt_batch` → `payment`, checks
@@ -503,11 +505,13 @@ Bulk insert hutang (Sprint 12):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 176 tests
+flutter test                                                                                     passed, 179 tests
   - createMany atomic local + one debt_batch outbox tests                                        passed
   - invalid row/group/max batch rollback tests                                                  passed
   - batch sync before payment and failure preservation tests                                    passed
   - admin/public bulk UI, validation, group, confirmation tests                                 passed
+  - default due date auto-fill and +1 month per row tests                                       passed
+  - addMonthsClamped end-of-month tests                                                         passed
 deno fmt --check / deno check / deno lint / deno test                                             passed, 68 tests
   - debt_batch validation/duplicate/limit tests                                                  passed
 pgTAP admin_bulk_debt.test.sql                                                                   passed, 15 assertions

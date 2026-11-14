@@ -64,8 +64,12 @@ Layar **Tambah Banyak Hutang**:
 
 1. **Header batch**
    - Dropdown **Group untuk semua hutang** (termasuk Unassigned).
-   - Pilihan **Jatuh tempo default (opsional)**.
-   - Tombol **Terapkan ke semua baris** untuk mengisi tanggal yang masih kosong.
+   - Pilihan **Jatuh tempo default (opsional)** yang otomatis mengisi tanggal
+     setiap baris saat dipilih.
+   - Checklist **Jatuh tempo per bulan**: baris 1 memakai tanggal default,
+     baris berikutnya +1 bulan, +2 bulan, dan seterusnya.
+   - Tombol **Terapkan ulang ke semua baris** untuk mengulang jadwal setelah
+     override manual.
    - Info: `0/50 hutang`.
 
 2. **Daftar baris**
@@ -305,8 +309,11 @@ Tidak ada perubahan khusus:
 - Tambah/hapus baris bekerja dan batas 50 ditegakkan.
 - Baris kosong di bagian bawah diabaikan.
 - Baris terisi sebagian menampilkan error dan tidak menyimpan.
-- Default group dan tanggal diterapkan ke baris.
-- Override tanggal per baris tidak tertimpa default.
+- Default group dan tanggal otomatis diterapkan ke baris.
+- Checklist per bulan menghasilkan baris 1 = default, baris 2 = +1 bulan,
+  baris 3 = +2 bulan.
+- Override tanggal per baris tidak tertimpa default sampai jadwal diterapkan
+  ulang.
 - Simpan tiga baris menutup layar, menampilkan SnackBar, dan daftar hutang
   menampilkan tiga baris.
 - Dialog konfirmasi muncul untuk lebih dari satu baris.
@@ -327,7 +334,8 @@ Tidak ada perubahan khusus:
 - [x] Admin dapat membuka **Tambah Banyak Hutang** dari layar Semua Hutang.
 - [x] Publik tidak melihat tombol dan tidak dapat membuka route.
 - [x] Admin dapat menambah, menghapus, dan mengisi hingga 50 baris.
-- [x] Group batch dan jatuh tempo default bekerja; override per baris tersedia.
+- [x] Group batch dan jatuh tempo default bekerja otomatis; checklist per
+      bulan menambah 1 bulan per baris; override per baris tersedia.
 - [x] Baris kosong diabaikan; baris terisi sebagian ditolak.
 - [x] Satu transaksi menyimpan semua hutang dan satu outbox batch.
 - [x] Tidak ada data parsial jika validasi/transaksi gagal.
@@ -373,7 +381,8 @@ Selesai dan tervalidasi:
 - [x] Edge Function `debt_batch` + validasi 1–50 baris/ID unik.
 - [x] RPC `admin_bulk_create_debts` dengan idempotency, atomic insert, audit.
 - [x] Dependency sync group → debt_batch → payment.
-- [x] UI multi-baris, group batch, tanggal default, validasi, dan konfirmasi.
+- [x] UI multi-baris, group batch, tanggal default otomatis, checklist per
+      bulan, validasi, dan konfirmasi.
 - [x] Route admin-only `/debts/bulk` dan tombol **Tambah Banyak**.
 - [x] Test repository, sync, widget, handler Deno, dan pgTAP.
 - [x] Format, analyze, seluruh Flutter test, Deno test, dan pgTAP lulus.

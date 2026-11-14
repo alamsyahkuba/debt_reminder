@@ -31,6 +31,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
   int _lastActiveCount = 0;
   String? _selectedGroupId;
   DateTime? _defaultDueDate;
+  bool _monthlyDueDates = false;
   String? _formError;
   bool _saving = false;
 
@@ -162,22 +163,34 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
                           ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    key: const Key('bulk-debt-apply-default-date'),
-                    onPressed: _defaultDueDate == null
-                        ? null
-                        : _applyDefaultDueDate,
-                    icon: const Icon(Icons.event_repeat_outlined),
-                    label: const Text('Terapkan ke semua baris'),
+                CheckboxListTile(
+                  key: const Key('bulk-debt-monthly-checkbox'),
+                  value: _monthlyDueDates,
+                  onChanged: _defaultDueDate == null
+                      ? null
+                      : _setMonthlyDueDates,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Jatuh tempo per bulan'),
+                  subtitle: const Text(
+                    'Baris 1 memakai tanggal default, baris berikutnya +1 bulan.',
                   ),
                 ),
+                if (_defaultDueDate != null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: const Key('bulk-debt-apply-default-date'),
+                      onPressed: _applyDefaultDueDate,
+                      icon: const Icon(Icons.event_repeat_outlined),
+                      label: const Text('Terapkan ulang ke semua baris'),
+                    ),
+                  ),
                 const SizedBox(height: 4),
                 Text(
                   '${_activeRowCount()}/$maxDebtBatchSize hutang siap disimpan. '
-                  'Group dan tanggal default hanya mengisi baris yang kosong.',
+                  'Tanggal default terisi otomatis; checklist per bulan '
+                  'menambah 1 bulan per baris.',
                   key: const Key('bulk-debt-summary'),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
@@ -254,7 +267,10 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
 
     final row = _BulkDebtRow(id: _nextRowId++);
     _attachRow(row);
-    setState(() => _rows.add(row));
+    setState(() {
+      _rows.add(row);
+      _applyDefaultSchedule(force: false);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         row.titleFocus.requestFocus();
@@ -271,6 +287,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
       _rows.remove(row);
       _rowErrors.remove(row.id);
       _formError = null;
+      _applyDefaultSchedule(force: false);
       _lastActiveCount = _activeRowCount();
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => row.dispose());
@@ -293,6 +310,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
     setState(() {
       _defaultDueDate = selected;
       _defaultDueDateController.text = formatDate(selected);
+      _applyDefaultSchedule(force: true);
       _formError = null;
     });
   }
@@ -300,24 +318,54 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
   void _clearDefaultDueDate() {
     setState(() {
       _defaultDueDate = null;
+      _monthlyDueDates = false;
       _defaultDueDateController.clear();
-    });
-  }
-
-  void _applyDefaultDueDate() {
-    final date = _defaultDueDate;
-    if (date == null) {
-      return;
-    }
-    setState(() {
       for (final row in _rows) {
-        if (row.dueDate == null) {
-          row.dueDate = date;
-          row.dueDateController.text = formatDate(date);
+        if (!row.hasCustomDueDate) {
+          row.dueDate = null;
+          row.dueDateController.clear();
         }
       }
       _lastActiveCount = _activeRowCount();
     });
+  }
+
+  void _setMonthlyDueDates(bool? value) {
+    if (_defaultDueDate == null) {
+      return;
+    }
+    setState(() {
+      _monthlyDueDates = value ?? false;
+      _applyDefaultSchedule(force: true);
+    });
+  }
+
+  void _applyDefaultDueDate() {
+    if (_defaultDueDate == null) {
+      return;
+    }
+    setState(() => _applyDefaultSchedule(force: true));
+  }
+
+  void _applyDefaultSchedule({required bool force}) {
+    final base = _defaultDueDate;
+    if (base == null) {
+      return;
+    }
+
+    for (var index = 0; index < _rows.length; index++) {
+      final row = _rows[index];
+      if (!force && row.hasCustomDueDate) {
+        continue;
+      }
+      final date = _monthlyDueDates ? addMonthsClamped(base, index) : base;
+      row.dueDate = date;
+      row.dueDateController.text = formatDate(date);
+      if (force) {
+        row.hasCustomDueDate = false;
+      }
+    }
+    _lastActiveCount = _activeRowCount();
   }
 
   Future<void> _pickRowDueDate(_BulkDebtRow row) async {
@@ -328,6 +376,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
     setState(() {
       row.dueDate = selected;
       row.dueDateController.text = formatDate(selected);
+      row.hasCustomDueDate = true;
       _rowErrors.remove(row.id);
       _lastActiveCount = _activeRowCount();
     });
@@ -337,6 +386,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
     setState(() {
       row.dueDate = null;
       row.dueDateController.clear();
+      row.hasCustomDueDate = true;
       _lastActiveCount = _activeRowCount();
     });
   }
@@ -510,12 +560,12 @@ class _BulkDebtRow {
   final TextEditingController notesController = TextEditingController();
   final FocusNode titleFocus = FocusNode();
   DateTime? dueDate;
+  bool hasCustomDueDate = false;
 
   bool get isBlank =>
       titleController.text.trim().isEmpty &&
       principalController.text.trim().isEmpty &&
-      notesController.text.trim().isEmpty &&
-      dueDate == null;
+      notesController.text.trim().isEmpty;
 
   void dispose() {
     titleController.dispose();

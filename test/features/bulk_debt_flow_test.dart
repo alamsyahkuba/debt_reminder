@@ -1,5 +1,6 @@
 import 'package:debt_reminder/app/app.dart';
 import 'package:debt_reminder/app/providers.dart';
+import 'package:debt_reminder/core/utils/date_formatter.dart';
 import 'package:debt_reminder/data/local/app_database.dart';
 import 'package:debt_reminder/data/repositories/debt_group_repository_impl.dart';
 import 'package:debt_reminder/data/repositories/debt_repository_impl.dart';
@@ -67,6 +68,11 @@ Future<void> _openDebts(WidgetTester tester) async {
 Future<void> _openBulk(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('debts-bulk-add-button')));
   await tester.pumpAndSettle();
+}
+
+String _fieldText(WidgetTester tester, Key key) {
+  final field = tester.widget<TextField>(find.byKey(key));
+  return field.controller?.text ?? '';
 }
 
 void main() {
@@ -156,6 +162,88 @@ void main() {
           .get();
       expect(stored, hasLength(1));
       expect(stored.single.groupId, group.id);
+    } finally {
+      await harness.dispose(tester);
+    }
+  });
+
+  testWidgets('tanggal default otomatis dan checklist per bulan bertahap', (
+    tester,
+  ) async {
+    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
+    try {
+      await harness.pump(tester);
+      await _openDebts(tester);
+      await _openBulk(tester);
+
+      await tester.tap(find.byKey(const Key('bulk-debt-default-date')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('15').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OKE').last);
+      await tester.pumpAndSettle();
+
+      expect(
+        _fieldText(tester, const Key('bulk-debt-due-0')),
+        startsWith('15/'),
+      );
+
+      await tester.tap(find.byKey(const Key('bulk-debt-monthly-checkbox')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('bulk-debt-add-row')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bulk-debt-add-row')));
+      await tester.pumpAndSettle();
+
+      final firstDate = _fieldText(tester, const Key('bulk-debt-due-0'));
+      final secondDate = _fieldText(tester, const Key('bulk-debt-due-1'));
+      final thirdDate = _fieldText(tester, const Key('bulk-debt-due-2'));
+      expect(firstDate, startsWith('15/'));
+      expect(secondDate, isNot(firstDate));
+      expect(thirdDate, isNot(secondDate));
+
+      for (var index = 0; index < 3; index++) {
+        await tester.enterText(
+          find.byKey(Key('bulk-debt-title-$index')),
+          'Hutang bulan ${index + 1}',
+        );
+        await tester.enterText(
+          find.byKey(Key('bulk-debt-principal-$index')),
+          '${100000 * (index + 1)}',
+        );
+      }
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('bulk-debt-save-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bulk-debt-confirm-save')));
+      await tester.pumpAndSettle();
+
+      final stored = await harness.database
+          .select(harness.database.debts)
+          .get();
+      expect(stored, hasLength(3));
+      final dates =
+          stored.map((row) => row.dueDate).whereType<DateTime>().toList()
+            ..sort();
+      expect(dates, hasLength(3));
+      final firstDateOnly = DateTime.utc(
+        dates[0].year,
+        dates[0].month,
+        dates[0].day,
+      );
+      final secondDateOnly = DateTime.utc(
+        dates[1].year,
+        dates[1].month,
+        dates[1].day,
+      );
+      final thirdDateOnly = DateTime.utc(
+        dates[2].year,
+        dates[2].month,
+        dates[2].day,
+      );
+      expect(secondDateOnly, addMonthsClamped(firstDateOnly, 1));
+      expect(thirdDateOnly, addMonthsClamped(firstDateOnly, 2));
     } finally {
       await harness.dispose(tester);
     }
