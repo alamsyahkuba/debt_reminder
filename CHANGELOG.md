@@ -5,6 +5,12 @@ Format mengikuti Keep a Changelog dan Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-14
+
+### Changed
+
+- Update splash screen branding assets and startup UI
+
 ## [1.0.1] - 2026-11-14
 
 ### Changed
