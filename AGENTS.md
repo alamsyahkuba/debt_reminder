@@ -207,7 +207,8 @@ silently reinterpret the product.
 - Cancel reminders when debt is paid or archived.
 - Handle Android notification and exact-alarm permissions gracefully.
 - Never imply that a notification proves a payment occurred.
-- Reminder configuration belongs to admin; public mode only displays due dates.
+- Reminder configuration is device-local and available to public users; it must
+  not mutate business data or create outbox entries.
 
 ## 10. Testing and quality gates
 

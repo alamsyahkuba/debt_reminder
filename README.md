@@ -94,14 +94,15 @@ argumen build client.
 
 ## Reminder
 
-- Admin dapat mengaktifkan H-3, H-1, dan/atau hari H serta memilih waktu lokal.
+- Publik dan admin dapat mengaktifkan H-3, H-1, dan/atau hari H serta memilih
+  waktu lokal.
 - Jadwal dikelola lokal dan direkonsiliasi saat startup, resume, atau data
   hutang/pembayaran berubah.
 - Hutang lunas dan diarsipkan tidak memiliki reminder aktif.
 - Jika izin notifikasi atau exact alarm tidak tersedia, aplikasi menjelaskan
   fallback-nya.
-- Public mode hanya menampilkan tanggal jatuh tempo dan tidak dapat mengubah
-  konfigurasi reminder.
+- Konfigurasi reminder hanya mengubah preferensi lokal; tidak membuat mutasi
+  bisnis atau outbox.
 
 ## Database lokal
 

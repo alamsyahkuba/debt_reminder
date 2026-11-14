@@ -147,3 +147,5 @@ Jangan membuat outbox item di luar transaksi entity.
 - Backup/export JSON tidak disinkronkan; restore-merge hanya menambahkan data
   yang belum ada dan tidak menimpa cloud secara otomatis.
 - Tidak ada app lock/SQLite encryption atau PIN recovery UI di v1.
+- Reminder lokal dan kontrolnya dapat diakses publik; preferensi tetap
+  device-local dan tidak membuat outbox.

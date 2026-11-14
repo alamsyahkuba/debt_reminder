@@ -408,7 +408,8 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   - Notifikasi memakai channel lokal dan teks yang menegaskan bukan bukti
     pembayaran.
   - Public mode hanya menampilkan daftar jatuh tempo; kontrol reminder hanya
-    muncul saat admin unlocked.
+    muncul saat admin unlocked. (Digantikan oleh D-024: reminder publik
+    device-local tanpa mutasi bisnis.)
   - Drift schema dinaikkan ke v4 dengan reset destruktif.
 - **Konsekuensi:** Perilaku notifikasi, permission prompt, exact alarm, boot
   rescheduling, dan timezone change perlu diverifikasi di perangkat Android
@@ -480,3 +481,22 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 - **Konsekuensi:** Kehilangan PIN berarti admin tidak dapat masuk sampai reset
   server dilakukan. Kehilangan perangkat tidak dilindungi app lock lokal;
   dokumentasikan risiko ini pada release notes.
+
+## D-024 — Reminder lokal dapat diakses publik
+
+- **Tanggal:** 14 November 2026
+- **Status:** Disetujui owner untuk v1
+- **Konteks:** Reminder hanya menyimpan preferensi lokal di perangkat dan tidak
+  mengubah data bisnis cloud. Owner ingin pengguna publik dapat memakai reminder
+  tanpa harus membuka sesi admin.
+- **Keputusan:**
+  - Halaman Reminder dan seluruh kontrolnya dapat diakses tanpa PIN admin.
+  - Public dapat mengaktifkan H-3/H-1/H, memilih waktu lokal, memberikan izin
+    notifikasi/exact alarm, dan menjadwalkan ulang reminder.
+  - Preferensi tetap disimpan di `local_settings`, tidak disinkronkan, dan tidak
+    membuat outbox atau mutasi bisnis.
+  - Public tetap read-only terhadap group, hutang, pembayaran, dan data cloud.
+  - Reminder hanya membaca data bisnis publik dari database lokal.
+- **Konsekuensi:** Siapa pun yang memakai perangkat dapat mengubah jadwal
+  notifikasi lokal. Ini tidak memberi akses tulis ke data cloud dan tidak
+  mengubah otorisasi admin. Preferensi reminder tetap per perangkat.

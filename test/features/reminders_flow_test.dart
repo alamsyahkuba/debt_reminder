@@ -145,23 +145,15 @@ void main() {
     }
   });
 
-  testWidgets('public mode hanya melihat jatuh tempo tanpa kontrol reminder', (
-    tester,
-  ) async {
+  testWidgets('public mode dapat mengatur reminder lokal', (tester) async {
     final harness = _Harness(AppDatabase(NativeDatabase.memory()));
     try {
-      final debt = await harness.debts.create(
-        title: 'Hutang Sekolah',
-        principalAmount: 500000,
-        dueDate: DateTime.utc(2027, 2, 10),
-      );
       await harness.pump(tester, unlocked: false);
       await harness.openReminders(tester);
 
-      expect(find.byKey(const Key('admin-locked-banner')), findsOneWidget);
-      expect(find.byKey(const Key('reminder-enabled-switch')), findsNothing);
-      expect(find.byKey(Key('public-due-${debt.id}')), findsOneWidget);
-      expect(find.textContaining('Jatuh tempo 10/02/2027'), findsOneWidget);
+      expect(find.byKey(const Key('admin-locked-banner')), findsNothing);
+      expect(find.byKey(const Key('reminder-enabled-switch')), findsOneWidget);
+      expect(find.byKey(const Key('reminder-save-button')), findsOneWidget);
     } finally {
       await harness.dispose(tester);
     }

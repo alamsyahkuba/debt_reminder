@@ -2,15 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/date_formatter.dart';
-import '../../../domain/entities/debt_overview.dart';
 import '../../../domain/entities/reminder.dart';
-import '../../../shared/widgets/admin_locked_banner.dart';
-import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_state.dart';
 import '../../../shared/widgets/local_data_notice.dart';
-import '../../admin/application/admin_providers.dart';
-import '../../debts/application/debt_providers.dart';
 import '../application/reminder_providers.dart';
 
 class RemindersScreen extends ConsumerStatefulWidget {
@@ -28,9 +23,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(adminUnlockedProvider);
     final preferencesAsync = ref.watch(reminderControllerProvider);
-    final overviews = ref.watch(debtOverviewsProvider(false)).value;
     final capability = ref.watch(reminderCapabilityProvider);
 
     final preferences = preferencesAsync.value;
@@ -54,19 +47,15 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             padding: const EdgeInsets.only(bottom: 48),
             children: <Widget>[
               const LocalDataNotice(),
-              const AdminLockedBanner(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: Text(
-                  isAdmin ? 'Pengingat jatuh tempo' : 'Jatuh tempo terdekat',
+                  'Pengingat jatuh tempo',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               const SizedBox(height: 8),
-              if (isAdmin)
-                _buildAdminSettings(context, current, capability)
-              else
-                _buildPublicDueList(context, overviews ?? const []),
+              _buildReminderSettings(context, current, capability),
             ],
           );
         },
@@ -74,7 +63,7 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
     );
   }
 
-  Widget _buildAdminSettings(
+  Widget _buildReminderSettings(
     BuildContext context,
     ReminderPreferences preferences,
     AsyncValue<ReminderCapability> capability,
@@ -344,63 +333,6 @@ class _RemindersScreenState extends ConsumerState<RemindersScreen> {
             );
           },
         ),
-      ],
-    );
-  }
-
-  Widget _buildPublicDueList(
-    BuildContext context,
-    List<DebtOverview> overviews,
-  ) {
-    final theme = Theme.of(context);
-    final dueDebts =
-        overviews
-            .where(
-              (overview) =>
-                  overview.debt.dueDate != null &&
-                  overview.outstandingAmount > 0,
-            )
-            .toList(growable: false)
-          ..sort((a, b) => a.debt.dueDate!.compareTo(b.debt.dueDate!));
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Konfigurasi pengingat hanya tersedia untuk admin. '
-            'Data jatuh tempo tetap dapat dibaca.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (dueDebts.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(16),
-            child: EmptyState(
-              icon: Icons.event_available_outlined,
-              title: 'Tidak ada jatuh tempo aktif',
-              message:
-                  'Hutang lunas, arsip, atau tanpa jatuh tempo tidak '
-                  'ditampilkan di sini.',
-            ),
-          )
-        else
-          for (final overview in dueDebts)
-            Card(
-              key: Key('public-due-${overview.debt.id}'),
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: ListTile(
-                leading: const Icon(Icons.event_outlined),
-                title: Text(overview.debt.title),
-                subtitle: Text(
-                  'Jatuh tempo ${formatDate(overview.debt.dueDate!)}',
-                ),
-              ),
-            ),
       ],
     );
   }

@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import '../support/fake_admin_session_store.dart';
+import '../support/fake_reminder_notification_gateway.dart';
 import '../support/fake_reminder_preferences_repository.dart';
 
 const AppConfig _testConfig = AppConfig(
@@ -45,6 +46,9 @@ Future<void> _pumpApp(WidgetTester tester) async {
         ),
         reminderPreferencesRepositoryProvider.overrideWithValue(
           FakeReminderPreferencesRepository(),
+        ),
+        reminderNotificationGatewayProvider.overrideWithValue(
+          FakeReminderNotificationGateway(),
         ),
       ],
       child: const DebtReminderApp(),

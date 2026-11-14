@@ -84,7 +84,7 @@ kembali ke mode publik/read-only.
 - Sesi aktif membuka aksi mutasi; tanpa sesi aplikasi bersifat read-only.
 
 ### Settings
-- Reminder schedule (admin-only controls live on the Reminder screen).
+- Reminder schedule (device-local; dapat diakses publik dan admin).
 - Admin PIN change (tanpa recovery UI).
 - Sync now.
 - Backup/export JSON dan restore-merge admin-only.
@@ -93,10 +93,12 @@ kembali ke mode publik/read-only.
 - Tidak ada menu perangkat read-only.
 
 ### Reminder
-- Admin dapat mengaktifkan H-3, H-1, dan/atau H serta memilih waktu lokal.
+- Publik dan admin dapat mengaktifkan H-3, H-1, dan/atau H serta memilih waktu
+  lokal.
 - Tampilkan status izin notifikasi dan exact alarm beserta fallback-nya.
 - Tampilkan jadwal pengingat mendatang.
-- Public mode hanya menampilkan tanggal jatuh tempo, tanpa kontrol konfigurasi.
+- Tidak ada kontrol mutasi bisnis di halaman ini; preferensi reminder hanya
+  disimpan di perangkat.
 - Notifikasi bukan bukti pembayaran.
 
 ## 4. Visual rules

@@ -8,13 +8,13 @@
 - Read-only.
 - Tidak dapat membuat, mengedit, menghapus, atau mengarsipkan data.
 - Tidak dapat membuka fitur admin tanpa PIN.
+- Dapat mengakses dan mengatur reminder lokal pada perangkat.
 - Tidak memerlukan enrollment perangkat.
 - Tidak dapat mengakses data admin, audit, sesi, atau internal metadata.
 
 ### Admin tunggal
 - Membuka Drawer → Admin → memasukkan PIN.
 - Mengelola group, hutang, dan pembayaran.
-- Mengubah pengaturan reminder.
 - Melakukan operasi saat offline; perubahan masuk antrean sinkronisasi.
 - Sesi admin memiliki expiry dan dapat dikunci/logout.
 - Semua mutasi cloud diverifikasi server-side.
@@ -84,16 +84,16 @@
 - Tidak ada pencarian pelanggan.
 
 ### Reminders
-- Admin dapat memilih reminder H-3, H-1, dan hari H (configurable).
+- Publik dan admin dapat memilih reminder H-3, H-1, dan hari H (configurable).
 - Reminder lokal pada perangkat.
 - Jadwal ulang ketika due date/status berubah.
 - Cancel reminder saat debt lunas atau archived.
 - Reminder tidak boleh menganggap notifikasi sebagai bukti pembayaran.
-- Publik hanya melihat informasi jatuh tempo; konfigurasi reminder milik admin.
+- Konfigurasi reminder hanya mengubah preferensi lokal; tidak membuat mutasi
+  bisnis atau outbox.
 
 ### Settings
 - Admin PIN change.
-- Reminder preferences.
 - Sync status/manual sync.
 - Lock admin session.
 - App info dan privacy note.

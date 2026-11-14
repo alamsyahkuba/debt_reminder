@@ -174,7 +174,8 @@ I2505 with all passing. AAB/Play Console are out of scope for v1 distribution.
   to inexact scheduling.
 - Admin UI supports enable/disable, offsets, time, permission requests, upcoming
   schedule preview, and manual reschedule.
-- Public mode only shows upcoming due dates and has no reminder controls.
+- Reminder controls are available to public users; preferences remain
+  device-local and never mutate business data or create outbox entries.
 - Notification copy explicitly says a notification is not payment proof.
 
 ### Sprint 09 — QA, hardening & release (in progress)
@@ -196,6 +197,8 @@ I2505 with all passing. AAB/Play Console are out of scope for v1 distribution.
   timestamps, and group→debt→payment references. It shows a preview, adds only
   missing IDs, ignores duplicate payments, and never overwrites or deletes
   existing rows. Restored rows enter the outbox for admin-authorized sync.
+- Reminder screen and controls are accessible without an admin PIN. Preferences
+  remain device-local and never create business mutations or outbox entries.
 - Settings exposes admin-only export/restore and documents the no-app-lock,
   no-SQLite-encryption, and no-PIN-recovery limitations.
 - Branding: app name **Debt Reminder**, package `com.debtreminder.app`, version
@@ -315,12 +318,13 @@ flutter build apk --release                                                     
   - android.permission.INTERNET present in release manifest                                      passed
   - package/version/label verified: com.debtreminder.app / 1.0.0 (1) / Debt Reminder             passed
   - apksigner verify                                                                             passed
-  - SHA-256 0909b091f4c64592bdaa62acea2fb3b649f669df74f9d050abff2f05529397ca
+  - SHA-256 c3eb9891f87e3043ba796e39a99aec724f3bb43bc454576e519f3c755f9e08c6
 physical device I2505 (10DG3404HM000HH)                                                         passed
   - fresh install release APK                                                                   passed
   - branded splash logo + Debt Reminder                                                         passed
   - public pull from remote                                                                     passed
   - dashboard/debt detail/settings read-only UI                                                 passed
+  - public reminder controls accessible without admin PIN, notification permission granted, preferences saved   passed
   - admin PIN login, rate limit/lockout, session expiry                                         owner-reported passed
   - admin CRUD/archive/move/payment, offline outbox, restart/conflict recovery                    owner-reported passed
   - full pull manual, pending/conflict preservation, hard delete rules                           owner-reported passed
@@ -408,12 +412,12 @@ physical device I2505 (10DG3404HM000HH)                                         
   dependency-ordered, idempotent, retries transient errors, and surfaces version
   conflicts with reload/keep-local resolution.
 - Local reminders use device-local preferences and local notifications only;
-  public mode cannot configure them.
+  public users can configure them without gaining business-data mutation rights.
 - Offline-first admin CRUD remains; server authorization is required at sync.
   Hard delete is limited to groups and debts without payments; full pull
   reconciles deleted rows. Backup/export is admin-only JSON with safe
   restore-merge. No app lock or PIN recovery UI in v1.
-- See `plans/DECISIONS.md`, especially D-013 through D-023.
+- See `plans/DECISIONS.md`, especially D-013 through D-024.
 
 ## Owner decisions
 
@@ -429,6 +433,8 @@ physical device I2505 (10DG3404HM000HH)                                         
 - [x] No PIN recovery UI in v1; server-side operator reset only.
 - [x] Reminder schedule implemented as H-3/H-1/H with local time (default
       09:00) and exact-alarm fallback; owner may revise defaults.
+- [x] Reminder controls are available to public users; preferences are
+      device-local and never create business mutations or outbox entries.
 - [x] No offline local-only unlock in v1; offline edits require a valid server
       session and are queued through the outbox.
 

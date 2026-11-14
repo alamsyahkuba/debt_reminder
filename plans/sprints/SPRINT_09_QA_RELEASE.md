@@ -30,6 +30,8 @@ including hard-delete safety, deletion reconciliation, and admin backup/export.
 - [x] Configure release signing outside repo.
 - [x] Document known limitations and release checklist.
 - [x] Deploy cloud migrations and Edge Functions after credentials are set.
+- [x] Make reminder controls accessible to public users without business-data
+      mutation rights (D-024).
 
 Owner test sign-off: I2505 (`10DG3404HM000HH`), 14 November 2026. Seluruh
 pemeriksaan perangkat yang direncanakan dilaporkan lolos oleh owner

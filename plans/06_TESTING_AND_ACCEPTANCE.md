@@ -88,8 +88,9 @@ operations are preserved when that session expires.
 
 Implemented in Sprint 08 with device-local preferences, local notifications,
 timezone-aware scheduling, exact-alarm fallback, startup/resume reconciliation,
-and public read-only due-date display. Physical-device notification delivery
-remains a manual verification item.
+and public reminder controls. Reminder preferences never create outbox entries.
+Physical-device notification delivery was verified manually on I2505; no new
+automated reminder tests are required for the public-access change.
 
 ## 3. Reset acceptance
 - Fresh local Supabase applies revised migrations.

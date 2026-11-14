@@ -114,6 +114,7 @@ Pastikan output menunjukkan `package name='com.debtreminder.app'`,
 - [x] Icon launcher tampil benar (legacy dan adaptive).
 - [x] Drawer, dashboard, daftar hutang, detail hutang, dan pengaturan terbuka.
 - [x] Public read berhasil tanpa login; tombol mutasi tidak tampil.
+- [x] Halaman Reminder dan kontrolnya dapat diakses tanpa PIN admin.
 - [x] Login PIN server berhasil dari aplikasi pada perangkat fisik.
 - [x] PIN salah terkena rate limit/lockout.
 - [x] Sesi kedaluwarsa mengunci UI dan tidak menghapus outbox.

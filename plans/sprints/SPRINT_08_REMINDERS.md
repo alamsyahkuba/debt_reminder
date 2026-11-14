@@ -14,7 +14,8 @@ Schedule and maintain local debt due-date notifications for the admin.
 - [x] Handle Android exact alarm permission and fallback.
 - [x] Add reminder management UI for admin.
 - [x] Test permission denied and timezone changes.
-- [x] Ensure public mode only displays due dates and cannot configure reminders.
+- [x] Ensure public mode can access reminder controls (superseded by D-024:
+      controls are device-local and available without admin PIN).
 - [x] Remove customer/device-enrollment dependencies from reminder flows.
 
 ## Acceptance criteria
