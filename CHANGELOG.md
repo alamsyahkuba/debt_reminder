@@ -5,6 +5,14 @@ Format mengikuti Keep a Changelog dan Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-11-14
+
+### Changed
+
+- Add Sprint 12 bulk debt insert plan draft
+- Update launcher icons and remove adaptive icon inset
+- Mark Sprint 11 complete with owner-reported update test
+
 ## [1.0.2] - 2026-11-14
 
 ### Changed
