@@ -55,6 +55,7 @@ class _DrawerHeader extends StatelessWidget {
             width: 52,
             height: 52,
             padding: const EdgeInsets.all(4),
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
