@@ -12,7 +12,9 @@ hard delete, full-pull deletion reconciliation, admin JSON backup/export and
 restore-merge, branding, and release signing. Cloud migrations and Edge
 Functions are deployed, the first PIN is bootstrapped, and the signed release
 APK has been built. The owner completed all planned physical-device tests on
-I2505 with all passing. AAB/Play Console are out of scope for v1 distribution.
+I2505 with all passing. Sprint 10 release automation is implemented locally;
+GitHub dry run and first automated release are pending. AAB/Play Console are out
+of scope for v1 distribution.
 
 ## Sprint status
 
@@ -38,6 +40,8 @@ I2505 with all passing. AAB/Play Console are out of scope for v1 distribution.
       reconciliation, backup/export implemented; cloud deployed; signed APK
       built; all planned physical-device tests passed owner-reported; AAB out of
       scope)
+- [ ] Sprint 10 — GitHub release automation (implemented locally; GitHub dry run
+      and first automated release pending)
 
 ## Implementation status by area
 
@@ -178,7 +182,7 @@ I2505 with all passing. AAB/Play Console are out of scope for v1 distribution.
   device-local and never mutate business data or create outbox entries.
 - Notification copy explicitly says a notification is not payment proof.
 
-### Sprint 09 — QA, hardening & release (in progress)
+### Sprint 09 — QA, hardening & release (complete)
 
 - Debt hard delete is implemented server-side (`admin_delete_debt`), locally
   through `DebtRepository.delete`, and in debt detail UI. It requires an
@@ -213,6 +217,19 @@ I2505 with all passing. AAB/Play Console are out of scope for v1 distribution.
 - Security hardening migration revokes update/delete/truncate on payments and
   audit logs from `service_role` because Supabase default privileges can grant
   ALL on new public tables.
+
+### Sprint 10 — GitHub release automation (implemented locally)
+
+- Added `.github/workflows/release.yml` for manual `workflow_dispatch` releases.
+- Added `tool/release/next_version.dart` for SemVer/build bump with `auto`,
+  `patch`, `minor`, `major`, `build-only`, and `initial` modes.
+- Added `tool/release/verify_apk.sh` for package/version/permission/signature
+  checks.
+- Added `cliff.toml`, `CHANGELOG.md`, and `test/tool/next_version_test.dart`.
+- Release workflow builds APK-only with Supabase remote config, uses
+  `RELEASE_TOKEN` for protected `main`, and publishes GitHub Release assets.
+- First automated release target is `v1.0.0`; routine releases use `auto`.
+- GitHub dry run and first automated release are still pending.
 
 ## Required revision work
 
@@ -258,17 +275,21 @@ Local (Sprint 02R/03R) — done:
 - `plans/sprints/SPRINT_07_OFFLINE_SYNC.md`
 - `plans/sprints/SPRINT_08_REMINDERS.md`
 - `plans/sprints/SPRINT_09_QA_RELEASE.md`
+- `plans/sprints/SPRINT_10_RELEASE_AUTOMATION.md`
 - `plans/RELEASE_CHECKLIST.md`
 
 ## Documentation outside plans updated
 
 - `AGENTS.md` — revised roles/data/public-read/security/rework rules and current
-  implementation status through Sprint 09.
+  implementation status through Sprint 10.
 - `README.md` — product status, local DB target, public read policy, reminders,
   payments, dashboard, admin session, offline sync, hard delete, backup/export,
-  and release checklist link.
+  and GitHub release automation.
 - `supabase/README.md` — public RPC pagination, admin PIN/sync Edge Functions,
   hard delete behavior, append-only grants, token header, and deployment secrets.
+- `.github/workflows/release.yml`, `tool/release/`, `cliff.toml`, `CHANGELOG.md`
+  — APK release automation, version bump, changelog, verification, and release
+  publishing.
 
 ## Test evidence
 
@@ -300,11 +321,11 @@ deno fmt --check / deno check / deno lint / deno test                           
   - debt delete handler validation and version requirement                                             passed
 ```
 
-Flutter (Sprint 09):
+Flutter (Sprint 09/10):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 100 tests
+flutter test                                                                                     passed, 122 tests
 flutter build apk --debug                                                                        passed
   - package/version/label verified: com.debtreminder.app / 1.0.0 (1) / Debt Reminder             passed
   - branding assets and generated splash resources present in APK                               passed
@@ -330,6 +351,15 @@ physical device I2505 (10DG3404HM000HH)                                         
   - full pull manual, pending/conflict preservation, hard delete rules                           owner-reported passed
   - backup/restore, icon launcher, notifications H-3/H-1/H, permissions/exact alarm              owner-reported passed
   - reminder cancellation/reschedule, reboot, timezone, WorkManager, crash-free use              owner-reported passed
+```
+
+Release automation (Sprint 10):
+```text
+next_version.dart unit tests                                                                      passed, 22 tests
+CLI initial and auto against temporary Git repo                                                   passed
+git-cliff config renders changelog section                                                        passed
+actionlint + prettier YAML validation                                                             passed
+verify_apk.sh against release APK                                                                 passed
 ```
 
 ## Blockers / known limitations
@@ -447,6 +477,8 @@ restore-merge; no app lock; no PIN recovery UI; public business data final.
 
 ## Next step
 
-Distribute the signed APK directly. AAB and Play Console are not required.
-Keep the upload keystore and passwords backed up outside Git, and remove or
-archive the remote test debt `"tes"` if a clean dataset is desired.
+Configure GitHub Secrets (`RELEASE_TOKEN`, Android signing secrets, Supabase
+URL/anon key), then run the release workflow dry run and first automated
+`v1.0.0` release. After that, use `bump=auto` for routine releases. AAB and Play
+Console are not required. Remove or archive the remote test debt `"tes"` if a
+clean dataset is desired.

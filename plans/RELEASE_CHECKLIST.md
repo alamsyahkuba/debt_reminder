@@ -107,6 +107,14 @@ $ANDROID_HOME/build-tools/<versi>/apksigner verify --print-certs \
 Pastikan output menunjukkan `package name='com.debtreminder.app'`,
 `versionName='1.0.0'`, `versionCode='1'`, dan sertifikat rilis yang benar.
 
+## GitHub Release automation
+
+- [ ] GitHub Secrets release sudah dibuat dan `RELEASE_TOKEN` dapat bypass
+      ruleset `main`.
+- [ ] Dry run workflow `bump=initial` berhasil tanpa commit/tag/release.
+- [ ] Rilis otomatis pertama `v1.0.0` berhasil dan APK+checksum tersedia.
+- [ ] Rilis rutin `bump=auto` menaikkan versi/build dan changelog.
+
 ## Checklist perangkat fisik
 
 - [x] Fresh install APK release berhasil; tidak ada data lama.

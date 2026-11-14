@@ -35,9 +35,11 @@ reconciliation, backup/export JSON dengan restore-merge, branding **Debt
 Reminder**, package `com.debtreminder.app`, versi `1.0.0+1`, dan release signing.
 Cloud migration/Edge Functions sudah dideploy, PIN admin sudah bootstrap, APK
 release bertanda tangan sudah dibangun, dan seluruh pengujian perangkat di
-I2505 dilaporkan lolos oleh owner. Rilis v1 didistribusikan sebagai APK; AAB
-dan Play Console tidak termasuk scope. Lihat [`plans/STATUS.md`](plans/STATUS.md)
-dan [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
+I2505 dilaporkan lolos oleh owner. GitHub release automation sudah
+diimplementasikan; dry run dan rilis otomatis pertama masih pending. Rilis v1
+didistribusikan sebagai APK; AAB dan Play Console tidak termasuk scope. Lihat
+[`plans/STATUS.md`](plans/STATUS.md) dan
+[`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
 
@@ -160,15 +162,45 @@ pada [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 ## Build release
 
 Release harus dibangun dengan konfigurasi Supabase remote; tanpa
-`--dart-define-from-file`, aplikasi akan berjalan tanpa konfigurasi cloud.
+`--dart-define-from-file` atau `--dart-define`, aplikasi akan berjalan tanpa
+konfigurasi cloud.
+
+Workflow release otomatis ada di
+[`.github/workflows/release.yml`](.github/workflows/release.yml). Workflow ini
+menjalankan test, bump versi/build, membuat changelog dengan `git-cliff`,
+membangun APK bertanda tangan, membuat tag, dan menerbitkan GitHub Release.
+AAB dan Play Console tidak termasuk scope.
+
+Rilis pertama `v1.0.0`:
+
+```bash
+gh workflow run release.yml -f bump=initial -f dry_run=true
+gh run watch
+gh workflow run release.yml -f bump=initial
+```
+
+Release berikutnya:
+
+```bash
+gh workflow run release.yml -f bump=auto
+```
+
+`auto` membaca conventional commits sejak tag terakhir. Override manual:
+`-f bump=patch`, `minor`, atau `major`. `build-only` hanya untuk dry run.
+
+Secret yang dibutuhkan: `RELEASE_TOKEN`, `ANDROID_KEYSTORE_BASE64`,
+`ANDROID_STORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`,
+`SUPABASE_URL`, dan `SUPABASE_ANON_KEY`. `RELEASE_TOKEN` harus diizinkan
+melewati ruleset `main`.
+
+Manual fallback:
 
 ```bash
 flutter build apk --release \
   --dart-define-from-file=config/app_config.local.json
 ```
 
-APK ada di `build/app/outputs/flutter-apk/app-release.apk`. Rilis v1 hanya
-mendistribusikan APK; AAB dan Play Console tidak termasuk scope. Release signing
+APK ada di `build/app/outputs/flutter-apk/app-release.apk`. Release signing
 membaca `android/key.properties` di luar Git.
 
 ## Kualitas kode

@@ -2,9 +2,10 @@
 
 ## Status
 
-**Disetujui owner pada 14 November 2026 — belum diimplementasikan.** Plan ini
-mendefinisikan workflow, versioning, changelog, dan prosedur rilis. Tidak ada
-perubahan kode aplikasi sampai implementasi dimulai.
+**Diimplementasikan secara lokal pada 14 November 2026 — GitHub dry run dan
+rilis pertama belum dijalankan.** Plan ini mendefinisikan workflow, versioning,
+changelog, dan prosedur rilis. Implementasi hanya menyentuh tooling, workflow,
+dan dokumentasi; tidak ada fitur aplikasi yang berubah.
 
 Keputusan final owner:
 
@@ -233,6 +234,10 @@ on:
 Tidak memakai trigger `push` ke `main`. Release hanya dijalankan lewat
 `workflow_dispatch` agar commit dokumentasi biasa tidak otomatis menjadi rilis.
 
+`build-only` hanya diizinkan dengan `dry_run=true`, karena tag/version yang sama
+tidak boleh dipublikasikan ulang. Untuk rilis nyata gunakan `auto`, `patch`,
+`minor`, atau `major`.
+
 ### Concurrency
 
 ```yaml
@@ -273,7 +278,8 @@ luas dan jangan memakai `GITHUB_TOKEN` untuk memaksa push.
   - `flutter analyze`
   - `flutter test`
 - Tentukan versi berikutnya dengan `tool/release/next_version.dart`.
-- Buat changelog dengan `git-cliff`.
+- Generate section changelog dengan `git-cliff` (`--strip header`) lalu
+  menyisipkannya setelah `## [Unreleased]`.
 - Jalankan `dart format` pada file yang berubah bila diperlukan.
 - Simpan versi dan changelog sebagai artifact workflow.
 
@@ -353,6 +359,7 @@ Hanya workflow/tooling/dokumentasi, bukan fitur aplikasi:
 - `.github/workflows/release.yml` — workflow release.
 - `tool/release/next_version.dart` — bump SemVer + build number.
 - `tool/release/verify_apk.sh` — verifikasi package, versi, permission, signature.
+- `test/tool/next_version_test.dart` — unit test version bumper.
 - `cliff.toml` — konfigurasi changelog.
 - `CHANGELOG.md` — changelog awal.
 - `plans/sprints/SPRINT_10_RELEASE_AUTOMATION.md` — plan ini.
@@ -429,6 +436,11 @@ aplikasi.
    - `fix` → patch, misalnya `1.0.1+2`
    - `feat` → minor, misalnya `1.1.0+2`
    - breaking change → major, misalnya `2.0.0+2`
+
+   `build-only` hanya untuk dry run karena akan memakai tag/version yang sama:
+   ```bash
+   gh workflow run release.yml -f bump=build-only -f dry_run=true
+   ```
 5. Override manual bila perlu:
    ```bash
    gh workflow run release.yml -f bump=patch

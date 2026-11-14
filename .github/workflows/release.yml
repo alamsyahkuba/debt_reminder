@@ -1,0 +1,300 @@
+name: Release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "auto | patch | minor | major | build-only | initial"
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+          - build-only
+          - initial
+      dry_run:
+        description: "Build tanpa commit/tag/release"
+        required: true
+        default: false
+        type: boolean
+      prerelease:
+        description: "Tandai GitHub Release sebagai prerelease"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+
+      - name: Verify release branch
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse --abbrev-ref HEAD)" = "main"
+          test -z "$(git status --porcelain)"
+
+      - name: Validate release secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          set -euo pipefail
+          for name in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_STORE_PASSWORD \
+            ANDROID_KEY_ALIAS \
+            ANDROID_KEY_PASSWORD \
+            SUPABASE_URL \
+            SUPABASE_ANON_KEY \
+            RELEASE_TOKEN; do
+            if [ -z "${!name:-}" ]; then
+              echo "$name belum diset." >&2
+              exit 1
+            fi
+          done
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-37" "build-tools;36.0.0" "platform-tools"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Validate release mode
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.bump }}" = "build-only" ] && [ "${{ inputs.dry_run }}" != "true" ]; then
+            echo "Mode build-only hanya boleh dipakai dengan dry_run=true." >&2
+            exit 1
+          fi
+
+      - name: Determine next version
+        id: version
+        run: |
+          set -euo pipefail
+          dart run tool/release/next_version.dart \
+            --bump="${{ inputs.bump }}" \
+            --apply \
+            --github-output="$GITHUB_OUTPUT"
+
+      - name: Generate changelog section
+        if: steps.version.outputs.tag != ''
+        id: changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --unreleased --tag ${{ steps.version.outputs.tag }} --strip header
+
+      - name: Update CHANGELOG.md
+        if: steps.version.outputs.tag != ''
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          CHANGELOG_SECTION: ${{ steps.changelog.outputs.content }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["VERSION_NAME"]
+          section = os.environ.get("CHANGELOG_SECTION", "").strip()
+          if not section:
+              raise SystemExit("Bagian changelog kosong")
+
+          path = Path("CHANGELOG.md")
+          source = path.read_text(encoding="utf-8")
+          existing = re.compile(
+              rf"(?ms)^## \[{re.escape(version)}\].*?(?=^## \[|\Z)"
+          )
+          source = existing.sub("", source)
+          marker = "## [Unreleased]\n"
+          if marker not in source:
+              raise SystemExit("Marker ## [Unreleased] tidak ditemukan")
+          source = source.replace(
+              marker,
+              marker + "\n" + section + "\n",
+              1,
+          )
+          path.write_text(source, encoding="utf-8")
+          PY
+
+      - name: Verify changelog
+        if: steps.version.outputs.tag != ''
+        run: |
+          set -euo pipefail
+          grep -Fq "## [${{ steps.version.outputs.version_name }}]" CHANGELOG.md
+
+      - name: Prepare signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYSTORE="$RUNNER_TEMP/upload-keystore.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          test -s "$KEYSTORE"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE" \
+            "$ANDROID_STORE_PASSWORD" \
+            "$ANDROID_KEY_ALIAS" \
+            "$ANDROID_KEY_PASSWORD" > android/key.properties
+
+      - name: Build release APK
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --dart-define=APP_ENV=production \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=SEED_DEMO_DATA=false
+
+      - name: Verify APK and build assets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          VERSION_NAME="${{ steps.version.outputs.version_name }}"
+          BUILD_NUMBER="${{ steps.version.outputs.build_number }}"
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          bash tool/release/verify_apk.sh "$APK" "$VERSION_NAME" "$BUILD_NUMBER"
+          ASSET="debt-reminder-v${VERSION_NAME}+${BUILD_NUMBER}.apk"
+          cp "$APK" "$ASSET"
+          sha256sum "$ASSET" > "$ASSET.sha256"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debt-reminder-v${{ steps.version.outputs.version_name }}+${{ steps.version.outputs.build_number }}
+          path: |
+            debt-reminder-*.apk
+            debt-reminder-*.apk.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Prepare release notes
+        if: inputs.dry_run == false && steps.version.outputs.tag != ''
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+        run: |
+          set -euo pipefail
+          python3 - "$VERSION_NAME" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          version = sys.argv[1]
+          source = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          match = re.search(
+              rf"(?ms)^## \[{re.escape(version)}\].*?(?=^## \[|\Z)",
+              source,
+          )
+          if match is None:
+              raise SystemExit(f"Bagian changelog untuk {version} tidak ditemukan")
+          Path("release-notes.md").write_text(
+              match.group(0).strip() + "\n",
+              encoding="utf-8",
+          )
+          PY
+          test -s release-notes.md
+
+      - name: Commit, tag, and publish release
+        if: inputs.dry_run == false && steps.version.outputs.tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+          PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          ASSET="debt-reminder-v${VERSION_NAME}+${BUILD_NUMBER}.apk"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            if gh release view "$TAG" >/dev/null 2>&1; then
+              echo "Tag dan release $TAG sudah ada; tidak ada perubahan."
+              exit 0
+            fi
+            echo "Tag $TAG sudah ada tetapi release belum ada. Periksa manual." >&2
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml CHANGELOG.md
+          git commit -m "chore(release): ${TAG}+${BUILD_NUMBER}"
+          git push origin HEAD:main
+          git tag -a "$TAG" -m "Debt Reminder ${VERSION_NAME} (build ${BUILD_NUMBER})"
+          git push origin "$TAG"
+
+          if [ "$PRERELEASE" = "true" ]; then
+            gh release create "$TAG" "$ASSET" "$ASSET.sha256" \
+              --title "Debt Reminder ${VERSION_NAME} (build ${BUILD_NUMBER})" \
+              --notes-file release-notes.md \
+              --prerelease
+          else
+            gh release create "$TAG" "$ASSET" "$ASSET.sha256" \
+              --title "Debt Reminder ${VERSION_NAME} (build ${BUILD_NUMBER})" \
+              --notes-file release-notes.md
+          fi
+
+      - name: Remove signing material
+        if: always()
+        run: rm -f android/key.properties "$RUNNER_TEMP/upload-keystore.jks"
