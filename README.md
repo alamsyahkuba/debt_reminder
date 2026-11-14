@@ -34,8 +34,8 @@ dan rekonsiliasi jadwal. Sprint 09 menambahkan hard delete terbatas, full-pull
 reconciliation, backup/export JSON dengan restore-merge, branding **Debt
 Reminder**, package `com.debtreminder.app`, versi `1.0.0+1`, dan release signing.
 Cloud migration/Edge Functions sudah dideploy, PIN admin sudah bootstrap, dan
-APK/AAB release bertanda tangan sudah dibangun. Verifikasi perangkat fisik
-masih menjadi gate release. Lihat [`plans/STATUS.md`](plans/STATUS.md) dan
+APK release bertanda tangan sudah dibangun. Verifikasi perangkat fisik masih
+menjadi gate release. Lihat [`plans/STATUS.md`](plans/STATUS.md) dan
 [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
@@ -163,13 +163,11 @@ Release harus dibangun dengan konfigurasi Supabase remote; tanpa
 ```bash
 flutter build apk --release \
   --dart-define-from-file=config/app_config.local.json
-flutter build appbundle --release \
-  --dart-define-from-file=config/app_config.local.json
 ```
 
-APK ada di `build/app/outputs/flutter-apk/app-release.apk`; AAB ada di
-`build/app/outputs/bundle/release/app-release.aab`. Release signing membaca
-`android/key.properties` di luar Git.
+APK ada di `build/app/outputs/flutter-apk/app-release.apk`. Rilis v1 hanya
+mendistribusikan APK; AAB dan Play Console tidak termasuk scope. Release signing
+membaca `android/key.properties` di luar Git.
 
 ## Kualitas kode
 

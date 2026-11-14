@@ -30,10 +30,9 @@ Jangan mengubah application ID setelah rilis pertama.
 - [x] `flutter build apk --release` berhasil dan ditandatangani keystore rilis.
 - [x] File keystore di `android/key.properties` valid (bukan 0 byte) dan alias
       dapat dibuka dengan password yang dikonfigurasi.
-- [x] `flutter build appbundle --release` berhasil untuk Play Console.
 - [x] APK release diverifikasi: package, version, signature, icon, dan splash.
-- [x] APK/AAB release dibangun dengan `config/app_config.local.json` sehingga
-      URL dan anon key Supabase remote tertanam.
+- [x] APK release dibangun dengan `config/app_config.local.json` sehingga URL
+      dan anon key Supabase remote tertanam.
 - [x] Tidak ada secret, keystore, password, atau service-role key di repo/APK.
 - [x] Tidak ada `customers`, `customer_id`, `read_devices`, atau device
       enrollment di schema, kode, UI, dan test.
@@ -80,10 +79,12 @@ Bootstrap PIN:
 
 ## Build dan verifikasi APK
 
+Rilis v1 hanya didistribusikan sebagai APK. AAB dan Play Console tidak
+termasuk dalam scope rilis ini.
+
 ```bash
 flutter build apk --debug
 flutter build apk --release --dart-define-from-file=config/app_config.local.json
-flutter build appbundle --release --dart-define-from-file=config/app_config.local.json
 ```
 
 Verifikasi:
@@ -144,6 +145,8 @@ Pastikan output menunjukkan `package name='com.debtreminder.app'`,
   create dapat ditandai gagal; data lokal tetap dipertahankan dan tidak menimpa
   cloud.
 - Tidak ada full destructive cloud restore di v1.
+- AAB dan Play Console tidak termasuk scope rilis v1; distribusi dilakukan
+  langsung memakai APK bertanda tangan.
 - WorkManager bersifat best-effort; jangan mengandalkannya sebagai satu-satunya
   jalur sinkronisasi.
 - Public pull tidak membawa `version`, sehingga edit admin pertama setelah pull

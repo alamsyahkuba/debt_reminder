@@ -64,9 +64,10 @@ reminders, conflict resolution, sync status, limited hard delete, full-pull
 deletion reconciliation, and admin JSON backup/export with safe restore-merge
 are implemented. Branding, package identity, and release signing are configured.
 QA and release hardening remain in progress. Cloud migrations and Edge
-Functions are deployed, the first PIN is bootstrapped, and signed release
-APK/AAB artifacts are built. Physical-device WorkManager, notification, splash,
-and install verification remain outstanding.
+Functions are deployed, the first PIN is bootstrapped, and a signed release APK
+is built. Physical-device WorkManager, notification, splash, and install
+verification remain outstanding. AAB/Play Console are not part of the v1
+distribution scope.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.

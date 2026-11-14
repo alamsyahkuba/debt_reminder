@@ -55,7 +55,8 @@ including hard-delete safety, deletion reconciliation, and admin backup/export.
 - Final application ID, app name, version, icon, and splash.
 - Release keystore and signing credentials outside the repository. Current
   `android/key.properties` points to a valid upload keystore; the release
-  APK/AAB have been built and signature-verified.
+  APK release has been built and signature-verified. AAB/Play Console are out
+  of scope for v1 distribution.
 - Physical Android device(s) for notification, WorkManager, and fresh-install
   verification.
 

@@ -11,7 +11,8 @@ Sprint 08 local reminders are complete. Sprint 09 implementation adds limited
 hard delete, full-pull deletion reconciliation, admin JSON backup/export and
 restore-merge, branding, and release signing. Cloud migrations and Edge
 Functions are deployed, the first PIN is bootstrapped, and signed release
-APK/AAB artifacts are built. Physical-device verification remains outstanding.
+APK release artifact is built. Physical-device verification remains outstanding.
+AAB/Play Console are out of scope for v1 distribution.
 
 ## Sprint status
 
@@ -35,7 +36,7 @@ APK/AAB artifacts are built. Physical-device verification remains outstanding.
       reconcile, admin UI)
 - [ ] Sprint 09 — QA, hardening & release (hard delete, full-pull
       reconciliation, backup/export implemented; cloud deployed; signed
-      APK/AAB built; physical-device verification pending)
+      APK built; physical-device verification pending; AAB out of scope)
 
 ## Implementation status by area
 
@@ -314,10 +315,6 @@ flutter build apk --release                                                     
   - package/version/label verified: com.debtreminder.app / 1.0.0 (1) / Debt Reminder             passed
   - apksigner verify                                                                             passed
   - SHA-256 0909b091f4c64592bdaa62acea2fb3b649f669df74f9d050abff2f05529397ca
-flutter build appbundle --release                                                                 passed, 66.2 MB
-  - built with config/app_config.local.json; remote URL and anon key embedded                     passed
-  - jarsigner verify                                                                             passed
-  - SHA-256 37057c448ffaf6b639bc58dc465db3645012e0baf007c0cb04aa71d83bda9107
 physical device I2505 (10DG3404HM000HH)                                                         partial passed
   - fresh install release APK                                                                   passed
   - branded splash logo + Debt Reminder                                                         passed
@@ -358,12 +355,12 @@ physical device I2505 (10DG3404HM000HH)                                         
 - Local management controls are read-only when locked, but local UI guards are
   not a substitute for server authorization.
 - Limited hard delete, full-pull deletion reconciliation, and admin backup/export
-  are implemented. Release APK/AAB verification is still pending.
+  are implemented. Release APK verification is still pending.
 - Restore-merge is local-first. Added rows enter the outbox; if the server
   already has the same ID but the local row was missing, the create may be
   marked failed while the local copy is preserved.
 - Release identity and signing are configured (`com.debtreminder.app`,
-  `1.0.0+1`). Release APK and AAB were built and signature-verified with the
+  `1.0.0+1`). Release APK was built and signature-verified with the
   upload keystore outside the repository. Keep the keystore and passwords
   outside Git and backed up; losing them prevents future updates with the same
   signing identity.
@@ -440,6 +437,6 @@ restore-merge; no app lock; no PIN recovery UI; public business data final.
 
 Continue physical-device verification on I2505 for admin PIN login, offline
 admin mutations/outbox, hard delete, backup/restore, notifications, exact
-alarms, reboot rescheduling, timezone changes, and WorkManager. Then upload the
-AAB to Play Console for internal testing. Remove or archive the remote test debt
-`"tes"` if a clean dataset is desired.
+alarms, reboot rescheduling, timezone changes, and WorkManager. Then distribute
+the signed APK directly. AAB and Play Console are not required. Remove or
+archive the remote test debt `"tes"` if a clean dataset is desired.
