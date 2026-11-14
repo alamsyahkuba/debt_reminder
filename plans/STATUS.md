@@ -15,10 +15,9 @@ APK has been built. The owner completed all planned physical-device tests on
 I2505 with all passing. Sprint 10 dry run and first automated `v1.0.0` release
 succeeded; that release contains APK and `.sha256` but not `latest.json` because
 it was built before the Sprint 11 workflow change. Sprint 11 in-app update is
-implemented locally with automated tests, native installer compilation, and
-manifest validation; a published release containing `latest.json` and a
-physical-device update test are still pending. AAB/Play Console are out of scope
-for v1 distribution.
+complete: automated tests pass, `v1.0.1+2` and `v1.0.2+3` include APK,
+`.sha256`, and `latest.json`, and the owner reports the full update flow passed
+on I2505. AAB/Play Console are out of scope for v1 distribution.
 
 ## Sprint status
 
@@ -46,9 +45,9 @@ for v1 distribution.
       scope)
 - [x] Sprint 10 — GitHub release automation (dry run and first automated
       `v1.0.0` release succeeded; update-manifest assets added afterward)
-- [ ] Sprint 11 — In-app update (implemented locally; automated tests pass,
-      native installer compiles, published update release and physical-device
-      update test pending)
+- [x] Sprint 11 — In-app update (automated tests pass; `v1.0.1`/`v1.0.2`
+      released with `latest.json`; full update flow owner-reported passed on
+      I2505)
 - [ ] Sprint 12 — Bulk insert hutang (draft plan created; awaiting owner
       approval, not implemented)
 
@@ -241,10 +240,10 @@ for v1 distribution.
 - GitHub dry run run `43572390531` succeeded without commit/tag/release.
 - The first automated release run `43573193030` published `v1.0.0` with APK and
   `.sha256`; it predates the Sprint 11 `latest.json` workflow change.
-- Routine releases after Sprint 11 will include APK, `.sha256`, and
-  `latest.json` (stable releases only).
+- Routine stable releases include APK, `.sha256`, and `latest.json` (stable
+  releases only); `v1.0.1` and `v1.0.2` follow this contract.
 
-### Sprint 11 — In-app update (implemented locally)
+### Sprint 11 — In-app update (complete, owner-reported device verification)
 
 - Settings exposes **Cek Update** to public and admin users. The check is manual
   and uses the public GitHub Release API for `alamsyahkuba/debt_reminder`.
@@ -265,9 +264,12 @@ for v1 distribution.
   app.
 - Automated coverage includes manifest parsing/security, checksum and cancel
   behavior, controller states, update UI, and public Settings visibility.
-- Debug APK build passes and its merged manifest contains the install permission
-  and FileProvider. A published update release and real update test on I2505
-  remain pending.
+- Debug and release APK builds pass; the merged manifest contains the install
+  permission and FileProvider.
+- Releases `v1.0.1+2` and `v1.0.2+3` contain APK, `.sha256`, and `latest.json`.
+  The owner reports the complete update flow passed on I2505: check, download,
+  checksum/signature verification, installer, data preservation, and negative
+  cases.
 
 ## Required revision work
 
@@ -418,7 +420,7 @@ GitHub Actions dry run 43572390531                                              
 GitHub Actions release run 43573193030                                                            passed
   - v1.0.0 commit/tag/release created                                                             passed
   - assets: debt-reminder-v1.0.0+1.apk + .sha256                                                  passed
-  - latest.json absent because run predates Sprint 11 workflow change                             known
+  - latest.json absent because run predates Sprint 11 workflow change                             historical
 Main ruleset 27254580                                                                              active
   - required PR/status checks enabled; owner bypass actor present                                 passed
 ```
@@ -442,7 +444,19 @@ flutter build apk --release --dart-define-from-file=config/app_config.local.json
   - package/version/minSdk verified: com.debtreminder.app / 1.0.0 (1) / 24                         passed
   - REQUEST_INSTALL_PACKAGES and FileProvider present in release manifest                        passed
   - apksigner verify                                                                            passed
-published update release + I2505 update flow                                                     pending
+GitHub Release v1.0.1 (build 2)                                                                  published
+  - assets: debt-reminder-v1.0.1+2.apk, .sha256, latest.json                                     passed
+  - latest.json: version 1.0.1, build 2, asset/checksum/size/release URL/notes                   passed
+GitHub Release v1.0.2 (build 3)                                                                  published
+  - assets: debt-reminder-v1.0.2+3.apk, .sha256, latest.json                                     passed
+  - latest.json: version 1.0.2, build 3, asset/checksum/size/release URL/notes                   passed
+I2505 in-app update flow                                                                         owner-reported passed
+  - Cek Update menampilkan versi, ukuran, dan notes                                             passed
+  - download progress, checksum SHA-256, package/version/signature verification                   passed
+  - installer Android terbuka dan update terpasang                                               passed
+  - data lokal, sesi admin, dan preferensi reminder tetap ada                                    passed
+  - unknown sources ditolak, checksum salah, signature mismatch, offline/rate limit              passed
+  - installer diuji pada Android 16; Android 8-15 belum tersedia                                  limited
 ```
 
 ## Blockers / known limitations
@@ -480,22 +494,19 @@ published update release + I2505 update flow                                    
 - Restore-merge is local-first. Added rows enter the outbox; if the server
   already has the same ID but the local row was missing, the create may be
   marked failed while the local copy is preserved.
-- Release identity and signing are configured (`com.debtreminder.app`,
-  `1.0.0+1`). Release APK was built and signature-verified with the
-  upload keystore outside the repository. Keep the keystore and passwords
-  outside Git and backed up; losing them prevents future updates with the same
-  signing identity.
-- All planned physical-device tests passed owner testing on I2505. Remaining
-  release risks are operational: protect/back up the upload keystore, review
-  public data visibility, and document the server-side PIN reset runbook.
-- In-app update needs a published stable GitHub Release containing
-  `latest.json`. `v1.0.0` does not contain it because it predates the Sprint 11
-  workflow change; until a newer release is published, the update card will
-  report that the manifest is unavailable.
-- The real update flow (old build → new build, checksum/signature/negative
-  permission tests, data preservation) has not been exercised on I2505.
-- Sprint 11 changes are local/uncommitted at the time of this status update;
-  they must be committed and pushed before the release workflow can build them.
+- Release identity and signing are configured (`com.debtreminder.app`); the
+  current stable is `1.0.2+3` and the first release was `1.0.0+1`. Release APKs
+  were built and signature-verified with the upload keystore outside the
+  repository. Keep the keystore and passwords outside Git and backed up; losing
+  them prevents future updates with the same signing identity.
+- All planned physical-device tests, including the in-app update flow, passed
+  owner testing on I2505. Remaining release risks are operational: protect/back
+  up the upload keystore, review public data visibility, and document the
+  server-side PIN reset runbook.
+- In-app update was verified on I2505 running Android 16. Android 8–15 still
+  requires testing when suitable devices/emulators are available.
+- Use `v1.0.1+2` or newer for updater testing. `v1.0.0` does not contain
+  `latest.json` because it predates the Sprint 11 workflow change.
 - In-app update checks are manual only in v1; there is no startup polling or
   background update check.
 - Offline local-only unlock is currently disabled pending owner confirmation. A
@@ -574,11 +585,10 @@ restore-merge; no app lock; no PIN recovery UI; public business data final.
 
 ## Next step
 
-Review and commit the Sprint 11 changes, then push to `main`. Run the release
-workflow dry run with `bump=auto` to confirm APK, `.sha256`, and `latest.json`
-are generated, then publish the next stable release (for example `v1.0.1`).
-Install that build on I2505, publish one more build with `bump=auto`, and
-complete the in-app update test (check → download → checksum/signature
-verification → installer → data preserved). After that, use `bump=auto` for
-routine releases. AAB and Play Console are not required. Remove or archive the
-remote test debt `"tes"` if a clean dataset is desired.
+Sprint 11 is complete and `v1.0.2+3` is the latest stable release. The next
+planned work is Sprint 12 (bulk insert hutang), which is still a draft awaiting
+owner approval of input method, batch limit, group behavior, and sync strategy.
+After approval, implement and test bulk insert. Optionally test the updater on
+Android 8–15 when suitable devices/emulators are available. AAB and Play
+Console are not required. Remove or archive the remote test debt `"tes"` if a
+clean dataset is desired.

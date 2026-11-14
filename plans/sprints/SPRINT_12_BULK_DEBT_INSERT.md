@@ -2,9 +2,9 @@
 
 Status: Draft — menunggu persetujuan owner; belum diimplementasikan.
 Tanggal: 14 November 2026.
-Dependency: Sprint 11 boleh belum selesai untuk mulai coding, tetapi urutan
-sprint tetap menunggu persetujuan owner. Plan ini tidak mengubah schema lokal,
-Supabase, RLS, atau Edge Function.
+Dependency: Sprint 11 selesai (owner-reported device verification passed);
+Sprint 12 tetap menunggu persetujuan owner sebelum coding. Plan ini tidak
+mengubah schema lokal, Supabase, RLS, atau Edge Function.
 
 ## 1. Tujuan
 

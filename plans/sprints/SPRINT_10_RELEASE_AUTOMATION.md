@@ -2,10 +2,11 @@
 
 ## Status
 
-**Diimplementasikan secara lokal pada 14 November 2026 — GitHub dry run dan
-rilis pertama belum dijalankan.** Plan ini mendefinisikan workflow, versioning,
-changelog, dan prosedur rilis. Implementasi hanya menyentuh tooling, workflow,
-dan dokumentasi; tidak ada fitur aplikasi yang berubah.
+**Selesai pada 14 November 2026 — GitHub dry run dan rilis otomatis `v1.0.0`
+berhasil dijalankan.** Plan ini mendefinisikan workflow, versioning, changelog,
+dan prosedur rilis. Implementasi hanya menyentuh tooling, workflow, dan
+dokumentasi; tidak ada fitur aplikasi yang berubah. Rilis `v1.0.1+2` dan
+`v1.0.2+3` kemudian menerapkan kontrak `latest.json` dari Sprint 11.
 
 Keputusan final owner:
 

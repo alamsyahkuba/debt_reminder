@@ -1,7 +1,7 @@
 # Sprint 11 — In-App Update
 
-Status: implementasi kode dan test otomatis selesai; rilis uji dan verifikasi
-perangkat masih pending.
+Status: selesai; test otomatis, rilis stabil, dan verifikasi perangkat
+owner-reported passed pada 14 November 2026.
 Tanggal: 14 November 2026.
 Scope: tombol cek update, download APK dari GitHub Release, verifikasi, dan
 membuka installer Android.
@@ -335,38 +335,42 @@ sudah public.
 
 ## 12. Test plan
 
+Status: **owner-reported passed** pada I2505, 14 November 2026. Bukti rilis:
+`v1.0.1+2` dan `v1.0.2+3`, keduanya memiliki APK, `.sha256`, dan
+`latest.json`. Hasil ini bukan hasil otomasi perangkat.
+
 Unit:
 
-- Parse `latest.json` valid/invalid.
-- Pilih asset APK dan checksum.
-- Bandingkan build number.
-- Abaikan prerelease/draft.
-- Tolak host URL di luar allowlist.
-- SHA-256 file valid/salah.
-- State machine controller.
+- [x] Parse `latest.json` valid/invalid.
+- [x] Pilih asset APK dan checksum.
+- [x] Bandingkan build number.
+- [x] Abaikan prerelease/draft.
+- [x] Tolak host URL di luar allowlist.
+- [x] SHA-256 file valid/salah.
+- [x] State machine controller.
 
 Widget:
 
-- Tombol cek update muncul.
-- Checking state.
-- Up-to-date state.
-- Update available state.
-- Download progress.
-- Error/retry.
-- Permission required.
-- Public mode tetap dapat melihat update card.
+- [x] Tombol cek update muncul.
+- [x] Checking state.
+- [x] Up-to-date state.
+- [x] Update available state.
+- [x] Download progress.
+- [x] Error/retry.
+- [x] Permission required.
+- [x] Public mode tetap dapat melihat update card.
 
 Device I2505:
 
-1. Install APK versi lama.
-2. Publikasikan release versi baru di repo release publik.
-3. Tekan Cek Update.
-4. Download, verifikasi checksum, buka installer.
-5. Setujui install; pastikan data lokal tetap ada.
-6. Uji unknown sources ditolak.
-7. Uji checksum rusak/signature mismatch untuk memastikan update ditolak.
-8. Uji offline dan rate limit/error.
-9. Uji update dari build lama ke build baru tanpa kehilangan database.
+- [x] Install APK versi lama.
+- [x] Publikasikan release versi baru di repo release publik.
+- [x] Tekan Cek Update.
+- [x] Download, verifikasi checksum, buka installer.
+- [x] Setujui install; pastikan data lokal tetap ada.
+- [x] Uji unknown sources ditolak.
+- [x] Uji checksum rusak/signature mismatch untuk memastikan update ditolak.
+- [x] Uji offline dan rate limit/error.
+- [x] Uji update dari build lama ke build baru tanpa kehilangan database.
 
 ## 13. File yang akan diubah saat implementasi
 
@@ -453,13 +457,14 @@ Selesai dan tervalidasi otomatis:
 - [x] `flutter analyze`, seluruh `flutter test`, actionlint, prettier, dan
       `flutter build apk --debug` lulus.
 
-Belum selesai:
+Selesai dan diverifikasi perangkat (owner-reported):
 
-- [ ] Rilis GitHub stabil yang berisi APK + `.sha256` + `latest.json`. Release
-      `v1.0.0` hanya berisi APK + `.sha256` karena dibuat sebelum perubahan
-      workflow Sprint 11.
-- [ ] Uji update nyata di I2505: build lama → build baru, data lokal tetap ada.
-- [ ] Uji negatif di perangkat: checksum salah, signature mismatch, izin
+- [x] Rilis GitHub stabil yang berisi APK + `.sha256` + `latest.json`:
+      `v1.0.1+2` dan `v1.0.2+3`. `v1.0.0` tetap historis tanpa `latest.json`
+      karena dibuat sebelum perubahan workflow Sprint 11.
+- [x] Uji update nyata di I2505: build lama → build baru, data lokal tetap ada.
+- [x] Uji negatif di perangkat: checksum salah, signature mismatch, izin
       unknown sources ditolak, offline/rate limit.
-- [ ] Uji installer pada rentang Android 8–16 sesuai perangkat yang tersedia.
+- [x] Uji installer pada perangkat yang tersedia (I2505, Android 16). Perangkat
+      Android 8–15 belum tersedia untuk pengujian langsung.
 - [x] Verifikasi ruleset `main` aktif dan `RELEASE_TOKEN` ada di bypass list.

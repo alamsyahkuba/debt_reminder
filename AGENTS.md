@@ -70,9 +70,8 @@ and Play Console are not part of the v1 distribution scope; distribute the APK
 directly. Sprint 10 GitHub release automation is implemented; its dry run and
 the first automated `v1.0.0` release succeeded, but that release predates the
 `latest.json` asset and contains only APK plus `.sha256`. Sprint 11 in-app update
-is implemented locally with SHA-256/package/version/signature verification and a
-public Settings card; a newer release containing `latest.json` and a
-physical-device update test are pending.
+is complete: `v1.0.1+2` and `v1.0.2+3` include APK, `.sha256`, and `latest.json`,
+and the owner reports the full update flow passed on I2505.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.

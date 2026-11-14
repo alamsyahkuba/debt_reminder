@@ -37,9 +37,10 @@ Cloud migration/Edge Functions sudah dideploy, PIN admin sudah bootstrap, APK
 release bertanda tangan sudah dibangun, dan seluruh pengujian perangkat di
 I2505 dilaporkan lolos oleh owner. GitHub release automation sudah dijalankan:
 dry run dan rilis otomatis pertama `v1.0.0` berhasil. In-app update sudah
-diimplementasikan, tetapi rilis stabil berikutnya harus dipublikasikan agar
-memuat `latest.json`; uji update nyata di perangkat masih pending. Rilis v1
-didistribusikan sebagai APK; AAB dan Play Console tidak termasuk scope. Lihat
+diimplementasikan dan diuji owner: `v1.0.1+2` dan `v1.0.2+3` dipublikasikan
+dengan APK, `.sha256`, dan `latest.json`; alur cek/download/verifikasi/install
+dan preservasi data dilaporkan lolos di I2505. Rilis v1 didistribusikan sebagai
+APK; AAB dan Play Console tidak termasuk scope. Lihat
 [`plans/STATUS.md`](plans/STATUS.md) dan
 [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
@@ -196,19 +197,13 @@ membangun APK bertanda tangan, membuat `latest.json`, membuat tag, dan
 menerbitkan GitHub Release berisi APK, `.sha256`, dan manifest update. AAB dan
 Play Console tidak termasuk scope.
 
-Rilis pertama `v1.0.0` sudah dipublikasikan sebelum `latest.json` ditambahkan.
-Rilis stabil berikutnya wajib memuat APK, `.sha256`, dan `latest.json` agar
-in-app update dapat berfungsi:
+Rilis `v1.0.1+2` dan `v1.0.2+3` sudah dipublikasikan dengan APK, `.sha256`, dan
+`latest.json`; alur in-app update sudah diuji dan dilaporkan lolos oleh owner.
+Rilis berikutnya menggunakan alur yang sama:
 
 ```bash
 gh workflow run release.yml -f bump=auto -f dry_run=true
 gh run watch
-gh workflow run release.yml -f bump=auto
-```
-
-Release berikutnya:
-
-```bash
 gh workflow run release.yml -f bump=auto
 ```
 

@@ -504,8 +504,8 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 ## D-025 — In-app update dari GitHub Release publik
 
 - **Tanggal:** 14 November 2026
-- **Status:** Disetujui owner; implementasi lokal selesai, verifikasi rilis dan
-  perangkat masih pending
+- **Status:** Disetujui owner dan selesai; rilis `v1.0.1`/`v1.0.2` tersedia dan
+  verifikasi perangkat owner-reported passed di I2505 (Android 16)
 - **Konteks:** Aplikasi didistribusikan sebagai APK langsung, bukan melalui Play
   Store. Repo `alamsyahkuba/debt_reminder` sudah public, sehingga updater dapat
   membaca GitHub Release tanpa token.

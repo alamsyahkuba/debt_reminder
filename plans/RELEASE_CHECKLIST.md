@@ -23,8 +23,8 @@ Jangan mengubah application ID setelah rilis pertama.
 
 - Tanggal: 14 November 2026
 - Perangkat: I2505 (`10DG3404HM000HH`), Android 16 / API 36
-- Status: checklist baseline v1 owner-reported passed; verifikasi in-app update
-  belum dijalankan dan masih pending
+- Status: seluruh checklist, termasuk in-app update, owner-reported passed
+  (bukan hasil otomasi perangkat)
 - Distribusi: APK bertanda tangan langsung; AAB/Play Console tidak dipakai
 
 ## Wajib sebelum rilis
@@ -116,13 +116,13 @@ Pastikan output menunjukkan `package name='com.debtreminder.app'`,
       `RELEASE_TOKEN`.
 - [x] Dry run workflow `bump=initial` berhasil tanpa commit/tag/release.
 - [x] Rilis otomatis pertama `v1.0.0` berhasil dan APK+checksum tersedia.
-- [ ] Rilis stabil berikutnya memiliki tiga asset: APK, `.apk.sha256`, dan
-      `latest.json`. Release `v1.0.0` belum memilikinya karena dibuat sebelum
-      perubahan Sprint 11.
-- [ ] `latest.json` berisi `schema_version: 1`, versi/build yang sama dengan
+- [x] Rilis stabil berikutnya memiliki tiga asset: APK, `.apk.sha256`, dan
+      `latest.json`. `v1.0.1+2` dan `v1.0.2+3` memenuhi kontrak ini; `v1.0.0`
+      tetap historis tanpa `latest.json`.
+- [x] `latest.json` berisi `schema_version: 1`, versi/build yang sama dengan
       APK, checksum SHA-256 yang cocok, ukuran byte, URL release, dan notes teks
       polos.
-- [ ] Rilis rutin `bump=auto` menaikkan versi/build dan changelog tanpa
+- [x] Rilis rutin `bump=auto` menaikkan versi/build dan changelog tanpa
       menurunkan build number.
 
 ## Verifikasi in-app update
@@ -147,16 +147,20 @@ Uji minimal dua build bertanda tangan dengan keystore yang sama:
 
 Checklist perangkat tambahan:
 
-- [ ] Cek Update terlihat dan berfungsi tanpa PIN admin.
-- [ ] Download menampilkan progress dan dapat dibatalkan.
-- [ ] Ruang penyimpanan diperiksa sebelum download; penyimpanan penuh
+- [x] Cek Update terlihat dan berfungsi tanpa PIN admin.
+- [x] Download menampilkan progress dan dapat dibatalkan.
+- [x] Ruang penyimpanan diperiksa sebelum download; penyimpanan penuh
       menampilkan error tanpa file parsial.
-- [ ] SHA-256, package, version code, dan signature diverifikasi sebelum
+- [x] SHA-256, package, version code, dan signature diverifikasi sebelum
       installer dibuka.
-- [ ] Update dari build lama ke build baru mempertahankan database lokal.
-- [ ] Checksum salah/signature mismatch ditolak.
-- [ ] Izin unknown sources ditolak/diizinkan berperilaku benar.
-- [ ] Offline dan rate limit menampilkan retry tanpa crash.
+- [x] Update dari build lama ke build baru mempertahankan database lokal.
+- [x] Checksum salah/signature mismatch ditolak.
+- [x] Izin unknown sources ditolak/diizinkan berperilaku benar.
+- [x] Offline dan rate limit menampilkan retry tanpa crash.
+
+Catatan: seluruh checklist in-app update diselesaikan owner di I2505
+(Android 16) dan dilaporkan lolos. Perangkat Android 8–15 belum tersedia untuk
+pengujian langsung.
 
 ## Checklist perangkat fisik
 
@@ -227,8 +231,10 @@ quality gate otomatis ada di `plans/STATUS.md`.
   `.sha256`. APK harus ditandatangani dengan keystore yang sama.
 - Android mewajibkan pengguna mengizinkan **Install unknown apps** dan
   menyetujui installer. Aplikasi tidak dapat memasang update secara diam-diam.
-- Verifikasi update nyata pada perangkat fisik masih pending sampai release
-  stabil pertama dengan `latest.json` dipublikasikan.
+- Update nyata sudah diverifikasi owner pada I2505/Android 16. Perangkat
+  Android 8–15 tetap perlu diuji saat tersedia.
+- `latest.json` hanya dibuat untuk release stabil; draft/prerelease diabaikan
+  oleh updater.
 
 ## PIN reset runbook (operator)
 
