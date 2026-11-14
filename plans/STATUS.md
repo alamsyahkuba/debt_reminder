@@ -49,6 +49,8 @@ for v1 distribution.
 - [ ] Sprint 11 — In-app update (implemented locally; automated tests pass,
       native installer compiles, published update release and physical-device
       update test pending)
+- [ ] Sprint 12 — Bulk insert hutang (draft plan created; awaiting owner
+      approval, not implemented)
 
 ## Implementation status by area
 
@@ -313,6 +315,7 @@ Local (Sprint 02R/03R) — done:
 - `plans/sprints/SPRINT_09_QA_RELEASE.md`
 - `plans/sprints/SPRINT_10_RELEASE_AUTOMATION.md`
 - `plans/sprints/SPRINT_11_IN_APP_UPDATE.md`
+- `plans/sprints/SPRINT_12_BULK_DEBT_INSERT.md`
 - `plans/RELEASE_CHECKLIST.md`
 
 ## Documentation outside plans updated

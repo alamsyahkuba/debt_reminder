@@ -53,3 +53,6 @@ pengelolaan hutang menggunakan Flutter dan Supabase.
 - `sprints/SPRINT_11_IN_APP_UPDATE.md` — cek update, download APK GitHub
   Release, verifikasi checksum/package/signature, dan installer Android
   (implementasi lokal selesai; rilis uji dan verifikasi perangkat pending).
+- `sprints/SPRINT_12_BULK_DEBT_INSERT.md` — rencana input banyak hutang
+  sekaligus dengan transaksi lokal atomik dan outbox per hutang (draft,
+  menunggu persetujuan owner).
