@@ -5,6 +5,14 @@ Format mengikuti Keep a Changelog dan Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-14
+
+### Changed
+
+- Add Sprint 11 in-app update plan
+- Merge branch 'main' of https://github.com/alamsyahkuba/debt_reminder
+- Add in-app update from GitHub releases
+
 ## [1.0.0] - 2026-11-14
 
 ### Changed
