@@ -48,3 +48,5 @@ pengelolaan hutang menggunakan Flutter dan Supabase.
 - `DECISIONS.md` — keputusan teknis yang diadopsi selama implementasi.
 - `RELEASE_CHECKLIST.md` — gate rilis, batasan v1, dan runbook PIN reset.
 - `sprints/` — sprint planning per file.
+- `sprints/SPRINT_10_RELEASE_AUTOMATION.md` — rencana GitHub Release
+  automation (changelog, version bump, tag, APK release).
