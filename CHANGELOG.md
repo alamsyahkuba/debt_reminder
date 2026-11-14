@@ -5,6 +5,13 @@ Format mengikuti Keep a Changelog dan Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-11-14
+
+### Changed
+
+- Replace bulk rows with installment generator
+- Merge branch 'main' of https://github.com/alamsyahkuba/debt_reminder
+
 ## [1.0.5] - 2026-11-14
 
 ### Changed
