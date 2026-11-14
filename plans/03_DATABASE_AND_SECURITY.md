@@ -154,6 +154,8 @@ Target revisi: Drift schema baru setelah reset.
 - `local_settings` menyimpan preferensi reminder perangkat; tidak disinkronkan.
 - Backup/export JSON hanya berisi field bisnis group/debt/payment; metadata
   internal, session, audit, `version`, dan `operation_id` tidak diekspor.
+- `service_role` tidak diberi grant update/delete/truncate pada `payments` dan
+  `audit_logs`; append-only juga ditegakkan trigger.
 - `PRAGMA foreign_keys = ON`; group deletion set `debts.group_id` null.
 - Public mode tidak membuat outbox.
 - Schema lama (customers/read_devices) harus dihapus. Karena aplikasi belum

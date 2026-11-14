@@ -1,19 +1,22 @@
 # Supabase — Debt Reminder
 
 Folder ini berisi schema PostgreSQL, RLS, idempotency helpers, public read RPCs,
-dan Edge Function shared utilities untuk aplikasi Catatan Hutang.
+dan Edge Function shared utilities untuk aplikasi Debt Reminder.
 
 > **Status implementasi:** cloud schema, public read + pagination RPC, local
-> Flutter/Drift customer cleanup, payment/dashboard, admin PIN/session, dan
-> admin sync sudah selesai. Reminder lokal Sprint 08 tidak menambah tabel atau
-> endpoint server. Migration lama customers/read_devices dihapus dan local
-> Supabase sudah di-reset. Cloud project belum di-push. WorkManager/background
-> sync dan pengiriman notifikasi belum diverifikasi di perangkat fisik.
+> Flutter/Drift customer cleanup, payment/dashboard, admin PIN/session, admin
+> sync, limited hard delete, full-pull reconciliation, dan backup/export sudah
+> selesai. Reminder lokal Sprint 08 tidak menambah tabel atau endpoint server.
+> Migration lama customers/read_devices dihapus dan local Supabase sudah
+> di-reset. Linked project sudah menerima seluruh migration; `admin-pin` dan
+> `admin-sync` aktif, dan PIN admin sudah bootstrap. WorkManager/background sync
+> dan pengiriman notifikasi belum diverifikasi di perangkat fisik.
 
 ## Prasyarat
 
-- Docker.
 - Supabase CLI 3.1.0 (dijalankan lewat `npx` pada contoh di bawah).
+- Docker hanya diperlukan untuk database/Edge Function lokal dan pgTAP lokal.
+  Operasi remote (`db push --remote`, deploy function) tidak memerlukan Docker.
 - Deno 2 untuk test helper Edge Function.
 
 ## Menjalankan database lokal
@@ -126,6 +129,8 @@ Aturan penting:
 - `debt_groups` dan `debts` memiliki `version`; trigger menaikkan `version` dan
   `updated_at` pada setiap update.
 - `payments` dan `audit_logs` menolak UPDATE/DELETE melalui trigger.
+  `service_role` juga tidak diberi grant update/delete/truncate pada kedua tabel
+  melalui migration hardening.
 - `payments.debt_id` memakai `ON DELETE RESTRICT`.
 - `debts.group_id` memakai `ON DELETE SET NULL`; menghapus group memindahkan
   hutang menjadi Unassigned.
@@ -235,11 +240,15 @@ Alur:
 1. Validasi allowlist field dan tipe operasi.
 2. Verifikasi sesi admin server-side.
 3. Hash payload kanonik.
-4. Panggil `admin_apply_mutation` dengan service role.
+4. Panggil `admin_apply_mutation` dengan service role; operasi debt `delete`
+   dirutekan ke `admin_delete_debt`.
 5. PostgreSQL melakukan idempotency registry, version check, mutasi, audit, dan
    menyimpan response dalam satu transaksi.
 6. Replay mengembalikan response lama; stale version mengembalikan 409 beserta
    `server_version`, `server_updated_at`, dan `server_row`.
+
+Operasi debt `delete` hanya berhasil jika belum ada payment. Debt dengan payment
+harus diarsipkan; payment tidak pernah dihapus dan server mencatat audit delete.
 
 Urutan dependency dilakukan di client: group create/update/archive → debt →
 payment → group delete.
@@ -256,7 +265,8 @@ deno test
 
 Test mencakup public read/pagination, anon denial, idempotency, PIN hashing,
 JWT signing/verification, rate limit, session lifecycle, invalid/expired token,
-PIN change/logout, audit, payload validation, version conflict, dan replay.
+PIN change/logout, audit, payload validation, version conflict, hard delete
+debt tanpa payment, penolakan delete debt dengan payment, dan replay.
 
 ## Migration, reset, dan deployment
 
@@ -265,26 +275,30 @@ Sprint 01R menggunakan reset, bukan migrasi data pelanggan:
 - Baseline migration sudah diganti dengan schema tanpa customers/read_devices.
 - Public read RPC dan RLS read-only sudah ditambahkan.
 - Database lokal Supabase sudah di-reset dan test lulus.
-- Cloud project belum di-reset/di-push; belum ada data produksi.
+- Linked project `rtgescanjpzkytcddnke` sudah menerima seluruh migration pada
+  14 November 2026; `admin-pin` dan `admin-sync` aktif, dan PIN admin sudah
+  bootstrap.
 
-Setelah rework cloud selesai dan owner menyetujui:
+Untuk deployment ulang:
 
 ```bash
 npx --yes supabase@3.1.0 link --project-ref <project-ref>
-npx --yes supabase@3.1.0 db push
+npx --yes supabase@3.1.0 db push --remote
 npx --yes supabase@3.1.0 secrets set \
   ADMIN_SESSION_JWT_SECRET=<min-32-characters> \
   ADMIN_PIN_PEPPER=<min-32-characters> \
   ADMIN_INITIAL_PIN=<6-digit-bootstrap-pin>
-npx --yes supabase@3.1.0 functions deploy admin-pin
-npx --yes supabase@3.1.0 functions deploy admin-sync
+npx --yes supabase@3.1.0 functions deploy admin-pin --remote
+npx --yes supabase@3.1.0 functions deploy admin-sync --remote
 ```
 
-Hapus `ADMIN_INITIAL_PIN` dari secrets setelah PIN pertama berhasil dibuat.
+`db push` tanpa `--remote` menargetkan stack lokal. Hapus
+`ADMIN_INITIAL_PIN` dari secrets setelah PIN pertama berhasil dibuat.
 
 ## Out of scope saat ini
 
 - Perangkat read-only dan device enrollment (dihapus).
 - Data pelanggan (dihapus).
 - Seed/demo data produksi.
-- Deployment cloud dan verifikasi perangkat fisik.
+- Full destructive restore cloud di v1.
+- Verifikasi perangkat fisik masih pending, bukan bagian dari server/deploy.

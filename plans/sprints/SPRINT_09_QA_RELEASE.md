@@ -5,29 +5,30 @@ Prepare a stable Android release candidate for the revised public-read product,
 including hard-delete safety, deletion reconciliation, and admin backup/export.
 
 ## Tasks
-- [ ] Run all unit/widget/integration tests.
-- [ ] Run Flutter analyze and formatting.
-- [ ] Review public RPCs, RLS, and Edge Function security.
-- [ ] Verify anon can read all approved business data but cannot mutate.
-- [ ] Verify internal tables/RPCs are inaccessible to anon.
-- [ ] Verify no customer table/entity/UI remains.
-- [ ] Verify no read_devices/device enrollment remains.
-- [ ] Verify no secrets in repo/build artifacts.
-- [ ] Test fresh install and database reset.
-- [ ] Test offline/online transitions and public pull.
-- [ ] Test Android notification permissions/background behavior.
-- [ ] Implement hard delete group/debt according to D-021.
-- [ ] Add server/local/UI delete mutation and audit.
-- [ ] Implement full-pull deletion reconciliation at startup (max once/24h) and
+- [x] Run unit and widget tests.
+- [ ] Run integration/device tests on the release candidate.
+- [x] Run Flutter analyze and formatting.
+- [x] Review public RPCs, RLS, and Edge Function security.
+- [x] Verify anon can read all approved business data but cannot mutate.
+- [x] Verify internal tables/RPCs are inaccessible to anon.
+- [x] Verify no customer table/entity/UI remains.
+- [x] Verify no read_devices/device enrollment remains.
+- [x] Verify no secrets in repo/build artifacts.
+- [x] Test fresh install and database reset on a physical Android device.
+- [x] Test offline/online transitions and public pull on a physical device.
+- [ ] Test Android notification permissions/background behavior on device.
+- [x] Implement hard delete group/debt according to D-021.
+- [x] Add server/local/UI delete mutation and audit.
+- [x] Implement full-pull deletion reconciliation at startup (max once/24h) and
       manual sync; preserve pending/conflict rows.
-- [ ] Implement admin JSON backup/export.
-- [ ] Implement admin-only restore-merge with validation and preview.
-- [ ] Add tests for hard delete, full-pull deletion, export, and restore.
-- [ ] Document no app lock/SQLite encryption and no PIN recovery.
-- [ ] Add app icon, splash, package name, version.
-- [ ] Configure release signing outside repo.
-- [ ] Document known limitations and release checklist.
-- [ ] Deploy cloud migrations and Edge Functions after credentials are set.
+- [x] Implement admin JSON backup/export.
+- [x] Implement admin-only restore-merge with validation and preview.
+- [x] Add tests for hard delete, full-pull deletion, export, and restore.
+- [x] Document no app lock/SQLite encryption and no PIN recovery.
+- [x] Add app icon, splash, package name, version.
+- [x] Configure release signing outside repo.
+- [x] Document known limitations and release checklist.
+- [x] Deploy cloud migrations and Edge Functions after credentials are set.
 
 ## Hard-delete policy
 - Group delete moves debts to Unassigned, then deletes the group.
@@ -52,7 +53,9 @@ including hard-delete safety, deletion reconciliation, and admin backup/export.
   `ADMIN_INITIAL_PIN`.
 - Client `SUPABASE_URL` and anon/publishable key.
 - Final application ID, app name, version, icon, and splash.
-- Release keystore and signing credentials outside the repository.
+- Release keystore and signing credentials outside the repository. Current
+  `android/key.properties` points to a valid upload keystore; the release
+  APK/AAB have been built and signature-verified.
 - Physical Android device(s) for notification, WorkManager, and fresh-install
   verification.
 

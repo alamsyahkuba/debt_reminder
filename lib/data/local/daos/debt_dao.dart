@@ -188,4 +188,14 @@ class DebtDao {
           ),
         );
   }
+
+  Future<void> deleteById(String id) async {
+    await (_db.delete(_db.debts)..where((table) => table.id.equals(id))).go();
+  }
+
+  Future<List<DebtRow>> listAll() {
+    return (_db.select(
+      _db.debts,
+    )..orderBy([(table) => OrderingTerm.asc(table.createdAt)])).get();
+  }
 }

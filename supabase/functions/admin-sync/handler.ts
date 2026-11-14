@@ -111,7 +111,7 @@ const PAYMENT_FIELDS = [
 
 const ALLOWED_OPERATIONS: Readonly<Record<string, ReadonlySet<string>>> = {
   debt_group: new Set(["create", "update", "archive", "delete"]),
-  debt: new Set(["create", "update", "archive"]),
+  debt: new Set(["create", "update", "archive", "delete"]),
   payment: new Set(["payment_create"]),
 };
 
@@ -325,6 +325,10 @@ function validateDebt(
   if (operation === "archive") {
     requireVersion(payload.expected_version, "expected_version");
     requireBoolean(payload.is_archived, "is_archived");
+  }
+
+  if (operation === "delete") {
+    requireVersion(payload.expected_version, "expected_version");
   }
 }
 

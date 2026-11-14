@@ -55,14 +55,18 @@ If any required file is missing, do not invent its contents. Report the missing 
 
 ### Current implementation note
 
-Sprint 01R–08 are complete: the cloud schema, local Drift schema, repositories,
-UI, and tests no longer contain customers or device enrollment. Debt management,
-derived status, append-only payments, overpayment rejection, the dashboard,
-server-verified admin PIN/session, public pull, idempotent outbox sync, and local
-due-date reminders are implemented. Conflict resolution, sync status, and admin
-reminder management are available. QA and release hardening are next. Cloud
-deployment, physical-device WorkManager, and physical-device notification
-verification remain outstanding.
+Sprint 01R–08 are complete and Sprint 09 implementation is largely complete:
+the cloud schema, local Drift schema, repositories, UI, and tests no longer
+contain customers or device enrollment. Debt management, derived status,
+append-only payments, overpayment rejection, the dashboard, server-verified
+admin PIN/session, public pull, idempotent outbox sync, local due-date
+reminders, conflict resolution, sync status, limited hard delete, full-pull
+deletion reconciliation, and admin JSON backup/export with safe restore-merge
+are implemented. Branding, package identity, and release signing are configured.
+QA and release hardening remain in progress. Cloud migrations and Edge
+Functions are deployed, the first PIN is bootstrapped, and signed release
+APK/AAB artifacts are built. Physical-device WorkManager, notification, splash,
+and install verification remain outstanding.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.

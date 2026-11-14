@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/config/app_config.dart';
+import '../data/backup/backup_file_service.dart';
 import '../data/local/app_database.dart';
 import '../data/local/dev_seed.dart';
+import '../data/repositories/backup_repository_impl.dart';
 import '../data/repositories/debt_group_repository_impl.dart';
 import '../data/repositories/debt_repository_impl.dart';
 import '../data/repositories/payment_repository_impl.dart';
+import '../domain/repositories/backup_repository.dart';
 import '../domain/repositories/debt_group_repository.dart';
 import '../domain/repositories/debt_repository.dart';
 import '../domain/repositories/payment_repository.dart';
@@ -48,4 +51,12 @@ final debtRepositoryProvider = Provider<DebtRepository>((ref) {
 
 final paymentRepositoryProvider = Provider<PaymentRepository>((ref) {
   return PaymentRepositoryImpl(ref.watch(appDatabaseProvider));
+});
+
+final backupRepositoryProvider = Provider<BackupRepository>((ref) {
+  return BackupRepositoryImpl(ref.watch(appDatabaseProvider));
+});
+
+final backupFileServiceProvider = Provider<BackupFileService>((ref) {
+  return BackupFileService();
 });

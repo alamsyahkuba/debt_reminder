@@ -69,7 +69,7 @@ class _SyncLifecycleState extends ConsumerState<SyncLifecycle>
         }
       },
     );
-    _run();
+    unawaited(ref.read(syncRunControllerProvider.notifier).syncOnStartup());
   }
 
   void _run() {

@@ -8,6 +8,7 @@ import '../../domain/validation/entity_validation.dart';
 import '../local/app_database.dart';
 import '../local/daos/debt_dao.dart';
 import '../local/daos/debt_group_dao.dart';
+import '../local/daos/payment_dao.dart';
 import '../local/daos/sync_queue_dao.dart';
 import 'mappers.dart';
 import 'outbox_payloads.dart';
@@ -22,6 +23,7 @@ class DebtRepositoryImpl implements DebtRepository {
   }) : _db = db,
        _debts = DebtDao(db),
        _groups = DebtGroupDao(db),
+       _payments = PaymentDao(db),
        _queue = syncQueueDao ?? SyncQueueDao(db),
        _uuid = uuid ?? const Uuid(),
        _now = now ?? nowUtc;
@@ -29,6 +31,7 @@ class DebtRepositoryImpl implements DebtRepository {
   final AppDatabase _db;
   final DebtDao _debts;
   final DebtGroupDao _groups;
+  final PaymentDao _payments;
   final SyncQueueDao _queue;
   final Uuid _uuid;
   final DateTime Function() _now;
@@ -301,6 +304,42 @@ class DebtRepositoryImpl implements DebtRepository {
         createdAt: now,
       );
       return row.toDomain();
+    });
+  }
+
+  @override
+  Future<void> delete({
+    required String id,
+    required int expectedVersion,
+  }) async {
+    await _db.transaction(() async {
+      final existing = await _debts.findById(id) ?? throwNotFound('Hutang');
+      ensureExpectedVersion(
+        currentVersion: existing.version,
+        expectedVersion: expectedVersion,
+        entityName: 'Hutang',
+      );
+
+      final payments = await _payments.listByDebt(id);
+      if (payments.isNotEmpty) {
+        throw const AppException(
+          code: AppErrorCode.validation,
+          message:
+              'Hutang yang sudah memiliki pembayaran tidak dapat dihapus. '
+              'Arsipkan hutang ini agar histori pembayaran tetap tersimpan.',
+        );
+      }
+
+      final now = _now().toUtc();
+      await _queue.enqueue(
+        operationId: _uuid.v4(),
+        entityType: 'debt',
+        entityId: existing.id,
+        operation: 'delete',
+        payload: debtDeletePayload(existing.toDomain(), expectedVersion),
+        createdAt: now,
+      );
+      await _debts.deleteById(id);
     });
   }
 

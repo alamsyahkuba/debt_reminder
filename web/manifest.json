@@ -1,6 +1,6 @@
 {
-    "name": "debt_reminder",
-    "short_name": "debt_reminder",
+    "name": "Debt Reminder",
+    "short_name": "Debt Reminder",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

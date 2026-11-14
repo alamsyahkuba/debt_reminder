@@ -1,4 +1,4 @@
-package com.example.debt_reminder
+package com.debtreminder.app
 
 import io.flutter.embedding.android.FlutterActivity
 

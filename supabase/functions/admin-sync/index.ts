@@ -26,16 +26,36 @@ async function applyMutation(
   supabase: ReturnType<typeof createSupabaseAdminClient>,
   args: ApplyMutationArgs,
 ): Promise<Record<string, unknown>> {
-  const { data, error } = await supabase.rpc("admin_apply_mutation", {
-    p_operation_id: args.operationId,
-    p_operation: args.operation,
-    p_entity_type: args.entityType,
-    p_entity_id: args.entityId,
-    p_payload: args.payload,
-    p_payload_hash: args.payloadHash,
-    p_session_id: args.sessionId,
-    p_device_id: args.deviceId,
-  });
+  const isDebtDelete = args.entityType === "debt" &&
+    args.operation === "delete";
+  const expectedVersion = args.payload.expected_version;
+  if (isDebtDelete && typeof expectedVersion !== "number") {
+    throw new AdminMutationError(
+      "validation_error",
+      "expected_version tidak valid.",
+      400,
+    );
+  }
+
+  const { data, error } = isDebtDelete
+    ? await supabase.rpc("admin_delete_debt", {
+      p_operation_id: args.operationId,
+      p_entity_id: args.entityId,
+      p_payload_hash: args.payloadHash,
+      p_expected_version: expectedVersion,
+      p_session_id: args.sessionId,
+      p_device_id: args.deviceId,
+    })
+    : await supabase.rpc("admin_apply_mutation", {
+      p_operation_id: args.operationId,
+      p_operation: args.operation,
+      p_entity_type: args.entityType,
+      p_entity_id: args.entityId,
+      p_payload: args.payload,
+      p_payload_hash: args.payloadHash,
+      p_session_id: args.sessionId,
+      p_device_id: args.deviceId,
+    });
 
   if (error) {
     throw mapRpcError(error);

@@ -46,4 +46,5 @@ pengelolaan hutang menggunakan Flutter dan Supabase.
 - `07_AGENT_WORKFLOW.md` — instruksi operasional AI Agent.
 - `STATUS.md` — status progres dan keputusan.
 - `DECISIONS.md` — keputusan teknis yang diadopsi selama implementasi.
+- `RELEASE_CHECKLIST.md` — gate rilis, batasan v1, dan runbook PIN reset.
 - `sprints/` — sprint planning per file.

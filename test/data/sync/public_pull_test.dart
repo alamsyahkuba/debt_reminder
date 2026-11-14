@@ -251,4 +251,167 @@ void main() {
       expect(await queue.listAll(), hasLength(2));
     },
   );
+
+  test('full pull menghapus debt synced yang tidak ada di server', () async {
+    await database
+        .into(database.debts)
+        .insert(
+          DebtRow(
+            id: 'sync-debt',
+            groupId: null,
+            title: 'Hutang lama',
+            principalAmount: 100000,
+            dueDate: null,
+            notes: null,
+            isArchived: false,
+            createdAt: _fixedNow(),
+            updatedAt: _fixedNow(),
+            version: 1,
+            syncState: 'synced',
+            serverUpdatedAt: _fixedNow(),
+          ),
+        );
+    final service = PublicPullService(
+      database: database,
+      repository: _FakePublicSource(),
+      now: _fixedNow,
+    );
+
+    await service.pull(full: true);
+
+    expect(await database.select(database.debts).get(), isEmpty);
+  });
+
+  test(
+    'full pull mempertahankan debt pending yang tidak ada di server',
+    () async {
+      final debts = DebtRepositoryImpl(database, now: _fixedNow);
+      final pending = await debts.create(
+        title: 'Hutang lokal',
+        principalAmount: 100000,
+      );
+      final service = PublicPullService(
+        database: database,
+        repository: _FakePublicSource(),
+        now: _fixedNow,
+      );
+
+      await service.pull(full: true);
+
+      expect(await debts.findById(pending.id), isNotNull);
+      expect(await queue.listAll(), hasLength(1));
+    },
+  );
+
+  test(
+    'full pull mempertahankan debt conflict yang tidak ada di server',
+    () async {
+      await database
+          .into(database.debts)
+          .insert(
+            DebtRow(
+              id: 'conflict-debt',
+              groupId: null,
+              title: 'Hutang konflik',
+              principalAmount: 100000,
+              dueDate: null,
+              notes: null,
+              isArchived: false,
+              createdAt: _fixedNow(),
+              updatedAt: _fixedNow(),
+              version: 2,
+              syncState: 'conflict',
+              serverUpdatedAt: _fixedNow(),
+            ),
+          );
+      final service = PublicPullService(
+        database: database,
+        repository: _FakePublicSource(),
+        now: _fixedNow,
+      );
+
+      await service.pull(full: true);
+
+      expect(await database.select(database.debts).get(), hasLength(1));
+    },
+  );
+
+  test(
+    'full pull tidak menghapus debt yang masih memiliki pembayaran lokal',
+    () async {
+      await database
+          .into(database.debts)
+          .insert(
+            DebtRow(
+              id: 'sync-debt-paid',
+              groupId: null,
+              title: 'Hutang dengan pembayaran',
+              principalAmount: 100000,
+              dueDate: null,
+              notes: null,
+              isArchived: false,
+              createdAt: _fixedNow(),
+              updatedAt: _fixedNow(),
+              version: 1,
+              syncState: 'synced',
+              serverUpdatedAt: _fixedNow(),
+            ),
+          );
+      await database
+          .into(database.payments)
+          .insert(
+            PaymentRow(
+              id: 'sync-payment',
+              debtId: 'sync-debt-paid',
+              amount: 50000,
+              paidAt: _fixedNow(),
+              notes: null,
+              operationId: 'sync-payment-operation',
+              createdAt: _fixedNow(),
+              syncState: 'synced',
+              serverUpdatedAt: _fixedNow(),
+            ),
+          );
+      final service = PublicPullService(
+        database: database,
+        repository: _FakePublicSource(),
+        now: _fixedNow,
+      );
+
+      await service.pull(full: true);
+
+      expect(await database.select(database.debts).get(), hasLength(1));
+      expect(await database.select(database.payments).get(), hasLength(1));
+    },
+  );
+
+  test('pull inkremental tidak menghapus debt synced yang absen', () async {
+    await database
+        .into(database.debts)
+        .insert(
+          DebtRow(
+            id: 'sync-debt',
+            groupId: null,
+            title: 'Hutang lama',
+            principalAmount: 100000,
+            dueDate: null,
+            notes: null,
+            isArchived: false,
+            createdAt: _fixedNow(),
+            updatedAt: _fixedNow(),
+            version: 1,
+            syncState: 'synced',
+            serverUpdatedAt: _fixedNow(),
+          ),
+        );
+    final service = PublicPullService(
+      database: database,
+      repository: _FakePublicSource(),
+      now: _fixedNow,
+    );
+
+    await service.pull();
+
+    expect(await database.select(database.debts).get(), hasLength(1));
+  });
 }

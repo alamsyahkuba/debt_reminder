@@ -17,7 +17,7 @@ class DebtReminderApp extends ConsumerWidget {
     return SyncLifecycle(
       child: ReminderLifecycle(
         child: MaterialApp.router(
-          title: 'Catatan Hutang',
+          title: 'Debt Reminder',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,

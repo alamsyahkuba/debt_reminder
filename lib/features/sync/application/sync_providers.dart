@@ -146,6 +146,20 @@ class SyncRunController extends Notifier<SyncRunState> {
   @override
   SyncRunState build() => const SyncRunState();
 
+  /// Runs at foreground startup and performs a full reconciliation at most
+  /// once every 24 hours. Manual sync always requests a full pull.
+  Future<void> syncOnStartup() async {
+    final lastPull = await SyncMetadataDao(ref.read(appDatabaseProvider))
+        .getValue('last_public_pull_at');
+    final lastPullAt = lastPull == null || lastPull.isEmpty
+        ? null
+        : DateTime.tryParse(lastPull)?.toUtc();
+
+    await syncNow(
+      fullPull: shouldRunFullPull(lastPullAt, DateTime.now().toUtc()),
+    );
+  }
+
   Future<void> syncNow({bool fullPull = false}) async {
     if (state.isSyncing) {
       return;
@@ -244,4 +258,15 @@ DateTime? _parseTimestamp(String? value) {
     return null;
   }
   return DateTime.tryParse(value)?.toUtc();
+}
+
+/// Full pull runs when no pull has completed or the last one is at least
+/// 24 hours old. A future timestamp is treated as recent to avoid a full pull
+/// loop after clock changes.
+bool shouldRunFullPull(DateTime? lastPullAt, DateTime now) {
+  if (lastPullAt == null) {
+    return true;
+  }
+  return now.toUtc().difference(lastPullAt.toUtc()) >=
+      const Duration(hours: 24);
 }

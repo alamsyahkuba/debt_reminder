@@ -1,4 +1,4 @@
-# Catatan Hutang
+# Debt Reminder
 
 Aplikasi Android untuk mencatat, mengelompokkan, memantau, dan mengingatkan
 hutang/piutang. Dibangun dengan Flutter dan disiapkan untuk backend Supabase
@@ -18,7 +18,7 @@ pada 12 November 2026:
 - semua field bisnis dapat dibaca publik;
 - admin tetap memakai PIN dan sesi server-side;
 - read-only device enrollment dihapus;
-- database akan di-reset.
+- database sudah di-reset karena aplikasi belum rilis.
 
 Sprint 01R sudah menyelesaikan rework cloud: schema tanpa customers/read_devices,
 public read RPC, dan RLS read-only. Sprint 02R/03R sudah membersihkan schema
@@ -30,10 +30,13 @@ guard, dan perubahan PIN. Sprint 07 menambahkan public pull paginasi, outbox
 sync idempoten, retry/backoff, conflict resolution, status sync, manual sync,
 connectivity trigger, dan WorkManager best-effort. Sprint 08 menambahkan
 reminder lokal H-3/H-1/H, permission notifikasi, fallback exact alarm, timezone,
-dan rekonsiliasi jadwal. Sprint 09 direncanakan mencakup hard delete terbatas,
-full-pull reconciliation, backup/export JSON, dan release hardening; implementasi
-belum dimulai dan membutuhkan kredensial cloud/signing serta perangkat fisik.
-Lihat [`plans/STATUS.md`](plans/STATUS.md).
+dan rekonsiliasi jadwal. Sprint 09 menambahkan hard delete terbatas, full-pull
+reconciliation, backup/export JSON dengan restore-merge, branding **Debt
+Reminder**, package `com.debtreminder.app`, versi `1.0.0+1`, dan release signing.
+Cloud migration/Edge Functions sudah dideploy, PIN admin sudah bootstrap, dan
+APK/AAB release bertanda tangan sudah dibangun. Verifikasi perangkat fisik
+masih menjadi gate release. Lihat [`plans/STATUS.md`](plans/STATUS.md) dan
+[`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
 
@@ -123,7 +126,12 @@ di-reset.
 - Pembayaran bersifat append-only, termasuk trigger SQLite yang menolak
   perubahan field finansial. Metadata sync tetap boleh diperbarui.
 - Hard delete debt hanya untuk hutang tanpa payment; hutang dengan payment harus
-  diarsipkan. Backup/export JSON admin-only direncanakan untuk Sprint 09.
+  diarsipkan. Backup/export JSON admin-only dan restore-merge tersedia dari
+  Pengaturan.
+- Full-pull reconciliation berjalan saat startup maksimal sekali per 24 jam dan
+  saat sinkronisasi manual. Baris `synced` yang sudah tidak ada di server
+  dihapus; baris `pending`/`conflict` dan hutang dengan pembayaran lokal tetap
+  dipertahankan.
 - Konflik versi disimpan dan dapat dimuat ulang dari server atau dipertahankan
   lokal dari halaman Pengaturan.
 - Sinkronisasi berjalan foreground, saat konektivitas kembali, manual, dan
@@ -143,8 +151,25 @@ flutter run --dart-define=SEED_DEMO_DATA=true
 ```
 
 Seed demo tidak membuat outbox dan tidak boleh dipakai dengan database cloud
-nyata. Database lokal tidak dienkripsi; app lock tidak dipakai di v1 dan
-keterbatasan ini didokumentasikan pada release notes.
+nyata. Database lokal tidak dienkripsi; app lock tidak dipakai di v1. PIN admin
+tidak dapat dipulihkan dari aplikasi. Kedua keterbatasan ini didokumentasikan
+pada [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
+
+## Build release
+
+Release harus dibangun dengan konfigurasi Supabase remote; tanpa
+`--dart-define-from-file`, aplikasi akan berjalan tanpa konfigurasi cloud.
+
+```bash
+flutter build apk --release \
+  --dart-define-from-file=config/app_config.local.json
+flutter build appbundle --release \
+  --dart-define-from-file=config/app_config.local.json
+```
+
+APK ada di `build/app/outputs/flutter-apk/app-release.apk`; AAB ada di
+`build/app/outputs/bundle/release/app-release.aab`. Release signing membaca
+`android/key.properties` di luar Git.
 
 ## Kualitas kode
 
@@ -186,8 +211,10 @@ Kebijakan cloud target:
 - Data admin, audit, sesi, PIN, token, dan metadata internal tetap privat.
 - Tidak ada `customers`, `read_devices`, atau device enrollment.
 
-Schema cloud lokal sudah di-rework dan di-reset. Cloud project belum di-push.
-Detail ada di [`supabase/README.md`](supabase/README.md).
+Schema cloud lokal sudah di-rework dan di-reset. Linked project
+`rtgescanjpzkytcddnke` sudah menerima seluruh migration, `admin-pin` dan
+`admin-sync` aktif, serta PIN admin sudah bootstrap. Detail ada di
+[`supabase/README.md`](supabase/README.md).
 
 CI GitHub Actions menjalankan pemeriksaan Flutter serta test database/helper
 Edge Function pada push ke `main` dan setiap pull request.
@@ -225,8 +252,9 @@ Tidak ada lagi `features/customers` atau artefak device-enrollment.
 - Public mode tidak boleh membuat mutation atau outbox.
 - Semua operasi admin akan diverifikasi server-side.
 - Nominal uang disimpan sebagai integer rupiah.
-- Group/debt/payment management saat ini dapat diakses secara lokal tanpa PIN;
-  route guard dan sesi admin ditambahkan pada Sprint 06. Jangan distribusikan
-  build ini sebagai release sebelum gate tersebut aktif.
+- Semua mutation admin memerlukan sesi server-side; route guard dan sesi admin
+  sudah aktif. Build lokal tetap bukan pengganti otorisasi server.
+- Release signing membaca `android/key.properties` di luar Git. Jangan commit
+  keystore, password, atau `key.properties`.
 - Jangan mengedit `lib/data/local/app_database.g.dart` secara manual; ubah
   schema lalu jalankan build_runner.

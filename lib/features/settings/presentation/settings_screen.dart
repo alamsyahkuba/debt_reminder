@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/navigation.dart';
 import '../../../app/providers.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../data/local/app_database.dart';
+import '../../../domain/entities/backup_document.dart';
 import '../../../shared/widgets/local_data_notice.dart';
 import '../../admin/application/admin_providers.dart';
 import '../../sync/application/sync_providers.dart';
@@ -183,6 +185,49 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: _BackupCard(enabled: isAdmin),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        Icon(
+                          Icons.shield_outlined,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Keamanan & batasan v1',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Aplikasi belum memiliki app lock atau enkripsi SQLite '
+                      'tambahan. Lindungi perangkat dengan kunci layar Android.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'PIN admin tidak dapat dipulihkan dari aplikasi. Jika PIN '
+                      'hilang, reset harus dilakukan operator melalui prosedur '
+                      'server yang terdokumentasi.',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -209,6 +254,228 @@ class SettingsScreen extends ConsumerWidget {
       return '$label: belum pernah';
     }
     return '$label: ${formatDateTime(value)}';
+  }
+}
+
+class _BackupCard extends ConsumerStatefulWidget {
+  const _BackupCard({required this.enabled});
+
+  final bool enabled;
+
+  @override
+  ConsumerState<_BackupCard> createState() => _BackupCardState();
+}
+
+class _BackupCardState extends ConsumerState<_BackupCard> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(Icons.backup_outlined, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('Backup & Restore', style: theme.textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Backup JSON berisi group, hutang, dan pembayaran. Restore '
+              'menggabungkan data baru tanpa menimpa data yang sudah ada.',
+              style: theme.textTheme.bodySmall,
+            ),
+            if (!widget.enabled) ...<Widget>[
+              const SizedBox(height: 8),
+              Text(
+                'Masuk Admin untuk mengekspor atau memulihkan backup.',
+                key: const Key('settings-backup-locked'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ] else ...<Widget>[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  OutlinedButton.icon(
+                    key: const Key('settings-backup-export'),
+                    onPressed: _busy ? null : _export,
+                    icon: const Icon(Icons.ios_share_outlined),
+                    label: const Text('Ekspor JSON'),
+                  ),
+                  FilledButton.icon(
+                    key: const Key('settings-backup-import'),
+                    onPressed: _busy ? null : _import,
+                    icon: const Icon(Icons.restore_outlined),
+                    label: const Text('Restore merge'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Ekspor backup sebelum menghapus hutang permanen.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _export() async {
+    setState(() => _busy = true);
+    try {
+      final document = await ref.read(backupRepositoryProvider).exportBackup();
+      await ref.read(backupFileServiceProvider).shareBackup(document);
+      _showMessage(
+        'Backup dibuat: ${document.groups.length} group, '
+        '${document.debts.length} hutang, '
+        '${document.payments.length} pembayaran.',
+      );
+    } on AppException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Backup tidak dapat dibuat.');
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _import() async {
+    setState(() => _busy = true);
+    try {
+      final document = await ref.read(backupFileServiceProvider).pickBackup();
+      if (!mounted || document == null) {
+        return;
+      }
+
+      final preview = await ref
+          .read(backupRepositoryProvider)
+          .previewRestore(document);
+      if (!mounted) {
+        return;
+      }
+
+      if (!preview.hasChanges) {
+        await _showInfo(
+          'Tidak ada data baru',
+          'Semua ${preview.totalExisting} data di file backup sudah ada. '
+              'Data lokal tidak diubah.',
+        );
+        return;
+      }
+
+      final confirmed = await _confirmRestore(preview);
+      if (!mounted || !confirmed) {
+        return;
+      }
+
+      final result = await ref.read(backupRepositoryProvider).restore(document);
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage(
+        'Restore selesai: ${result.newGroups} group, '
+        '${result.newDebts} hutang, ${result.newPayments} pembayaran '
+        'ditambahkan. Data baru menunggu sinkronisasi admin.',
+      );
+    } on AppException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      _showMessage('Backup tidak dapat dipulihkan.');
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<bool> _confirmRestore(BackupRestorePreview preview) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Terapkan backup?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Data baru: ${preview.newGroups} group, '
+                '${preview.newDebts} hutang, '
+                '${preview.newPayments} pembayaran.',
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${preview.totalExisting} data dengan ID yang sama sudah ada '
+                'dan tidak akan diubah atau dihapus.',
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Data baru akan masuk antrean sinkronisasi dan dikirim saat '
+                'sesi admin aktif. Data cloud yang sudah ada tidak ditimpa.',
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              key: const Key('settings-backup-confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Terapkan merge'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
+  Future<void> _showInfo(String title, String message) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

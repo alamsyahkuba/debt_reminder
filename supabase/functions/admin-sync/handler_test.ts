@@ -192,6 +192,42 @@ Deno.test("payment operation id must match the queue operation id", async () => 
   assert.equal(response.status, 400);
 });
 
+Deno.test("debt delete requires a version and is accepted by the handler", async () => {
+  const entityId = "40000000-0000-4000-8000-000000000001";
+  const deleteBody = validBody({
+    operation_id: "10000000-0000-4000-8000-000000000020",
+    operation: "delete",
+    entity_type: "debt",
+    entity_id: entityId,
+    payload: { id: entityId, expected_version: 2 },
+  });
+
+  const accepted = await handle(deleteBody, {
+    result: {
+      status: "applied",
+      entity_type: "debt",
+      entity_id: entityId,
+      deleted: true,
+    },
+  });
+  assert.equal(accepted.response.status, 200);
+  assert.equal(accepted.args.length, 1);
+  assert.equal(accepted.args[0]?.operation, "delete");
+  assert.equal(accepted.args[0]?.entityType, "debt");
+  assert.equal(accepted.args[0]?.payload.expected_version, 2);
+
+  const missingVersion = await handle(
+    validBody({
+      operation_id: "10000000-0000-4000-8000-000000000021",
+      operation: "delete",
+      entity_type: "debt",
+      entity_id: entityId,
+      payload: { id: entityId },
+    }),
+  );
+  assert.equal(missingVersion.response.status, 400);
+});
+
 Deno.test("version conflict is returned as 409 with server details", async () => {
   const { response } = await handle(validBody(), {
     result: {

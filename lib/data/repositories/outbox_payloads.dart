@@ -94,6 +94,10 @@ Map<String, Object?> debtArchivePayload(Debt debt, int expectedVersion) {
   };
 }
 
+Map<String, Object?> debtDeletePayload(Debt debt, int expectedVersion) {
+  return <String, Object?>{'id': debt.id, 'expected_version': expectedVersion};
+}
+
 Map<String, Object?> paymentCreatePayload(Payment payment) {
   return <String, Object?>{
     'id': payment.id,

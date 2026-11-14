@@ -96,6 +96,7 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
     final dueDate = debt.dueDate == null
         ? 'Tanpa jatuh tempo'
         : 'Jatuh tempo ${formatDate(debt.dueDate!)}';
+    final hasPayments = payments.isNotEmpty || overview.paidAmount > 0;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -180,8 +181,30 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
                 ),
                 label: Text(debt.isArchived ? 'Pulihkan' : 'Arsipkan'),
               ),
+              OutlinedButton.icon(
+                key: const Key('debt-delete-button'),
+                onPressed: _busy || hasPayments
+                    ? null
+                    : () => _deleteDebt(overview),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.error,
+                ),
+                icon: const Icon(Icons.delete_forever_outlined),
+                label: const Text('Hapus permanen'),
+              ),
             ],
           ),
+        if (canManage && hasPayments) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            'Hutang dengan pembayaran tidak dapat dihapus permanen. '
+            'Gunakan Arsipkan agar histori pembayaran tetap tersimpan.',
+            key: const Key('debt-delete-blocked-message'),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
@@ -332,6 +355,37 @@ class _DebtDetailScreenState extends ConsumerState<DebtDetailScreen> {
       if (archiving) {
         context.go(AppRoutes.debts);
       }
+    });
+  }
+
+  Future<void> _deleteDebt(DebtOverview overview) async {
+    if (!_ensureAdmin()) {
+      return;
+    }
+
+    final confirmed = await showConfirmDialog(
+      context,
+      title: 'Hapus hutang permanen?',
+      message:
+          'Hutang "${overview.debt.title}" akan dihapus dari perangkat dan '
+          'server. Tindakan ini tidak dapat dibatalkan. Ekspor backup terlebih '
+          'dahulu dari Pengaturan jika data ini masih diperlukan.',
+      confirmLabel: 'Hapus permanen',
+      destructive: true,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    await _runAction(() async {
+      await ref
+          .read(debtRepositoryProvider)
+          .delete(id: overview.debt.id, expectedVersion: overview.debt.version);
+      if (!mounted) {
+        return;
+      }
+      _showMessage('Hutang dihapus permanen.');
+      context.go(AppRoutes.debts);
     });
   }
 

@@ -193,6 +193,70 @@ void main() {
     }
   });
 
+  testWidgets('hard delete hutang tanpa pembayaran dari detail', (
+    tester,
+  ) async {
+    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
+    try {
+      final debt = await harness.debts.create(
+        title: 'Hutang Dihapus',
+        principalAmount: 500000,
+      );
+
+      await harness.pump(tester);
+      await _openDebts(tester);
+      await tester.tap(find.byKey(Key('debt-tile-${debt.id}')));
+      await tester.pumpAndSettle();
+
+      await _tapAfterScroll(
+        tester,
+        find.byKey(const Key('debt-delete-button')),
+      );
+      expect(find.text('Hapus hutang permanen?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Hapus permanen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Belum ada hutang'), findsOneWidget);
+      expect(await harness.debts.findById(debt.id), isNull);
+      final queue = await harness.database
+          .select(harness.database.syncQueue)
+          .get();
+      expect(queue.where((row) => row.operation == 'delete'), hasLength(1));
+    } finally {
+      await harness.dispose(tester);
+    }
+  });
+
+  testWidgets('hard delete dinonaktifkan jika sudah ada pembayaran', (
+    tester,
+  ) async {
+    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
+    try {
+      final debt = await harness.debts.create(
+        title: 'Hutang Cicilan',
+        principalAmount: 1000000,
+      );
+      await harness.payments.create(debtId: debt.id, amount: 250000);
+
+      await harness.pump(tester);
+      await _openDebts(tester);
+      await tester.tap(find.byKey(Key('debt-tile-${debt.id}')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('debt-delete-blocked-message')),
+        findsOneWidget,
+      );
+      final button = tester.widget<OutlinedButton>(
+        find.byKey(const Key('debt-delete-button')),
+      );
+      expect(button.onPressed, isNull);
+      expect(await harness.debts.findById(debt.id), isNotNull);
+    } finally {
+      await harness.dispose(tester);
+    }
+  });
+
   testWidgets('mencatat pembayaran dan memperbarui sisa hutang', (
     tester,
   ) async {

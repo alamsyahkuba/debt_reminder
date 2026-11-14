@@ -7,9 +7,11 @@ customer entity, groups retained, all business data public, admin PIN retained,
 device enrollment removed, and database reset approved. Cloud rework (Sprint
 01R), local rework (Sprint 02R/03R), Sprint 04 debt management, Sprint 05
 payments/dashboard, Sprint 06 admin PIN/session, Sprint 07 offline sync, and
-Sprint 08 local reminders are complete. Sprint 09 plan has been expanded with
-owner decisions for hard delete, full-pull reconciliation, backup/export, and
-release security. Implementation has not started; release inputs are pending.
+Sprint 08 local reminders are complete. Sprint 09 implementation adds limited
+hard delete, full-pull deletion reconciliation, admin JSON backup/export and
+restore-merge, branding, and release signing. Cloud migrations and Edge
+Functions are deployed, the first PIN is bootstrapped, and signed release
+APK/AAB artifacts are built. Physical-device verification remains outstanding.
 
 ## Sprint status
 
@@ -32,7 +34,8 @@ release security. Implementation has not started; release inputs are pending.
 - [x] Sprint 08 — Local reminders (H-3/H-1/H, permissions, timezone,
       reconcile, admin UI)
 - [ ] Sprint 09 — QA, hardening & release (hard delete, full-pull
-      reconciliation, backup/export, release build, device verification)
+      reconciliation, backup/export implemented; cloud deployed; signed
+      APK/AAB built; physical-device verification pending)
 
 ## Implementation status by area
 
@@ -172,6 +175,40 @@ release security. Implementation has not started; release inputs are pending.
 - Public mode only shows upcoming due dates and has no reminder controls.
 - Notification copy explicitly says a notification is not payment proof.
 
+### Sprint 09 — QA, hardening & release (in progress)
+
+- Debt hard delete is implemented server-side (`admin_delete_debt`), locally
+  through `DebtRepository.delete`, and in debt detail UI. It requires an
+  explicit confirmation and is blocked when any payment exists; such debts must
+  be archived. Payments are never deleted.
+- The admin sync handler accepts debt `delete` with `expected_version`, routes
+  it to `admin_delete_debt`, treats `not_found` as an idempotent success, and
+  keeps the stable operation ID.
+- Full public pull reconciles deleted groups and debts. Startup performs a full
+  pull at most once every 24 hours; manual sync always requests one.
+  `pending`/`conflict` rows and debts with local payments are preserved.
+- Admin JSON backup/export contains only business fields plus `schema_version`
+  and `exported_at`; `version`, `operation_id`, sync metadata, sessions, audit,
+  and tokens are excluded.
+- Restore-merge validates schema, UUIDs, field lengths, monetary values,
+  timestamps, and group→debt→payment references. It shows a preview, adds only
+  missing IDs, ignores duplicate payments, and never overwrites or deletes
+  existing rows. Restored rows enter the outbox for admin-authorized sync.
+- Settings exposes admin-only export/restore and documents the no-app-lock,
+  no-SQLite-encryption, and no-PIN-recovery limitations.
+- Branding: app name **Debt Reminder**, package `com.debtreminder.app`, version
+  `1.0.0+1`, launcher icon and splash generated from the supplied logo. Flutter
+  keeps a short branded startup screen with logo and app name because Android
+  12 native splash cannot render text.
+- Release manifest includes `android.permission.INTERNET`; without it release
+  builds cannot perform public pull or admin sync even though debug/profile
+  builds work.
+- Release signing reads `android/key.properties` outside Git and uses a release
+  keystore.
+- Security hardening migration revokes update/delete/truncate on payments and
+  audit logs from `service_role` because Supabase default privileges can grant
+  ALL on new public tables.
+
 ## Required revision work
 
 Cloud (done in Sprint 01R):
@@ -216,62 +253,93 @@ Local (Sprint 02R/03R) — done:
 - `plans/sprints/SPRINT_07_OFFLINE_SYNC.md`
 - `plans/sprints/SPRINT_08_REMINDERS.md`
 - `plans/sprints/SPRINT_09_QA_RELEASE.md`
+- `plans/RELEASE_CHECKLIST.md`
 
 ## Documentation outside plans updated
 
 - `AGENTS.md` — revised roles/data/public-read/security/rework rules and current
-  implementation status through Sprint 08.
+  implementation status through Sprint 09.
 - `README.md` — product status, local DB target, public read policy, reminders,
-  payments, dashboard, admin session, and offline sync.
+  payments, dashboard, admin session, offline sync, hard delete, backup/export,
+  and release checklist link.
 - `supabase/README.md` — public RPC pagination, admin PIN/sync Edge Functions,
-  token header, and deployment secrets.
+  hard delete behavior, append-only grants, token header, and deployment secrets.
 
 ## Test evidence
 
-Backend (no schema changes in Sprint 08; rerun):
+Backend (Sprint 09):
 ```text
-supabase db reset                                                                                    passed
-supabase test db                                                                                     passed, 163 pgTAP assertions
-  - admin_mutation.test.sql                                                                          28
-  - admin_security.test.sql                                                                          33
-  - public_read.test.sql                                                                             26
-  - schema_security.test.sql                                                                         53
-  - idempotency.test.sql                                                                             23
-supabase db lint                                                                                     passed
-deno fmt --check / deno check / deno lint / deno test                                                passed, 64 tests
-admin-sync integration                                                                               passed
-  - group/debt/payment create                                                                        200 / 200 / 200
-  - payment replay                                                                                   200, one payment row
-  - stale debt update                                                                                409 version_conflict
-  - public page RPC                                                                                  200, one group
-  - audit registry                                                                                    rows appended
+remote migration list                                                                                  passed
+  - 20261114120000_debt_delete.sql applied
+  - 20261114130000_append_only_grants.sql applied
+remote functions list                                                                                 passed
+  - admin-pin ACTIVE
+  - admin-sync ACTIVE version 3
+remote admin_settings                                                                                 passed
+  - pin_hash_algorithm = pbkdf2_sha256
+  - ADMIN_INITIAL_PIN absent from secrets
+remote privilege check                                                                                 passed
+  - admin_delete_debt: anon execute false, service_role execute true
+  - service_role update on payments false
+migrations applied to temporary PostgreSQL 17.11 container                                               passed
+  - Supabase local Docker stack was unavailable after environment restarts
+pgTAP                                                                                                   passed, 175 assertions
+  - admin_debt_delete.test.sql                                                                         12
+  - admin_mutation.test.sql                                                                            28
+  - admin_security.test.sql                                                                            33
+  - public_read.test.sql                                                                               26
+  - schema_security.test.sql                                                                           53
+  - idempotency.test.sql                                                                               23
+  - server role append-only grants rechecked after migration                                           passed
+deno fmt --check / deno check / deno lint / deno test                                                   passed, 65 tests
+  - debt delete handler validation and version requirement                                             passed
 ```
 
-Flutter (Sprint 08):
+Flutter (Sprint 09):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 81 tests
+flutter test                                                                                     passed, 100 tests
 flutter build apk --debug                                                                        passed
-  - public pull pagination/no-outbox tests                                                        passed
-  - pending local row preservation                                                                 passed
-  - group → debt → payment ordering                                                                passed
-  - restart/processing recovery                                                                   passed
-  - auth/network retry behavior                                                                   passed
-  - version conflict reload/keep-local                                                            passed
-  - public/admin HTTP client parsing                                                              passed
-  - sync settings/conflict UI                                                                     passed
-  - settings test cleanup with bounded settle                                                      passed
-  - reminder scheduling/cancellation/due-date/timezone tests                                       passed
-  - reminder admin/public UI and permission-denied tests                                            passed
+  - package/version/label verified: com.debtreminder.app / 1.0.0 (1) / Debt Reminder             passed
+  - branding assets and generated splash resources present in APK                               passed
+  - hard delete repository/UI tests                                                              passed
+  - full-pull debt deletion and pending/conflict preservation tests                              passed
+  - backup export/restore-merge/reference validation tests                                       passed
+  - admin settings restore preview and export UI test                                            passed
+  - startup full-pull 24-hour decision tests                                                     passed
+flutter build apk --release                                                                       passed, 68.4 MB
+  - built with config/app_config.local.json; remote URL and anon key embedded                     passed
+  - android.permission.INTERNET present in release manifest                                      passed
+  - package/version/label verified: com.debtreminder.app / 1.0.0 (1) / Debt Reminder             passed
+  - apksigner verify                                                                             passed
+  - SHA-256 0909b091f4c64592bdaa62acea2fb3b649f669df74f9d050abff2f05529397ca
+flutter build appbundle --release                                                                 passed, 66.2 MB
+  - built with config/app_config.local.json; remote URL and anon key embedded                     passed
+  - jarsigner verify                                                                             passed
+  - SHA-256 37057c448ffaf6b639bc58dc465db3645012e0baf007c0cb04aa71d83bda9107
+physical device I2505 (10DG3404HM000HH)                                                         partial passed
+  - fresh install release APK                                                                   passed
+  - branded splash logo + Debt Reminder                                                         passed
+  - public pull from remote                                                                     passed
+  - dashboard/debt detail/settings read-only UI                                                 passed
+  - admin PIN screen reachable                                                                  passed
+  - offline read then reconnect sync                                                            passed
+  - admin login/mutation, notifications, exact alarm, reboot, timezone, WorkManager              pending
 ```
 
 ## Blockers / known limitations
 
 - Cloud and local schemas are reworked; no customers/read_devices/customer_id.
 - No Android device was connected during Sprint 04/05/06/07/08 verification.
-- Cloud Supabase, `admin-pin`, and `admin-sync` Edge Functions have not been
-  linked, deployed, or configured with production secrets.
+- Cloud Supabase project `rtgescanjpzkytcddnke` is linked. Migrations through
+  `20261114130000_append_only_grants.sql` are applied, `admin-pin` and
+  `admin-sync` (version 3) are active, and `ADMIN_INITIAL_PIN` is absent.
+  `admin_settings.pin_hash_algorithm` is `pbkdf2_sha256`, so the first PIN is
+  bootstrapped.
+- Local Supabase Docker stack is currently stopped (no containers). Local
+  migration files match remote, but local pgTAP/Edge Function serving requires
+  starting the stack first.
 - WorkManager/background sync compiles but has not been verified on a physical
   Android device; foreground/manual sync remains the reliable path.
 - Local notification delivery, notification permission prompts, exact-alarm
@@ -283,29 +351,37 @@ flutter build apk --debug                                                       
 - Public pull does not expose server `version`. Rows pulled from another device
   keep a local version guess and may surface a conflict on first admin edit;
   the conflict UI resolves it.
-- Group deletion reconciliation is only done on a full manual pull. Incremental
-  pulls do not delete local groups that disappeared server-side.
+- Group deletion reconciliation and debt deletion reconciliation are performed
+  only on a full pull (startup at most once per 24 hours, or manual sync).
 - Background WorkManager may open SQLite while the foreground app is active.
   SQLite handles concurrent connections, but this needs device verification.
 - Local management controls are read-only when locked, but local UI guards are
   not a substitute for server authorization.
-- Hard delete, full-pull deletion reconciliation, and backup/export are planned
-  for Sprint 09 and are not implemented yet.
-- Release identity, signing credentials, cloud project access, and physical
-  Android verification are still required before release.
+- Limited hard delete, full-pull deletion reconciliation, and admin backup/export
+  are implemented. Release APK/AAB verification is still pending.
+- Restore-merge is local-first. Added rows enter the outbox; if the server
+  already has the same ID but the local row was missing, the create may be
+  marked failed while the local copy is preserved.
+- Release identity and signing are configured (`com.debtreminder.app`,
+  `1.0.0+1`). Release APK and AAB were built and signature-verified with the
+  upload keystore outside the repository. Keep the keystore and passwords
+  outside Git and backed up; losing them prevents future updates with the same
+  signing identity.
+- Physical Android verification is still required before release.
 - Offline local-only unlock is currently disabled pending owner confirmation. A
   valid server session is required before offline edits can be queued; if it
   expires, local work already in the outbox is preserved.
 - Local SQLite is not encrypted and no device-level app lock is used in v1;
   this is a documented limitation (D-023).
 - Public read is intentionally world-readable to anyone with the anon key.
-- Initial PIN bootstrap depends on `ADMIN_INITIAL_PIN`; remove it after setup.
+- Initial PIN bootstrap used `ADMIN_INITIAL_PIN`; the secret has been removed
+  after bootstrap.
 - Android build now requires compileSdk 37 and core-library desugaring because
   of `flutter_local_notifications`; future AGP/Flutter upgrades must preserve
   this.
 - AGP 9.1 emits a warning that compileSdk 37 is above its recommended maximum
-  (36). The debug APK builds successfully, but the toolchain combination should
-  be revisited before a release build.
+  (36). Debug and release builds succeed, but the toolchain combination should
+  be revisited before upgrading AGP/Flutter.
 
 ## Decisions
 
@@ -362,7 +438,8 @@ restore-merge; no app lock; no PIN recovery UI; public business data final.
 
 ## Next step
 
-Set cloud/release credentials and provide a physical Android device, then start
-Sprint 09 implementation: hard delete + reconciliation, backup/export, security
-and release verification. Reminder and WorkManager behavior still need
-physical-device verification.
+Continue physical-device verification on I2505 for admin PIN login, offline
+admin mutations/outbox, hard delete, backup/restore, notifications, exact
+alarms, reboot rescheduling, timezone changes, and WorkManager. Then upload the
+AAB to Play Console for internal testing. Remove or archive the remote test debt
+`"tes"` if a clean dataset is desired.

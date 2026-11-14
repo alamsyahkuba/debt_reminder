@@ -145,7 +145,9 @@ class AdminSyncService {
             conflicts++;
 
           case AdminMutationStatus.notFound:
-            if (item.operation == 'delete' && item.entityType == 'debt_group') {
+            if (item.operation == 'delete' &&
+                (item.entityType == 'debt_group' ||
+                    item.entityType == 'debt')) {
               await _queue.deleteOperation(item.operationId);
               applied++;
             } else {

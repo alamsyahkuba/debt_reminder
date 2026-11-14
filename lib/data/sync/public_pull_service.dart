@@ -53,7 +53,7 @@ class PublicPullService {
     }
 
     final groupCount = await _pullGroups(full: full);
-    final debtCount = await _pullDebts();
+    final debtCount = await _pullDebts(full: full);
     final paymentCount = await _pullPayments();
 
     await _metadata.setValue(
@@ -148,8 +148,9 @@ class PublicPullService {
     return count;
   }
 
-  Future<int> _pullDebts() async {
+  Future<int> _pullDebts({required bool full}) async {
     var cursor = await _readCursor(_debtsCursorKey);
+    final remoteIds = <String>{};
     var count = 0;
 
     while (true) {
@@ -160,6 +161,7 @@ class PublicPullService {
 
       await _db.transaction(() async {
         for (final debt in page.items) {
+          remoteIds.add(debt.id);
           final existing = await _debts.findById(debt.id);
           if (existing != null && existing.syncState != SyncState.synced.name) {
             continue;
@@ -188,6 +190,24 @@ class PublicPullService {
       await _writeCursor(_debtsCursorKey, cursor);
       if (page.items.length < repository.pageSize) {
         break;
+      }
+    }
+
+    if (full) {
+      final localDebts = await _debts.listAll();
+      for (final row in localDebts) {
+        if (row.syncState != SyncState.synced.name ||
+            remoteIds.contains(row.id)) {
+          continue;
+        }
+
+        // A debt with local payment history must never be removed by a pull.
+        // The payment FK also blocks this, but skip explicitly so a pending
+        // payment is preserved instead of aborting the transaction.
+        final payments = await _payments.listByDebt(row.id);
+        if (payments.isEmpty) {
+          await _debts.deleteById(row.id);
+        }
       }
     }
 

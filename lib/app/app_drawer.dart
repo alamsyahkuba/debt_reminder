@@ -45,7 +45,6 @@ class _DrawerHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
@@ -55,19 +54,16 @@ class _DrawerHeader extends StatelessWidget {
           Container(
             width: 52,
             height: 52,
+            padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              Icons.account_balance_wallet_outlined,
-              color: colorScheme.onPrimaryContainer,
-              size: 28,
-            ),
+            child: Image.asset('assets/branding/logo.jpg', fit: BoxFit.contain),
           ),
           const SizedBox(height: 14),
           Text(
-            'Catatan Hutang',
+            'Debt Reminder',
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w700,
             ),
@@ -76,7 +72,7 @@ class _DrawerHeader extends StatelessWidget {
           Text(
             'Kelola hutang dengan rapi',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],

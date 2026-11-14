@@ -6,13 +6,21 @@ import 'app.dart';
 import 'providers.dart';
 import 'theme.dart';
 
+/// Keeps the branded startup screen visible for a short minimum duration after
+/// the local database is ready. Android 12 native splash cannot render text,
+/// so the app name is shown here before the dashboard appears.
+final startupReadyProvider = FutureProvider<void>((ref) async {
+  await ref.watch(databaseReadyProvider.future);
+  await Future<void>.delayed(const Duration(milliseconds: 800));
+});
+
 class AppBootstrap extends ConsumerWidget {
   const AppBootstrap({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ref
-        .watch(databaseReadyProvider)
+        .watch(startupReadyProvider)
         .when(
           data: (_) => const DebtReminderApp(),
           loading: () => _StartupApp(
@@ -26,7 +34,10 @@ class AppBootstrap extends ConsumerWidget {
             ),
           ),
           error: (error, stackTrace) => _StartupErrorApp(
-            onRetry: () => ref.invalidate(databaseReadyProvider),
+            onRetry: () {
+              ref.invalidate(databaseReadyProvider);
+              ref.invalidate(startupReadyProvider);
+            },
           ),
         );
   }
@@ -40,7 +51,7 @@ class _StartupApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Catatan Hutang',
+      title: 'Debt Reminder',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
@@ -48,7 +59,41 @@ class _StartupApp extends StatelessWidget {
       locale: const Locale('id'),
       supportedLocales: const <Locale>[Locale('id')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      home: Scaffold(body: Center(child: child)),
+      home: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Container(
+                    width: 104,
+                    height: 104,
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Image.asset(
+                      'assets/branding/splash_logo.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Debt Reminder',
+                    style: Theme.of(context).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 24),
+                  child,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
