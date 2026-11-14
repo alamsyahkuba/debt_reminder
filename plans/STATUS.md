@@ -40,8 +40,10 @@ of scope for v1 distribution.
       reconciliation, backup/export implemented; cloud deployed; signed APK
       built; all planned physical-device tests passed owner-reported; AAB out of
       scope)
-- [ ] Sprint 10 — GitHub release automation (implemented locally; GitHub dry run
+- [x] Sprint 10 — GitHub release automation (implemented locally; GitHub dry run
       and first automated release pending)
+- [ ] Sprint 11 — In-app update (planned; distribution via public GitHub repo
+      decided; implementation not started)
 
 ## Implementation status by area
 
