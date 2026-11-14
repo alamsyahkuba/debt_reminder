@@ -72,6 +72,15 @@ Map<String, Object?> debtCreatePayload(Debt debt) {
   };
 }
 
+Map<String, Object?> debtBatchCreatePayload(String batchId, List<Debt> debts) {
+  return <String, Object?>{
+    'id': batchId,
+    'debts': <Map<String, Object?>>[
+      for (final debt in debts) debtCreatePayload(debt),
+    ],
+  };
+}
+
 Map<String, Object?> debtUpdatePayload(Debt debt, int expectedVersion) {
   return <String, Object?>{
     'id': debt.id,

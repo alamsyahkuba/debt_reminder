@@ -6,11 +6,13 @@ dan Edge Function shared utilities untuk aplikasi Debt Reminder.
 > **Status implementasi:** cloud schema, public read + pagination RPC, local
 > Flutter/Drift customer cleanup, payment/dashboard, admin PIN/session, admin
 > sync, limited hard delete, full-pull reconciliation, dan backup/export sudah
-> selesai. Reminder lokal Sprint 08 tidak menambah tabel atau endpoint server.
-> Migration lama customers/read_devices dihapus dan local Supabase sudah
-> di-reset. Linked project sudah menerima seluruh migration; `admin-pin` dan
-> `admin-sync` aktif, dan PIN admin sudah bootstrap. WorkManager/background sync
-> dan pengiriman notifikasi belum diverifikasi di perangkat fisik.
+> selesai. Sprint 12 menambahkan bulk insert hutang atomik: satu outbox
+> `debt_batch` di client dan RPC `admin_bulk_create_debts` di server. Migration
+> `20261114140000_bulk_debt_insert.sql` sudah diterapkan dan Edge Function
+> `admin-sync` versi 4 aktif di cloud. Reminder lokal
+> Sprint 08 tidak menambah tabel atau endpoint server. WorkManager/background
+> sync dan pengiriman notifikasi belum diverifikasi ulang setelah perubahan
+> bulk.
 
 ## Prasyarat
 
@@ -229,7 +231,7 @@ Request `POST` dengan header `x-admin-session`:
 {
   "operation_id": "uuid",
   "operation": "create|update|archive|delete|payment_create",
-  "entity_type": "debt_group|debt|payment",
+  "entity_type": "debt_group|debt|debt_batch|payment",
   "entity_id": "uuid",
   "payload": {}
 }
@@ -241,8 +243,9 @@ Alur:
 2. Verifikasi sesi admin server-side.
 3. Hash payload kanonik.
 4. Panggil `admin_apply_mutation` dengan service role; operasi debt `delete`
-   dirutekan ke `admin_delete_debt`.
-5. PostgreSQL melakukan idempotency registry, version check, mutasi, audit, dan
+   dirutekan ke `admin_delete_debt`, dan `debt_batch`/`create` dirutekan ke
+   `admin_bulk_create_debts`.
+5. PostgreSQL melakukan idempotency registry, validasi, mutasi, audit, dan
    menyimpan response dalam satu transaksi.
 6. Replay mengembalikan response lama; stale version mengembalikan 409 beserta
    `server_version`, `server_updated_at`, dan `server_row`.
@@ -250,8 +253,41 @@ Alur:
 Operasi debt `delete` hanya berhasil jika belum ada payment. Debt dengan payment
 harus diarsipkan; payment tidak pernah dihapus dan server mencatat audit delete.
 
-Urutan dependency dilakukan di client: group create/update/archive → debt →
-payment → group delete.
+Bulk insert menerima payload:
+
+```json
+{
+  "id": "batch-uuid",
+  "debts": [
+    {
+      "id": "debt-uuid",
+      "group_id": "group-uuid-or-null",
+      "title": "Hutang",
+      "principal_amount": 100000,
+      "due_date": "2027-01-10",
+      "notes": null,
+      "is_archived": false,
+      "created_at": "2026-11-14T10:00:00Z",
+      "updated_at": "2026-11-14T10:00:00Z",
+      "version": 1
+    }
+  ]
+}
+```
+
+Aturan bulk:
+
+- 1–50 hutang per batch, ID hutang unik.
+- Satu group per batch (boleh null/Unassigned).
+- `admin_bulk_create_debts` menyimpan semua baris atau rollback semua.
+- Satu operation ID mencakup seluruh batch; replay tidak menduplikasi.
+- Response berisi `count` dan daftar `debts` dengan `id`, `version`, dan
+  `server_updated_at` untuk setiap baris.
+- Audit mencatat `sync.batch_create` dengan jumlah baris.
+- Execute hanya diberikan kepada `service_role`.
+
+Urutan dependency dilakukan di client: group create/update/archive →
+`debt_batch`/debt → payment → group delete.
 
 Test helper:
 
@@ -266,7 +302,8 @@ deno test
 Test mencakup public read/pagination, anon denial, idempotency, PIN hashing,
 JWT signing/verification, rate limit, session lifecycle, invalid/expired token,
 PIN change/logout, audit, payload validation, version conflict, hard delete
-debt tanpa payment, penolakan delete debt dengan payment, dan replay.
+debt tanpa payment, penolakan delete debt dengan payment, replay, dan bulk
+insert atomik 1–50 baris termasuk rollback/ duplicate/privilege checks.
 
 ## Migration, reset, dan deployment
 
@@ -275,9 +312,11 @@ Sprint 01R menggunakan reset, bukan migrasi data pelanggan:
 - Baseline migration sudah diganti dengan schema tanpa customers/read_devices.
 - Public read RPC dan RLS read-only sudah ditambahkan.
 - Database lokal Supabase sudah di-reset dan test lulus.
-- Linked project `rtgescanjpzkytcddnke` sudah menerima seluruh migration pada
-  14 November 2026; `admin-pin` dan `admin-sync` aktif, dan PIN admin sudah
-  bootstrap.
+- Linked project `rtgescanjpzkytcddnke` sudah menerima migration sampai
+  `20261114130000_append_only_grants.sql`; `admin-pin` dan `admin-sync` aktif,
+  dan PIN admin sudah bootstrap.
+- Migration Sprint 12 `20261114140000_bulk_debt_insert.sql` sudah diterapkan
+  dan Edge Function `admin-sync` versi 4 (bulk) sudah aktif di cloud.
 
 Untuk deployment ulang:
 

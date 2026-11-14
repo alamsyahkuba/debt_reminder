@@ -2,6 +2,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/errors/app_exception.dart';
 import '../../domain/entities/debt.dart';
+import '../../domain/entities/debt_draft.dart';
 import '../../domain/entities/debt_overview.dart';
 import '../../domain/repositories/debt_repository.dart';
 import '../../domain/validation/entity_validation.dart';
@@ -146,6 +147,91 @@ class DebtRepositoryImpl implements DebtRepository {
         createdAt: now,
       );
       return row.toDomain();
+    });
+  }
+
+  @override
+  Future<List<Debt>> createMany({
+    String? groupId,
+    required List<DebtDraft> drafts,
+  }) async {
+    if (drafts.isEmpty) {
+      throw const AppException(
+        code: AppErrorCode.validation,
+        message: 'Minimal satu hutang harus diisi.',
+      );
+    }
+    if (drafts.length > maxDebtBatchSize) {
+      throw const AppException(
+        code: AppErrorCode.validation,
+        message: 'Maksimal $maxDebtBatchSize hutang per batch.',
+      );
+    }
+
+    final normalized = <_NormalizedDebtDraft>[];
+    for (var index = 0; index < drafts.length; index++) {
+      final draft = drafts[index];
+      final rowNumber = index + 1;
+      normalized.add(
+        _NormalizedDebtDraft(
+          title: validateText(
+            draft.title,
+            field: 'Judul hutang baris $rowNumber',
+            maxLength: 200,
+          ),
+          principalAmount: validatePositiveRupiah(
+            draft.principalAmount,
+            field: 'Pokok hutang baris $rowNumber',
+          ),
+          dueDate: normalizeDueDate(draft.dueDate),
+          notes: validateOptionalText(
+            draft.notes,
+            field: 'Catatan hutang baris $rowNumber',
+            maxLength: 2000,
+          ),
+        ),
+      );
+    }
+
+    return _db.transaction(() async {
+      await _ensureGroupExists(groupId);
+      final now = _now().toUtc();
+      final rows = <DebtRow>[
+        for (final draft in normalized)
+          DebtRow(
+            id: _uuid.v4(),
+            groupId: groupId,
+            title: draft.title,
+            principalAmount: draft.principalAmount,
+            dueDate: draft.dueDate,
+            notes: draft.notes,
+            isArchived: false,
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
+            syncState: 'pending',
+            serverUpdatedAt: null,
+          ),
+      ];
+
+      for (final row in rows) {
+        await _debts.upsert(row);
+      }
+
+      final batchId = _uuid.v4();
+      await _queue.enqueue(
+        operationId: _uuid.v4(),
+        entityType: 'debt_batch',
+        entityId: batchId,
+        operation: 'create',
+        payload: debtBatchCreatePayload(
+          batchId,
+          rows.map((row) => row.toDomain()).toList(growable: false),
+        ),
+        createdAt: now,
+      );
+
+      return rows.map((row) => row.toDomain()).toList(growable: false);
     });
   }
 
@@ -356,4 +442,18 @@ class DebtRepositoryImpl implements DebtRepository {
       );
     }
   }
+}
+
+final class _NormalizedDebtDraft {
+  const _NormalizedDebtDraft({
+    required this.title,
+    required this.principalAmount,
+    required this.dueDate,
+    required this.notes,
+  });
+
+  final String title;
+  final int principalAmount;
+  final DateTime? dueDate;
+  final String? notes;
 }

@@ -17,7 +17,10 @@ succeeded; that release contains APK and `.sha256` but not `latest.json` because
 it was built before the Sprint 11 workflow change. Sprint 11 in-app update is
 complete: automated tests pass, `v1.0.1+2` and `v1.0.2+3` include APK,
 `.sha256`, and `latest.json`, and the owner reports the full update flow passed
-on I2505. AAB/Play Console are out of scope for v1 distribution.
+on I2505. Sprint 12 bulk insert hutang is implemented and deployed: the UI,
+atomic local outbox, remote atomic server RPC, and Flutter/Deno/pgTAP tests
+pass; physical-device verification is pending. AAB/Play Console are out of scope
+for v1 distribution.
 
 ## Sprint status
 
@@ -48,8 +51,8 @@ on I2505. AAB/Play Console are out of scope for v1 distribution.
 - [x] Sprint 11 — In-app update (automated tests pass; `v1.0.1`/`v1.0.2`
       released with `latest.json`; full update flow owner-reported passed on
       I2505)
-- [ ] Sprint 12 — Bulk insert hutang (draft plan created; awaiting owner
-      approval, not implemented)
+- [ ] Sprint 12 — Bulk insert hutang (implemented and deployed;
+      Flutter/Deno/pgTAP tests pass, physical-device verification pending)
 
 ## Implementation status by area
 
@@ -271,6 +274,26 @@ on I2505. AAB/Play Console are out of scope for v1 distribution.
   checksum/signature verification, installer, data preservation, and negative
   cases.
 
+### Sprint 12 — Bulk insert hutang (implemented locally)
+
+- Admin-only **Tambah Banyak** screen at `/debts/bulk` supports 1–50 manual
+  rows, one group per batch, optional default due date with per-row override,
+  empty-row skipping, inline validation, and a confirmation dialog for >1 row.
+- `DebtRepository.createMany` writes all debts and one `debt_batch` outbox
+  operation in one SQLite transaction. Any invalid row rolls back the batch.
+- The sync worker processes `debt_group` → `debt_batch` → `payment`, checks
+  group dependencies, marks every batch row synced from the server result, and
+  preserves the outbox on failure.
+- Edge Function `admin-sync` accepts `entity_type=debt_batch`/`operation=create`
+  and validates 1–50 rows, unique IDs, debt fields, dates, amounts, and group
+  references.
+- Migration `20261114140000_bulk_debt_insert.sql` adds atomic
+  `admin_bulk_create_debts` with operation-registry idempotency, all-or-nothing
+  insert, `sync.batch_create` audit, and service-role-only execute permission.
+- Flutter repository/sync/widget tests, Deno handler tests, and pgTAP tests
+  pass. Migration `20261114140000_bulk_debt_insert.sql` is applied remotely and
+  `admin-sync` version 4 is ACTIVE. Physical-device testing remains pending.
+
 ## Required revision work
 
 Cloud (done in Sprint 01R):
@@ -323,12 +346,13 @@ Local (Sprint 02R/03R) — done:
 ## Documentation outside plans updated
 
 - `AGENTS.md` — revised roles/data/public-read/security/rework rules and current
-  implementation status through Sprint 10.
+  implementation status through Sprint 12.
 - `README.md` — product status, local DB target, public read policy, reminders,
   payments, dashboard, admin session, offline sync, hard delete, backup/export,
-  and GitHub release automation.
+  GitHub release automation, in-app update, and bulk insert.
 - `supabase/README.md` — public RPC pagination, admin PIN/sync Edge Functions,
-  hard delete behavior, append-only grants, token header, and deployment secrets.
+  hard delete behavior, bulk RPC/Atomic behavior, append-only grants, token
+  header, and deployment secrets.
 - `.github/workflows/release.yml`, `tool/release/`, `cliff.toml`, `CHANGELOG.md`
   — APK release automation, version bump, changelog, verification, and release
   publishing, including `latest.json` update manifest assets.
@@ -344,6 +368,22 @@ Local (Sprint 02R/03R) — done:
   install permission, and FileProvider.
 - `README.md` and `plans/RELEASE_CHECKLIST.md` — in-app update usage, release
   assets, and device verification steps.
+- `lib/domain/entities/debt_draft.dart`,
+  `lib/features/debts/presentation/bulk_debt_form_screen.dart`,
+  `lib/data/repositories/debt_repository_impl.dart`,
+  `lib/data/sync/admin_sync_service.dart`, and
+  `supabase/migrations/20261114140000_bulk_debt_insert.sql` — bulk insert UI,
+  transaksi lokal, outbox batch, dan RPC atomik.
+- `supabase/functions/admin-sync/handler.ts`,
+  `supabase/functions/admin-sync/index.ts`, dan
+  `supabase/functions/admin-sync/handler_test.ts` — validasi dan routing
+  `debt_batch`.
+- `test/data/repositories/bulk_debt_test.dart`,
+  `test/data/sync/bulk_debt_sync_test.dart`, dan
+  `test/features/bulk_debt_flow_test.dart` — test bulk insert.
+- `plans/03_DATABASE_AND_SECURITY.md`, `plans/04_OFFLINE_SYNC.md`,
+  `plans/05_UI_UX_SPEC.md`, dan `plans/06_TESTING_AND_ACCEPTANCE.md` — aturan
+  outbox, RPC atomik, UI, dan acceptance bulk.
 
 ## Test evidence
 
@@ -459,15 +499,37 @@ I2505 in-app update flow                                                        
   - installer diuji pada Android 16; Android 8-15 belum tersedia                                  limited
 ```
 
+Bulk insert hutang (Sprint 12):
+```text
+dart format --output=none --set-exit-if-changed .                                                passed
+flutter analyze                                                                                  no issues
+flutter test                                                                                     passed, 176 tests
+  - createMany atomic local + one debt_batch outbox tests                                        passed
+  - invalid row/group/max batch rollback tests                                                  passed
+  - batch sync before payment and failure preservation tests                                    passed
+  - admin/public bulk UI, validation, group, confirmation tests                                 passed
+deno fmt --check / deno check / deno lint / deno test                                             passed, 68 tests
+  - debt_batch validation/duplicate/limit tests                                                  passed
+pgTAP admin_bulk_debt.test.sql                                                                   passed, 15 assertions
+  - atomic bulk create/replay/audit/constraints/grants                                           passed
+  - all existing pgTAP suites against temporary PostgreSQL 17                                   passed
+flutter build apk --debug                                                                        passed
+cloud migration 20261114140000_bulk_debt_insert.sql                                              applied
+Edge Function admin-sync version 4                                                               ACTIVE
+physical-device bulk insert/sync/restart/reminder                                                pending
+```
+
 ## Blockers / known limitations
 
 - Cloud and local schemas are reworked; no customers/read_devices/customer_id.
 - No Android device was connected during Sprint 04/05/06/07/08 verification.
 - Cloud Supabase project `rtgescanjpzkytcddnke` is linked. Migrations through
-  `20261114130000_append_only_grants.sql` are applied, `admin-pin` and
-  `admin-sync` (version 3) are active, and `ADMIN_INITIAL_PIN` is absent.
+  `20261114140000_bulk_debt_insert.sql` are applied, `admin-pin` and
+  `admin-sync` (version 4) are active, and `ADMIN_INITIAL_PIN` is absent.
   `admin_settings.pin_hash_algorithm` is `pbkdf2_sha256`, so the first PIN is
   bootstrapped.
+- Remote `db lint` could not connect without `SUPABASE_DB_PASSWORD`; local
+  pgTAP and Deno checks passed instead.
 - Local Supabase Docker stack is currently stopped (no containers). Local
   migration files match remote, but local pgTAP/Edge Function serving requires
   starting the stack first.
@@ -509,6 +571,12 @@ I2505 in-app update flow                                                        
   `latest.json` because it predates the Sprint 11 workflow change.
 - In-app update checks are manual only in v1; there is no startup polling or
   background update check.
+- Bulk insert is implemented, deployed, and covered by automated/backend tests
+  but has not been exercised on a physical device. The server RPC is atomic:
+  one invalid row rejects the entire batch.
+- A failed `debt_batch` operation remains in the outbox with `failed` status;
+  there is no per-row retry UI. The user can inspect sync status, but recovery
+  currently requires fixing data locally/manually or a future retry action.
 - Offline local-only unlock is currently disabled pending owner confirmation. A
   valid server session is required before offline edits can be queued; if it
   expires, local work already in the outbox is preserved.
@@ -555,7 +623,11 @@ I2505 in-app update flow                                                        
   check is manual; downloads verify SHA-256, package, version code, and signing
   certificate before opening the Android installer. No GitHub token is embedded
   in the app.
-- See `plans/DECISIONS.md`, especially D-013 through D-025.
+- Bulk insert uses manual multi-row entry, one group per batch, max 50 rows, and
+  one atomic server RPC. Local debts plus one `debt_batch` outbox row are
+  written in one SQLite transaction; the server rejects the whole batch if any
+  row is invalid.
+- See `plans/DECISIONS.md`, especially D-013 through D-026.
 
 ## Owner decisions
 
@@ -575,6 +647,8 @@ I2505 in-app update flow                                                        
       device-local and never create business mutations or outbox entries.
 - [x] No offline local-only unlock in v1; offline edits require a valid server
       session and are queued through the outbox.
+- [x] Bulk insert: input manual multi-baris, maksimal 50 hutang, satu group per
+      batch, satu RPC server atomik, dan dialog konfirmasi untuk batch >1.
 
 Resolved 12 November 2026: public read all business data, no customers, groups
 retained, admin PIN retained, device enrollment removed, database reset.
@@ -585,10 +659,10 @@ restore-merge; no app lock; no PIN recovery UI; public business data final.
 
 ## Next step
 
-Sprint 11 is complete and `v1.0.2+3` is the latest stable release. The next
-planned work is Sprint 12 (bulk insert hutang), which is still a draft awaiting
-owner approval of input method, batch limit, group behavior, and sync strategy.
-After approval, implement and test bulk insert. Optionally test the updater on
-Android 8–15 when suitable devices/emulators are available. AAB and Play
-Console are not required. Remove or archive the remote test debt `"tes"` if a
-clean dataset is desired.
+Build/install an APK and verify bulk insert on I2505: 1, 5, and 50 rows;
+offline → reconnect → sync → restart; dashboard/group totals; reminders; and a
+deliberately invalid row to confirm the server rolls back the whole batch. Then
+publish the next stable release with `bump=auto`. Optionally test the updater on
+Android 8–15 when suitable devices/emulators are available. AAB and Play Console
+are not required. Remove or archive the remote test debt `"tes"` if a clean
+dataset is desired.

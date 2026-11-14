@@ -531,3 +531,30 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   tidak dapat dipasang diam-diam dan tidak dapat dilakukan tanpa release stabil
   yang berisi `latest.json`. Jika update check gagal, aplikasi tetap dapat
   dipakai normal.
+
+## D-026 — Bulk insert hutang atomik
+
+- **Tanggal:** 14 November 2026
+- **Status:** Disetujui owner; implementasi, test otomatis, dan deploy cloud
+  selesai; verifikasi perangkat pending
+- **Konteks:** Admin perlu memasukkan banyak hutang tanpa membuat satu form
+  per hutang. Aplikasi tetap offline-first dan mutasi admin harus memiliki
+  idempotency serta otorisasi server.
+- **Keputusan owner:**
+  - Input manual multi-baris di layar `/debts/bulk`.
+  - Maksimal 50 hutang per batch.
+  - Satu group untuk seluruh batch; tanggal default opsional dan dapat
+    dioverride per baris.
+  - Satu RPC server atomik untuk seluruh batch.
+  - Dialog konfirmasi jika batch berisi lebih dari satu hutang.
+- **Implementasi:**
+  - `DebtRepository.createMany` menulis semua hutang dan satu outbox
+    `debt_batch` dalam satu transaksi SQLite.
+  - Worker sync mengirim satu operation ID untuk batch; server memakai
+    `admin_bulk_create_debts` untuk idempotency, insert all-or-nothing, dan audit
+    `sync.batch_create`.
+  - Jika satu baris ditolak server, seluruh batch rollback dan outbox tetap ada
+    dengan status failed.
+- **Konsekuensi:** Tidak ada partial server insert. Kesalahan satu baris
+  menggagalkan seluruh batch dan memerlukan perbaikan/retry. Import CSV/Excel
+  belum termasuk; input masih manual.

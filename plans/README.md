@@ -54,6 +54,6 @@ pengelolaan hutang menggunakan Flutter dan Supabase.
   Release, verifikasi checksum/package/signature, dan installer Android
   (selesai; rilis `v1.0.1`/`v1.0.2` dan verifikasi perangkat owner-reported
   passed).
-- `sprints/SPRINT_12_BULK_DEBT_INSERT.md` — rencana input banyak hutang
-  sekaligus dengan transaksi lokal atomik dan outbox per hutang (draft,
-  menunggu persetujuan owner).
+- `sprints/SPRINT_12_BULK_DEBT_INSERT.md` — input banyak hutang sekaligus
+  dengan transaksi lokal atomik, outbox `debt_batch`, dan RPC server atomik
+  (implementasi, test, dan deploy cloud selesai; uji perangkat pending).

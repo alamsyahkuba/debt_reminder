@@ -28,6 +28,7 @@ async function applyMutation(
 ): Promise<Record<string, unknown>> {
   const isDebtDelete = args.entityType === "debt" &&
     args.operation === "delete";
+  const isDebtBatch = args.entityType === "debt_batch";
   const expectedVersion = args.payload.expected_version;
   if (isDebtDelete && typeof expectedVersion !== "number") {
     throw new AdminMutationError(
@@ -37,7 +38,16 @@ async function applyMutation(
     );
   }
 
-  const { data, error } = isDebtDelete
+  const { data, error } = isDebtBatch
+    ? await supabase.rpc("admin_bulk_create_debts", {
+      p_operation_id: args.operationId,
+      p_entity_id: args.entityId,
+      p_payload: args.payload,
+      p_payload_hash: args.payloadHash,
+      p_session_id: args.sessionId,
+      p_device_id: args.deviceId,
+    })
+    : isDebtDelete
     ? await supabase.rpc("admin_delete_debt", {
       p_operation_id: args.operationId,
       p_entity_id: args.entityId,
@@ -88,7 +98,9 @@ function mapRpcError(error: {
   if (
     code === "P0001" ||
     code === "22023" ||
+    code === "23502" ||
     code === "23503" ||
+    code === "23505" ||
     code === "23514" ||
     code === "22P02"
   ) {

@@ -39,9 +39,10 @@ I2505 dilaporkan lolos oleh owner. GitHub release automation sudah dijalankan:
 dry run dan rilis otomatis pertama `v1.0.0` berhasil. In-app update sudah
 diimplementasikan dan diuji owner: `v1.0.1+2` dan `v1.0.2+3` dipublikasikan
 dengan APK, `.sha256`, dan `latest.json`; alur cek/download/verifikasi/install
-dan preservasi data dilaporkan lolos di I2505. Rilis v1 didistribusikan sebagai
-APK; AAB dan Play Console tidak termasuk scope. Lihat
-[`plans/STATUS.md`](plans/STATUS.md) dan
+dan preservasi data dilaporkan lolos di I2505. Sprint 12 menambahkan bulk insert
+hutang manual hingga 50 baris dengan satu group per batch dan RPC server atomik;
+implementasi, test, dan deploy cloud sudah selesai, tinggal uji perangkat. Rilis v1 didistribusikan sebagai APK; AAB dan Play Console tidak
+termasuk scope. Lihat [`plans/STATUS.md`](plans/STATUS.md) dan
 [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
@@ -87,6 +88,22 @@ preferensi reminder. Jika pengecekan gagal atau perangkat offline, aplikasi
 tetap dapat dipakai normal. Detail kontrak manifest dan checklist uji ada di
 [`plans/sprints/SPRINT_11_IN_APP_UPDATE.md`](plans/sprints/SPRINT_11_IN_APP_UPDATE.md)
 dan [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
+
+## Bulk insert hutang
+
+Admin dapat membuka **Semua Hutang → Tambah Banyak** untuk mengisi beberapa
+hutang sekaligus:
+
+- 1–50 baris per batch, satu group untuk seluruh batch.
+- Jatuh tempo default opsional dan dapat dioverride per baris.
+- Baris kosong diabaikan; baris terisi sebagian ditolak.
+- Satu transaksi SQLite menyimpan semua hutang dan satu outbox `debt_batch`.
+- Satu RPC server atomik `admin_bulk_create_debts` membuat seluruh batch atau
+  rollback semua jika ada satu baris invalid.
+- Dialog konfirmasi muncul untuk batch lebih dari satu hutang.
+
+Detail keputusan, test, dan status implementasi ada di
+[`plans/sprints/SPRINT_12_BULK_DEBT_INSERT.md`](plans/sprints/SPRINT_12_BULK_DEBT_INSERT.md).
 
 ## Konfigurasi environment
 

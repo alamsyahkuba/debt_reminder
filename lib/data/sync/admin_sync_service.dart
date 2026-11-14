@@ -128,12 +128,12 @@ class AdminSyncService {
 
         switch (result.status) {
           case AdminMutationStatus.applied:
-            await _applySuccess(item, result);
+            await _applySuccess(item, result, payload);
             await _queue.deleteOperation(item.operationId);
             applied++;
 
           case AdminMutationStatus.conflict:
-            await _markEntityConflict(item);
+            await _markEntityConflict(item, payload);
             await _queue.markConflict(
               operationId: item.operationId,
               conflictData: jsonEncode(<String, Object?>{
@@ -228,6 +228,12 @@ class AdminSyncService {
         message: 'Konflik tidak ditemukan.',
       );
     }
+    if (item.entityType == 'debt_batch') {
+      throw const AdminSyncException(
+        code: 'invalid_conflict',
+        message: 'Konflik batch tidak dapat diselesaikan otomatis.',
+      );
+    }
 
     final conflict = _decodeConflict(item.conflictData);
     final serverVersion = _asInt(conflict['server_version']);
@@ -274,6 +280,12 @@ class AdminSyncService {
       throw const AdminSyncException(
         code: 'conflict_not_found',
         message: 'Konflik tidak ditemukan.',
+      );
+    }
+    if (item.entityType == 'debt_batch') {
+      throw const AdminSyncException(
+        code: 'invalid_conflict',
+        message: 'Konflik batch tidak dapat diselesaikan otomatis.',
       );
     }
 
@@ -344,7 +356,7 @@ class AdminSyncService {
     if (item.entityType == 'debt_group') {
       return item.operation == 'delete' ? 3 : 0;
     }
-    if (item.entityType == 'debt') {
+    if (item.entityType == 'debt' || item.entityType == 'debt_batch') {
       return 1;
     }
     return 2;
@@ -374,6 +386,20 @@ class AdminSyncService {
       return group != null && group.syncState == SyncState.synced.name;
     }
 
+    if (item.entityType == 'debt_batch') {
+      final groupIds = <String>{
+        for (final debt in _payloadDebts(payload))
+          if (_asString(debt['group_id']) case final String groupId) groupId,
+      };
+      for (final groupId in groupIds) {
+        final group = await _groups.findById(groupId);
+        if (group == null || group.syncState != SyncState.synced.name) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     if (item.entityType == 'payment') {
       final debtId = _asString(payload['debt_id']);
       if (debtId == null) {
@@ -389,8 +415,32 @@ class AdminSyncService {
   Future<void> _applySuccess(
     SyncQueueRow item,
     AdminMutationResult result,
+    Map<String, Object?> payload,
   ) async {
     final serverUpdatedAt = result.serverUpdatedAt ?? _now().toUtc();
+    if (item.entityType == 'debt_batch') {
+      final itemsById = <String, AdminMutationItemResult>{
+        for (final resultItem in result.items) resultItem.id: resultItem,
+      };
+      for (final debt in _payloadDebts(payload)) {
+        final id = _asString(debt['id']);
+        if (id == null) {
+          continue;
+        }
+        final existing = await _debts.findById(id);
+        if (existing == null) {
+          continue;
+        }
+        final resultItem = itemsById[id];
+        await _debts.markSynced(
+          id: id,
+          version: resultItem?.version ?? existing.version,
+          serverUpdatedAt: resultItem?.serverUpdatedAt ?? serverUpdatedAt,
+        );
+      }
+      return;
+    }
+
     if (item.entityType == 'debt_group') {
       final existing = await _groups.findById(item.entityId);
       if (existing != null) {
@@ -417,12 +467,34 @@ class AdminSyncService {
     }
   }
 
-  Future<void> _markEntityConflict(SyncQueueRow item) async {
-    if (item.entityType == 'debt_group') {
+  Future<void> _markEntityConflict(
+    SyncQueueRow item,
+    Map<String, Object?> payload,
+  ) async {
+    if (item.entityType == 'debt_batch') {
+      for (final debt in _payloadDebts(payload)) {
+        final id = _asString(debt['id']);
+        if (id != null) {
+          await _debts.markConflict(id);
+        }
+      }
+    } else if (item.entityType == 'debt_group') {
       await _groups.markConflict(item.entityId);
     } else if (item.entityType == 'debt') {
       await _debts.markConflict(item.entityId);
     }
+  }
+
+  List<Map<String, Object?>> _payloadDebts(Map<String, Object?> payload) {
+    final value = payload['debts'];
+    if (value is! List) {
+      return const <Map<String, Object?>>[];
+    }
+
+    return <Map<String, Object?>>[
+      for (final raw in value)
+        if (raw is Map) _stringKeyed(raw),
+    ];
   }
 
   Map<String, Object?> _decodeObject(String value) {

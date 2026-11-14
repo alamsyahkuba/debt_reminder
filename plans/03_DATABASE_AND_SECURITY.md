@@ -187,6 +187,9 @@ Target revisi: Drift schema baru setelah reset.
 - Client-side `isAdmin=true` bukan otorisasi.
 - `admin_apply_mutation` melakukan idempotency, version check, mutasi, audit, dan
   response dalam satu transaksi service-role.
+- `admin_bulk_create_debts` menangani `debt_batch/create`: validasi 1–50 baris,
+  unique ID, idempotency registry, insert semua hutang atau rollback semua,
+  audit `sync.batch_create`, dan hanya dapat dieksekusi `service_role`.
 
 ### PIN
 - PIN low entropy; gunakan server-side pepper dan password hashing yang sesuai.

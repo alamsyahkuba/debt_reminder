@@ -192,6 +192,103 @@ Deno.test("payment operation id must match the queue operation id", async () => 
   assert.equal(response.status, 400);
 });
 
+function debtPayload(id: string, overrides: Record<string, unknown> = {}) {
+  return {
+    id,
+    group_id: "20000000-0000-4000-8000-000000000001",
+    title: "Hutang bulk",
+    principal_amount: 100000,
+    due_date: "2027-01-10",
+    notes: null,
+    is_archived: false,
+    created_at: "2026-11-14T10:00:00Z",
+    updated_at: "2026-11-14T10:00:00Z",
+    version: 1,
+    ...overrides,
+  };
+}
+
+function batchBody(debts: Record<string, unknown>[]) {
+  const batchId = "60000000-0000-4000-8000-000000000001";
+  return validBody({
+    operation_id: "10000000-0000-4000-8000-000000000030",
+    operation: "create",
+    entity_type: "debt_batch",
+    entity_id: batchId,
+    payload: { id: batchId, debts },
+  });
+}
+
+Deno.test("bulk debt batch is validated and forwarded once", async () => {
+  const debts = [
+    debtPayload("40000000-0000-4000-8000-000000000011"),
+    debtPayload("40000000-0000-4000-8000-000000000012", {
+      title: "Hutang bulk kedua",
+      principal_amount: 250000,
+    }),
+  ];
+  const { response, args } = await handle(batchBody(debts), {
+    result: {
+      status: "applied",
+      entity_type: "debt_batch",
+      entity_id: "60000000-0000-4000-8000-000000000001",
+      count: 2,
+      debts: [],
+    },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(args.length, 1);
+  assert.equal(args[0]?.entityType, "debt_batch");
+  assert.equal(args[0]?.operation, "create");
+  assert.equal(args[0]?.entityId, "60000000-0000-4000-8000-000000000001");
+  assert.equal((args[0]?.payload.debts as unknown[]).length, 2);
+});
+
+Deno.test("bulk debt batch rejects duplicate ids and invalid rows", async () => {
+  const duplicateId = "40000000-0000-4000-8000-000000000011";
+  const duplicate = await handle(
+    batchBody([debtPayload(duplicateId), debtPayload(duplicateId)]),
+  );
+  assert.equal(duplicate.response.status, 400);
+
+  const invalidAmount = await handle(
+    batchBody([
+      debtPayload("40000000-0000-4000-8000-000000000013", {
+        principal_amount: 0,
+      }),
+    ]),
+  );
+  assert.equal(invalidAmount.response.status, 400);
+
+  const unknownField = await handle(
+    batchBody([
+      debtPayload("40000000-0000-4000-8000-000000000014", {
+        unexpected: true,
+      }),
+    ]),
+  );
+  assert.equal(unknownField.response.status, 400);
+});
+
+Deno.test("bulk debt batch rejects more than 50 rows and non-create operations", async () => {
+  const debts = Array.from(
+    { length: 51 },
+    (_, index) =>
+      debtPayload(
+        `40000000-0000-4000-8000-${(index + 100).toString().padStart(12, "0")}`,
+      ),
+  );
+  const oversized = await handle(batchBody(debts));
+  assert.equal(oversized.response.status, 400);
+
+  const nonCreate = await handle({
+    ...batchBody([debtPayload("40000000-0000-4000-8000-000000000015")]),
+    operation: "update",
+  });
+  assert.equal(nonCreate.response.status, 400);
+});
+
 Deno.test("debt delete requires a version and is accepted by the handler", async () => {
   const entityId = "40000000-0000-4000-8000-000000000001";
   const deleteBody = validBody({

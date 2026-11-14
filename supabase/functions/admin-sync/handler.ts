@@ -99,6 +99,8 @@ const DEBT_FIELDS = [
   "expected_version",
 ] as const;
 
+const DEBT_BATCH_FIELDS = ["id", "debts"] as const;
+
 const PAYMENT_FIELDS = [
   "id",
   "debt_id",
@@ -112,6 +114,7 @@ const PAYMENT_FIELDS = [
 const ALLOWED_OPERATIONS: Readonly<Record<string, ReadonlySet<string>>> = {
   debt_group: new Set(["create", "update", "archive", "delete"]),
   debt: new Set(["create", "update", "archive", "delete"]),
+  debt_batch: new Set(["create"]),
   payment: new Set(["payment_create"]),
 };
 
@@ -255,6 +258,11 @@ function validateMutation(
       validateDebt(payload, operation);
       return;
 
+    case "debt_batch":
+      ensureAllowedFields(payload, DEBT_BATCH_FIELDS);
+      validateDebtBatch(payload);
+      return;
+
     case "payment":
       ensureAllowedFields(payload, PAYMENT_FIELDS);
       validatePayment(payload, operationId);
@@ -329,6 +337,38 @@ function validateDebt(
 
   if (operation === "delete") {
     requireVersion(payload.expected_version, "expected_version");
+  }
+}
+
+function validateDebtBatch(payload: Record<string, unknown>): void {
+  const debts = payload.debts;
+  if (!Array.isArray(debts) || debts.length < 1 || debts.length > 50) {
+    throw new ValidationError(
+      "invalid_batch",
+      "Jumlah hutang dalam batch harus 1-50.",
+    );
+  }
+
+  const ids = new Set<string>();
+  for (const [index, raw] of debts.entries()) {
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      throw new ValidationError(
+        "invalid_payload",
+        `debts[${index}] harus berupa objek.`,
+      );
+    }
+
+    const debt = raw as Record<string, unknown>;
+    ensureAllowedFields(debt, DEBT_FIELDS);
+    const id = requireUuid(debt.id, `debts[${index}].id`);
+    if (ids.has(id)) {
+      throw new ValidationError(
+        "duplicate_debt_id",
+        `ID hutang duplikat pada baris ${index + 1}.`,
+      );
+    }
+    ids.add(id);
+    validateDebt(debt, "create");
   }
 }
 

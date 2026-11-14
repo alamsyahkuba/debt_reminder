@@ -1,3 +1,15 @@
+final class AdminMutationItemResult {
+  const AdminMutationItemResult({
+    required this.id,
+    required this.version,
+    required this.serverUpdatedAt,
+  });
+
+  final String id;
+  final int version;
+  final DateTime serverUpdatedAt;
+}
+
 final class AdminMutationResult {
   const AdminMutationResult._({
     required this.status,
@@ -5,16 +17,19 @@ final class AdminMutationResult {
     this.serverUpdatedAt,
     this.serverRow,
     this.message,
+    this.items = const <AdminMutationItemResult>[],
   });
 
   factory AdminMutationResult.applied({
     int? version,
     DateTime? serverUpdatedAt,
+    List<AdminMutationItemResult> items = const <AdminMutationItemResult>[],
   }) {
     return AdminMutationResult._(
       status: AdminMutationStatus.applied,
       version: version,
       serverUpdatedAt: serverUpdatedAt,
+      items: items,
     );
   }
 
@@ -45,6 +60,7 @@ final class AdminMutationResult {
   final DateTime? serverUpdatedAt;
   final Map<String, Object?>? serverRow;
   final String? message;
+  final List<AdminMutationItemResult> items;
 
   Map<String, Object?> toConflictData() {
     return <String, Object?>{

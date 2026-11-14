@@ -125,7 +125,19 @@ class _DebtsScreenState extends ConsumerState<DebtsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('Daftar hutang', style: theme.textTheme.titleMedium),
+                Row(
+                  children: <Widget>[
+                    Text('Daftar hutang', style: theme.textTheme.titleMedium),
+                    const Spacer(),
+                    if (isAdmin)
+                      OutlinedButton.icon(
+                        key: const Key('debts-bulk-add-button'),
+                        onPressed: () => context.push(AppRoutes.debtBulk),
+                        icon: const Icon(Icons.playlist_add, size: 18),
+                        label: const Text('Tambah Banyak'),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 10),
                 TextField(
                   key: const Key('debt-search-field'),

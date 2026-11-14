@@ -134,7 +134,38 @@ class HttpAdminSyncRepository implements AdminSyncRepository {
       serverUpdatedAt: updatedAt is String
           ? DateTime.tryParse(updatedAt)?.toUtc()
           : null,
+      items: _appliedItems(body['debts']),
     );
+  }
+
+  List<AdminMutationItemResult> _appliedItems(Object? value) {
+    if (value is! List) {
+      return const <AdminMutationItemResult>[];
+    }
+
+    final items = <AdminMutationItemResult>[];
+    for (final raw in value) {
+      if (raw is! Map) {
+        continue;
+      }
+      final item = _stringKeyed(raw);
+      final id = item['id'];
+      final version = item['version'];
+      final updatedAt = item['server_updated_at'] ?? item['updated_at'];
+      final parsedUpdatedAt = updatedAt is String
+          ? DateTime.tryParse(updatedAt)?.toUtc()
+          : null;
+      if (id is String && version is num && parsedUpdatedAt != null) {
+        items.add(
+          AdminMutationItemResult(
+            id: id,
+            version: version.toInt(),
+            serverUpdatedAt: parsedUpdatedAt,
+          ),
+        );
+      }
+    }
+    return items;
   }
 
   Future<http.Response> _send(Future<http.Response> Function() request) async {

@@ -39,6 +39,11 @@
 
 ### Debt/payment
 - Debt can be created without customer.
+- Bulk insert can create 1–50 debts with one group, optional due dates, and a
+  confirmation for multi-row batches.
+- Bulk insert is atomic locally and on the server; one invalid row prevents the
+  whole batch.
+- Bulk replay with the same operation ID does not duplicate debts.
 - Payment amount must be positive.
 - Overpayment rejected by default.
 - Duplicate sync retry does not duplicate payment.
@@ -46,6 +51,7 @@
 - Payment history remains append-only.
 - Debt hard delete is blocked when payments exist.
 - Public can read debt/payment data.
+- Public cannot access the bulk insert route or button.
 
 ### Offline
 - App opens and shows cached data without network.

@@ -58,6 +58,11 @@ kembali ke mode publik/read-only.
 - Sort: due date, latest, outstanding amount, group.
 - Debt row shows title, group, due date, remaining amount, status.
 - Tidak ada kolom customer.
+- Admin-only **Tambah Banyak** membuka form bulk 1–50 baris: satu group batch,
+  judul/nominal wajib, catatan dan jatuh tempo opsional, tanggal default dengan
+  override per baris, validasi inline, dan dialog konfirmasi untuk batch >1.
+- Bulk insert memakai satu transaksi lokal dan satu RPC server atomik; publik
+  tidak dapat melihat tombol atau membuka route.
 
 ### Debt detail
 - Principal amount.

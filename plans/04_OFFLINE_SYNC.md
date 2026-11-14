@@ -39,7 +39,8 @@ Digunakan hanya oleh admin mutation:
 - `operation_id UUID primary key`
 - `entity_type TEXT`
 - `entity_id UUID`
-- `operation TEXT` (`create`, `update`, `archive`, `payment_create`, dll.)
+- `operation TEXT` (`create`, `update`, `archive`, `payment_create`,
+  `debt_batch/create`, dll.)
 - `payload JSON`
 - `created_at`
 - `retry_count`
@@ -63,8 +64,10 @@ Jangan membuat outbox item di luar transaksi entity.
 
 ## 5. Sync order and dependencies
 
-- Group create sebelum debt yang mereferensikannya.
-- Debt create/update sebelum payment yang mereferensikannya.
+- Group create sebelum debt/debt_batch yang mereferensikannya.
+- `debt_batch` create sebelum payment yang mereferensikan salah satu hutangnya.
+- Bulk insert memakai satu operation ID untuk seluruh batch; server
+  `admin_bulk_create_debts` menyimpan semua baris atau rollback semua.
 - Payments append-only dan idempotent.
 - Archive tidak menghapus referenced records.
 - Queue diurutkan berdasarkan dependency dan created time.
@@ -74,6 +77,8 @@ Jangan membuat outbox item di luar transaksi entity.
 ## 6. Idempotency
 
 - Setiap mutation admin memiliki stable `operation_id`.
+- Satu batch bulk insert memakai satu `operation_id`; payload berisi seluruh
+  daftar hutang.
 - Server menyimpan processed operation IDs dan/atau unique payment operation_id.
 - Retry mengembalikan hasil sebelumnya tanpa duplikasi.
 - Client tidak boleh membuat operation_id baru saat retry.

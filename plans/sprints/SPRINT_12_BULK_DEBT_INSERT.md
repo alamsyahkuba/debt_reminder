@@ -1,10 +1,11 @@
 # Sprint 12 — Bulk Insert Hutang
 
-Status: Draft — menunggu persetujuan owner; belum diimplementasikan.
+Status: Diimplementasikan dan dideploy; test Flutter, Deno, pgTAP, dan deploy
+cloud berhasil. Verifikasi perangkat masih pending.
 Tanggal: 14 November 2026.
-Dependency: Sprint 11 selesai (owner-reported device verification passed);
-Sprint 12 tetap menunggu persetujuan owner sebelum coding. Plan ini tidak
-mengubah schema lokal, Supabase, RLS, atau Edge Function.
+Dependency: Sprint 11 selesai. Owner sudah menyetujui lima keputusan Sprint 12.
+Plan ini menambah satu RPC server atomik dan operasi Edge Function
+`debt_batch`; tidak mengubah tabel bisnis, RLS, public RPC, atau format backup.
 
 ## 1. Tujuan
 
@@ -20,28 +21,28 @@ Hasil yang diharapkan:
 - Data tetap offline-first: baris langsung terlihat dan tetap pending sampai
   sync admin berhasil.
 - Publik tidak memiliki akses ke layar atau aksi bulk insert.
-- Tidak ada perubahan pada data bisnis, schema, RLS, public RPC, atau format
-  backup.
+- Tabel bisnis, RLS, public read RPC, dan format backup tidak berubah.
+- Server menerima satu operasi `debt_batch` atomik untuk seluruh batch.
 
-## 2. Keputusan yang diusulkan
+## 2. Keputusan owner
 
-| Topik | Rekomendasi |
+| Topik | Keputusan |
 |---|---|
 | Metode input MVP | Form multi-baris manual di dalam aplikasi |
 | Import CSV/Excel | Ditunda ke fase berikutnya; tidak termasuk MVP |
 | Group | Satu group untuk seluruh batch, dipilih di header |
 | Jatuh tempo | Default batch opsional; setiap baris dapat override |
 | Batas batch | Maksimal 50 hutang per transaksi |
-| Penyimpanan | Satu transaksi SQLite; satu outbox `debt/create` per hutang |
-| Sync server | Tetap memakai operasi `debt/create` yang sudah ada |
-| Server bulk RPC | Tidak diperlukan pada MVP |
+| Penyimpanan | Satu transaksi SQLite; satu outbox `debt_batch` per batch |
+| Sync server | Satu RPC atomik `admin_bulk_create_debts` |
+| Server bulk RPC | Ya; seluruh batch commit atau rollback bersama |
 | Duplikat | Tidak ada dedupe otomatis; judul/nominal/tanggal boleh sama |
 | Konfirmasi | Dialog konfirmasi jika jumlah baris > 1 |
 | Undo batch | Tidak termasuk MVP |
 
-Keputusan ini menjaga perubahan tetap kecil: tidak ada migration, tidak ada
-endpoint baru, dan mekanisme idempotency/version/audit yang sudah ada tetap
-dipakai.
+Server memakai registry idempotency yang sama dengan operasi lain. Satu
+`operation_id` mewakili seluruh batch, sehingga retry tidak menduplikasi
+hutang.
 
 ## 3. UX yang diusulkan
 
@@ -120,16 +121,16 @@ Layar **Tambah Banyak Hutang**:
 Tambahkan entity domain ringan, tanpa dependensi Flutter/Drift/Supabase:
 
 ```dart
+const int maxDebtBatchSize = 50;
+
 final class DebtDraft {
   const DebtDraft({
-    required this.groupId,
     required this.title,
     required this.principalAmount,
-    required this.dueDate,
-    required this.notes,
+    this.dueDate,
+    this.notes,
   });
 
-  final String? groupId;
   final String title;
   final int principalAmount;
   final DateTime? dueDate;
@@ -137,15 +138,18 @@ final class DebtDraft {
 }
 ```
 
-`groupId` tetap per draft agar fase import berikutnya dapat memakai group
-berbeda per baris, walaupun UI MVP memakai satu group untuk seluruh batch.
+Group berada di parameter batch `createMany`, bukan di setiap draft. Ini
+mengikuti keputusan owner: satu group per batch.
 
 ### 4.2 Kontrak repository
 
-Tambahkan method berikut ke `DebtRepository`:
+Method berikut ditambahkan ke `DebtRepository`:
 
 ```dart
-Future<List<Debt>> createMany(List<DebtDraft> drafts);
+Future<List<Debt>> createMany({
+  String? groupId,
+  required List<DebtDraft> drafts,
+});
 ```
 
 Aturan implementasi:
@@ -156,40 +160,40 @@ Aturan implementasi:
    - nominal memakai `validatePositiveRupiah`;
    - catatan memakai `validateOptionalText(maxLength: 2000)`;
    - tanggal memakai `normalizeDueDate`;
-   - semua `groupId` unik harus ada di tabel `debt_groups`.
+   - group batch harus ada di tabel `debt_groups` jika tidak null.
 3. Buka satu `_db.transaction`.
 4. Gunakan satu timestamp `now` untuk seluruh batch.
-5. Buat ID hutang dan operation ID baru untuk setiap baris.
-6. Upsert semua baris hutang dan enqueue satu operasi `debt/create` per baris
-   di dalam transaksi yang sama.
+5. Buat ID untuk setiap hutang, satu batch ID, dan satu operation ID.
+6. Upsert semua baris hutang dan enqueue satu operasi `debt_batch`/`create`
+   dengan payload `{id: batchId, debts: [...]}` di dalam transaksi yang sama.
 7. Kembalikan `List<Debt>` sesuai urutan input.
 8. Jika satu langkah gagal, transaksi rollback: tidak ada hutang maupun outbox
    yang tersisa.
 
-Outbox payload tetap memakai `debtCreatePayload` yang sudah ada. Tidak ada
-perubahan format payload server.
+Outbox per baris tidak dibuat. Dengan demikian satu kegagalan server tidak
+meninggalkan sebagian batch tersinkron.
 
-### 4.3 Kenapa bukan satu operasi server bulk
+### 4.3 Sync server atomik
 
-MVP memakai satu operasi `debt/create` per hutang karena:
+Owner memilih satu RPC atomik, sehingga implementasi memakai:
 
-- kompatibel dengan `admin-sync`, idempotency registry, audit, dan conflict
-  handling yang sudah ada;
-- tidak perlu migration atau RPC baru;
-- kegagalan satu baris tidak membatalkan baris lain yang sudah berhasil di
-  server;
-- batch lokal tetap atomic dari sudut pandang pengguna.
+- Edge Function `admin-sync` menerima `entity_type='debt_batch'`,
+  `operation='create'`.
+- Validasi handler: 1–50 baris, setiap baris memakai field hutang yang diizinkan,
+  tidak ada ID duplikat, nominal/tanggal/group valid.
+- RPC `public.admin_bulk_create_debts(operation_id, entity_id, payload, ...)`
+  memakai `begin_operation`/`complete_operation`, insert semua hutang dalam satu
+  statement, menulis audit `sync.batch_create`, lalu commit.
+- Jika satu baris gagal (constraint, group hilang, ID duplikat), seluruh
+  transaksi rollback dan operation tidak tercatat sebagai sukses.
+- Retry dengan operation ID dan payload hash yang sama mengembalikan respons
+  sebelumnya tanpa duplikasi.
+- Worker lokal memproses group sebelum `debt_batch`, dan `debt_batch` sebelum
+  payment yang mereferensikan hutang baru. Setelah sukses, semua baris lokal
+  ditandai `synced` dari daftar hasil server.
 
-Konsekuensi yang harus disepakati:
-
-- Sync server tidak atomic per batch. Jika satu baris ditolak server, baris lain
-  tetap tersinkron dan baris yang gagal tetap ada secara lokal.
-- Batch 50 baris dapat membutuhkan beberapa request berurutan. Worker sync
-  default memproses maksimal 50 operasi per run, jadi batas 50 dipilih agar
-  batch MVP muat dalam satu run.
-- Jika performa sync 50 request dirasa terlalu lambat, operasi server
-  `debt.bulk_create` dapat direncanakan sebagai optimasi terpisah. Itu bukan
-  bagian Sprint 12.
+Batas 50 dipilih agar satu batch muat dalam satu operasi dan payload tetap
+terkendali. Tidak ada endpoint bulk tambahan di luar RPC tersebut.
 
 ## 5. UI state dan implementasi Flutter
 
@@ -197,7 +201,8 @@ Konsekuensi yang harus disepakati:
 
 - `lib/domain/entities/debt_draft.dart`
 - `lib/features/debts/presentation/bulk_debt_form_screen.dart`
-- `lib/features/debts/presentation/widgets/bulk_debt_row_editor.dart`
+- `supabase/migrations/20261114140000_bulk_debt_insert.sql`
+- `supabase/tests/admin_bulk_debt.test.sql`
 - `test/features/bulk_debt_flow_test.dart`
 - `test/data/repositories/bulk_debt_test.dart`
 - `test/data/sync/bulk_debt_sync_test.dart`
@@ -206,19 +211,25 @@ Konsekuensi yang harus disepakati:
 
 - `lib/domain/repositories/debt_repository.dart`
 - `lib/data/repositories/debt_repository_impl.dart`
+- `lib/data/repositories/outbox_payloads.dart`
+- `lib/data/remote/admin_sync_repository.dart`
+- `lib/data/sync/admin_sync_service.dart`
+- `lib/domain/entities/admin_mutation_result.dart`
 - `lib/features/debts/presentation/debts_screen.dart`
 - `lib/app/navigation.dart`
 - `lib/app/router.dart`
-- `plans/STATUS.md` setelah implementasi
-- `README.md` dan `plans/05_UI_UX_SPEC.md` setelah implementasi
+- `supabase/functions/admin-sync/handler.ts`
+- `supabase/functions/admin-sync/handler_test.ts`
+- `supabase/functions/admin-sync/index.ts`
+- `plans/STATUS.md`, `README.md`, `plans/05_UI_UX_SPEC.md`, dan
+  `supabase/README.md` setelah implementasi
 
 Tidak ada perubahan:
 
 - `lib/data/local/app_database.dart`
 - migration Drift
-- migration Supabase
-- `supabase/functions/admin-sync`
-- `public_*` RPC
+- tabel dan constraint bisnis Supabase
+- RLS dan `public_*` RPC
 - model payment/group
 
 ### 5.3 Pengelolaan state form
@@ -259,7 +270,7 @@ Tidak ada perubahan khusus:
 | Database penuh/error tulis | Transaksi rollback; error jelas |
 | Offline | Batch tersimpan lokal, outbox pending |
 | Sesi admin expired saat sync | Outbox dipertahankan; minta login ulang |
-| Satu baris gagal di server | Baris lain tetap sync; baris gagal muncul di sync status |
+| Satu baris gagal di server | Seluruh batch rollback; tidak ada baris server yang tersimpan |
 | App ditutup saat menyimpan | SQLite rollback atau commit utuh, tidak parsial |
 | Batch > 50 | Tombol tambah baris disabled dan validasi repository |
 
@@ -267,9 +278,10 @@ Tidak ada perubahan khusus:
 
 ### 8.1 Repository
 
-- `createMany` menyimpan N hutang dan N outbox dalam satu transaksi.
+- `createMany` menyimpan N hutang dan satu outbox `debt_batch` dalam satu
+  transaksi.
 - Semua hutang memakai timestamp batch yang konsisten dan group yang benar.
-- Operation ID setiap outbox unik dan stabil setelah retry.
+- Batch ID dan operation ID stabil setelah retry.
 - Satu baris invalid membatalkan seluruh hutang dan outbox.
 - Group yang tidak ada membatalkan seluruh batch.
 - Daftar kosong dan lebih dari 50 ditolak.
@@ -279,11 +291,12 @@ Tidak ada perubahan khusus:
 
 ### 8.2 Sync
 
-- Tiga hutang hasil bulk menghasilkan tiga operasi `debt/create` yang dikirim
-  berurutan.
-- Retry tidak menduplikasi hutang di server.
-- Satu operasi gagal tidak menghapus baris atau outbox lain.
+- Satu batch menghasilkan satu operasi `debt_batch`/`create`.
+- Retry dengan operation ID yang sama tidak menduplikasi hutang di server.
+- Satu baris invalid membuat seluruh batch server rollback.
+- Kegagalan batch tidak menghapus hutang lokal atau outbox.
 - Outbox bertahan setelah database ditutup dan dibuka kembali.
+- Batch diproses setelah group dan sebelum payment.
 
 ### 8.3 Widget
 
@@ -311,19 +324,23 @@ Tidak ada perubahan khusus:
 
 ## 9. Acceptance criteria
 
-- [ ] Admin dapat membuka **Tambah Banyak Hutang** dari layar Semua Hutang.
-- [ ] Publik tidak melihat tombol dan tidak dapat membuka route.
-- [ ] Admin dapat menambah, menghapus, dan mengisi hingga 50 baris.
-- [ ] Group batch dan jatuh tempo default bekerja; override per baris bekerja.
-- [ ] Baris kosong diabaikan; baris terisi sebagian ditolak.
-- [ ] Satu transaksi menyimpan semua hutang dan semua outbox.
-- [ ] Tidak ada data parsial jika validasi/transaksi gagal.
-- [ ] Hutang baru langsung terlihat di daftar, dashboard, dan group summary.
-- [ ] Setiap hutang sync tepat sekali dengan operation ID stabil.
-- [ ] Offline, retry, restart, dan auth failure mempertahankan outbox.
-- [ ] Reminder mempertimbangkan hutang baru tanpa perubahan schema.
-- [ ] Tidak ada perubahan pada RLS, public RPC, schema, atau service role.
-- [ ] `dart format`, `flutter analyze`, dan seluruh test lulus.
+- [x] Admin dapat membuka **Tambah Banyak Hutang** dari layar Semua Hutang.
+- [x] Publik tidak melihat tombol dan tidak dapat membuka route.
+- [x] Admin dapat menambah, menghapus, dan mengisi hingga 50 baris.
+- [x] Group batch dan jatuh tempo default bekerja; override per baris tersedia.
+- [x] Baris kosong diabaikan; baris terisi sebagian ditolak.
+- [x] Satu transaksi menyimpan semua hutang dan satu outbox batch.
+- [x] Tidak ada data parsial jika validasi/transaksi gagal.
+- [x] Hutang baru langsung terlihat di daftar; dashboard/group summary memakai
+      stream lokal yang sama.
+- [x] Seluruh batch sync lewat satu operasi atomik dengan operation ID stabil.
+- [x] RPC server menolak batch invalid secara atomik dan replay tidak menduplikasi.
+- [x] Tidak ada perubahan pada tabel bisnis, RLS, public RPC, atau service role.
+- [x] `dart format`, `flutter analyze`, seluruh Flutter test, Deno test, dan
+      pgTAP lulus.
+- [x] Deploy migration dan Edge Function ke Supabase cloud.
+- [ ] Uji offline → reconnect → restart dan reminder untuk batch pada perangkat
+      fisik.
 
 ## 10. Di luar scope
 
@@ -332,31 +349,40 @@ Tidak ada perubahan khusus:
 - Bulk edit, bulk archive, bulk delete, atau bulk payment.
 - Undo satu batch.
 - Deteksi/merge duplikat otomatis.
-- Server RPC bulk insert.
 - Progress upload per baris di UI; status tetap memakai sync status global.
 - Perubahan pada customer (tidak ada customer) atau device enrollment.
 
-## 11. Keputusan yang perlu disetujui owner
+RPC bulk insert sudah termasuk dalam scope Sprint 12, bukan di luar scope.
 
-1. **Metode input MVP:** form multi-baris manual (rekomendasi) atau langsung
-   tambahkan paste/import spreadsheet?
-2. **Batas batch:** 50 (rekomendasi) atau 100?
-3. **Group:** satu group per batch (rekomendasi) atau dropdown group per baris?
-4. **Sync:** operasi per hutang yang sudah ada (rekomendasi) atau server bulk
-   RPC atomic?
-5. **Konfirmasi:** dialog untuk batch > 1 (rekomendasi) atau langsung simpan?
+## 11. Keputusan owner (resolved)
 
-Jika owner memilih import spreadsheet, plan ini perlu ditambah parser,
-preview, format kolom, dan test parsing sebelum implementasi dimulai.
+1. **Metode input MVP:** form multi-baris manual.
+2. **Batas batch:** maksimal 50.
+3. **Group:** satu group per batch.
+4. **Sync:** server bulk RPC atomik.
+5. **Konfirmasi:** dialog untuk batch lebih dari satu baris.
 
-## 12. Urutan implementasi
+Import spreadsheet tetap ditunda karena owner memilih input manual.
 
-1. Tambahkan `DebtDraft` dan method `createMany` pada kontrak repository.
-2. Implementasikan `createMany` atomik + outbox per hutang dan test repository.
-3. Tambahkan route `/debts/bulk`, guard admin, dan tombol entry point.
-4. Bangun layar bulk, row editor, group/date default, serta validasi UI.
-5. Tambahkan dialog konfirmasi, SnackBar, dan state loading/error.
-6. Tambahkan test widget dan sync untuk batch.
-7. Jalankan format/analyze/test, lalu uji offline → reconnect → restart dan
-   reminder pada perangkat fisik.
-8. Perbarui `STATUS.md`, README, dan UI spec setelah implementasi disetujui.
+## 12. Status implementasi
+
+Selesai dan tervalidasi:
+
+- [x] Domain `DebtDraft` dan `createMany` dengan batas 50.
+- [x] Transaksi lokal atomik dan satu outbox `debt_batch`.
+- [x] Edge Function `debt_batch` + validasi 1–50 baris/ID unik.
+- [x] RPC `admin_bulk_create_debts` dengan idempotency, atomic insert, audit.
+- [x] Dependency sync group → debt_batch → payment.
+- [x] UI multi-baris, group batch, tanggal default, validasi, dan konfirmasi.
+- [x] Route admin-only `/debts/bulk` dan tombol **Tambah Banyak**.
+- [x] Test repository, sync, widget, handler Deno, dan pgTAP.
+- [x] Format, analyze, seluruh Flutter test, Deno test, dan pgTAP lulus.
+- [x] `flutter build apk --debug` lulus.
+- [x] Deploy migration `20261114140000_bulk_debt_insert.sql` ke remote.
+- [x] Deploy Edge Function `admin-sync` versi 4 ke remote.
+
+Pending:
+
+- [ ] Uji 1, 5, dan 50 baris pada perangkat fisik.
+- [ ] Uji offline → reconnect → sync → restart dan reminder batch.
+- [ ] Verifikasi dashboard/group summary pada perangkat.

@@ -1,4 +1,5 @@
 import '../entities/debt.dart';
+import '../entities/debt_draft.dart';
 import '../entities/debt_overview.dart';
 
 abstract interface class DebtRepository {
@@ -21,6 +22,15 @@ abstract interface class DebtRepository {
     required int principalAmount,
     DateTime? dueDate,
     String? notes,
+  });
+
+  /// Creates up to [maxDebtBatchSize] debts atomically.
+  ///
+  /// All rows and the single bulk outbox operation are written in one local
+  /// transaction. Server sync uses one atomic bulk RPC for the whole batch.
+  Future<List<Debt>> createMany({
+    String? groupId,
+    required List<DebtDraft> drafts,
   });
 
   Future<Debt> update({

@@ -8,6 +8,7 @@ import '../features/dashboard/presentation/dashboard_screen.dart';
 import '../features/debt_groups/presentation/group_detail_screen.dart';
 import '../features/debt_groups/presentation/group_form_screen.dart';
 import '../features/debt_groups/presentation/groups_screen.dart';
+import '../features/debts/presentation/bulk_debt_form_screen.dart';
 import '../features/debts/presentation/debt_detail_screen.dart';
 import '../features/debts/presentation/debt_form_screen.dart';
 import '../features/debts/presentation/debts_screen.dart';
@@ -50,6 +51,10 @@ GoRouter createAppRouter({
       GoRoute(
         path: AppRoutes.debtNew,
         builder: (context, state) => const DebtFormScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.debtBulk,
+        builder: (context, state) => const BulkDebtFormScreen(),
       ),
       GoRoute(
         path: '/debts/:debtId',
@@ -125,7 +130,8 @@ bool _isAdminOnlyPath(Uri uri) {
 
   if (segments.length == 2) {
     return (segments[0] == 'groups' && segments[1] == 'new') ||
-        (segments[0] == 'debts' && segments[1] == 'new');
+        (segments[0] == 'debts' &&
+            (segments[1] == 'new' || segments[1] == 'bulk'));
   }
 
   if (segments.length == 3) {

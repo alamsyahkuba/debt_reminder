@@ -23,15 +23,18 @@ Jangan mengubah application ID setelah rilis pertama.
 
 - Tanggal: 14 November 2026
 - Perangkat: I2505 (`10DG3404HM000HH`), Android 16 / API 36
-- Status: seluruh checklist, termasuk in-app update, owner-reported passed
-  (bukan hasil otomasi perangkat)
+- Status: baseline v1 dan in-app update owner-reported passed; verifikasi bulk
+  insert Sprint 12 masih pending (bukan hasil otomasi perangkat)
 - Distribusi: APK bertanda tangan langsung; AAB/Play Console tidak dipakai
 
 ## Wajib sebelum rilis
 
 - [x] `dart format --output=none --set-exit-if-changed .` bersih.
 - [x] `flutter analyze` tanpa issue.
-- [x] `flutter test` seluruh suite lulus.
+- [x] `flutter test` seluruh suite lulus (termasuk bulk insert).
+- [x] Deno handler tests dan pgTAP bulk insert lulus.
+- [x] Migration bulk dan Edge Function `admin-sync` sudah dideploy ke cloud.
+- [ ] Bulk insert sudah diuji pada perangkat fisik.
 - [x] `deno fmt --check`, `deno check`, `deno lint`, `deno test` lulus.
 - [x] pgTAP seluruh suite lulus pada schema yang akan dideploy.
 - [x] `flutter build apk --debug` berhasil.
@@ -162,6 +165,33 @@ Catatan: seluruh checklist in-app update diselesaikan owner di I2505
 (Android 16) dan dilaporkan lolos. Perangkat Android 8–15 belum tersedia untuk
 pengujian langsung.
 
+## Verifikasi bulk insert
+
+1. Pastikan migration `20261114140000_bulk_debt_insert.sql` dan Edge Function
+   `admin-sync` versi baru sudah dideploy.
+2. Login admin, buka **Semua Hutang → Tambah Banyak**.
+3. Simpan 1, 5, dan 50 baris dengan satu group; uji jatuh tempo default dan
+   override per baris.
+4. Pastikan daftar hutang, dashboard, dan group summary langsung bertambah.
+5. Offline: simpan batch, restart aplikasi, reconnect; pastikan satu outbox
+   `debt_batch` terkirim dan semua baris menjadi synced.
+6. Uji satu baris invalid di server; pastikan seluruh batch rollback dan tidak
+   ada data server parsial.
+7. Uji batch >50, ID duplikat, group hilang, dan baris terisi sebagian.
+8. Pastikan reminder untuk hutang baru dijadwalkan setelah batch tersimpan.
+9. Pastikan publik tidak melihat tombol dan route `/debts/bulk` dijaga PIN.
+
+Checklist:
+
+- [ ] Admin-only bulk screen dan route guard.
+- [ ] 1, 5, dan 50 baris tersimpan benar.
+- [ ] Group batch dan tanggal default/override benar.
+- [ ] Satu transaksi lokal + satu outbox `debt_batch`.
+- [ ] Server batch atomik dan replay idempoten.
+- [ ] Offline → reconnect → restart → synced.
+- [ ] Dashboard/group summary/reminder benar.
+- [ ] Negative cases ditolak tanpa data parsial.
+
 ## Checklist perangkat fisik
 
 - [x] Fresh install APK release berhasil; tidak ada data lama.
@@ -235,6 +265,10 @@ quality gate otomatis ada di `plans/STATUS.md`.
   Android 8–15 tetap perlu diuji saat tersedia.
 - `latest.json` hanya dibuat untuk release stabil; draft/prerelease diabaikan
   oleh updater.
+- Bulk insert bersifat atomik: satu baris invalid menggagalkan seluruh batch
+  lokal/server. Belum ada retry per baris; outbox gagal terlihat di status sync.
+- Migration `20261114140000_bulk_debt_insert.sql` sudah diterapkan dan
+  `admin-sync` versi 4 aktif di remote. Verifikasi perangkat masih pending.
 
 ## PIN reset runbook (operator)
 
