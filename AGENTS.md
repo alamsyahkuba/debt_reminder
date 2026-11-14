@@ -63,11 +63,11 @@ admin PIN/session, public pull, idempotent outbox sync, local due-date
 reminders, conflict resolution, sync status, limited hard delete, full-pull
 deletion reconciliation, and admin JSON backup/export with safe restore-merge
 are implemented. Branding, package identity, and release signing are configured.
-QA and release hardening remain in progress. Cloud migrations and Edge
+Sprint 09 QA/release verification is complete. Cloud migrations and Edge
 Functions are deployed, the first PIN is bootstrapped, and a signed release APK
-is built. Physical-device WorkManager, notification, splash, and install
-verification remain outstanding. AAB/Play Console are not part of the v1
-distribution scope.
+is built. All planned physical-device tests passed owner testing on I2505. AAB
+and Play Console are not part of the v1 distribution scope; distribute the APK
+directly.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.

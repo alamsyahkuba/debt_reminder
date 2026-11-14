@@ -33,10 +33,11 @@ reminder lokal H-3/H-1/H, permission notifikasi, fallback exact alarm, timezone,
 dan rekonsiliasi jadwal. Sprint 09 menambahkan hard delete terbatas, full-pull
 reconciliation, backup/export JSON dengan restore-merge, branding **Debt
 Reminder**, package `com.debtreminder.app`, versi `1.0.0+1`, dan release signing.
-Cloud migration/Edge Functions sudah dideploy, PIN admin sudah bootstrap, dan
-APK release bertanda tangan sudah dibangun. Verifikasi perangkat fisik masih
-menjadi gate release. Lihat [`plans/STATUS.md`](plans/STATUS.md) dan
-[`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
+Cloud migration/Edge Functions sudah dideploy, PIN admin sudah bootstrap, APK
+release bertanda tangan sudah dibangun, dan seluruh pengujian perangkat di
+I2505 dilaporkan lolos oleh owner. Rilis v1 didistribusikan sebagai APK; AAB
+dan Play Console tidak termasuk scope. Lihat [`plans/STATUS.md`](plans/STATUS.md)
+dan [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
 Spesifikasi produk dan sprint ada di [`plans/`](plans/).
 

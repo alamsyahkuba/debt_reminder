@@ -16,8 +16,15 @@ fisik.
 | Release signing | `android/key.properties`, keystore di luar repo |
 | Backend | Supabase project `rtgescanjpzkytcddnke` |
 
-Naikkan build number (`1.0.0+2`, `1.0.0+3`, ...) untuk setiap upload baru.
+Naikkan build number (`1.0.0+2`, `1.0.0+3`, ...) untuk setiap distribusi baru.
 Jangan mengubah application ID setelah rilis pertama.
+
+## Sign-off
+
+- Tanggal: 14 November 2026
+- Perangkat: I2505 (`10DG3404HM000HH`), Android 16 / API 36
+- Status: seluruh checklist owner-reported passed
+- Distribusi: APK bertanda tangan langsung; AAB/Play Console tidak dipakai
 
 ## Wajib sebelum rilis
 
@@ -42,8 +49,8 @@ Jangan mengubah application ID setelah rilis pertama.
 - [x] Secret server terpasang; `ADMIN_INITIAL_PIN` dihapus setelah bootstrap.
 - [x] PIN admin di-bootstrap (`admin_settings.pin_hash_algorithm =
       pbkdf2_sha256`).
-- [ ] Login server berhasil dari aplikasi pada perangkat fisik.
-- [ ] Perangkat fisik tersedia dan lolos checklist perangkat di bawah.
+- [x] Login server berhasil dari aplikasi pada perangkat fisik.
+- [x] Perangkat fisik tersedia dan lolos checklist perangkat di bawah.
 
 ## Deploy cloud
 
@@ -104,27 +111,33 @@ Pastikan output menunjukkan `package name='com.debtreminder.app'`,
 
 - [x] Fresh install APK release berhasil; tidak ada data lama.
 - [x] Splash menampilkan logo dan nama **Debt Reminder** tanpa terpotong.
-- [ ] Icon launcher tampil benar (legacy dan adaptive).
+- [x] Icon launcher tampil benar (legacy dan adaptive).
 - [x] Drawer, dashboard, daftar hutang, detail hutang, dan pengaturan terbuka.
 - [x] Public read berhasil tanpa login; tombol mutasi tidak tampil.
-- [ ] Login PIN server berhasil; PIN salah terkena rate limit/lockout.
-- [ ] Sesi kedaluwarsa mengunci UI dan tidak menghapus outbox.
-- [ ] Offline create/update/archive/payment masuk outbox; reconnect sync sukses.
-- [ ] Restart aplikasi mempertahankan outbox dan konflik.
-- [ ] Full pull manual menghapus baris synced yang sudah tidak ada di server.
-- [ ] Baris pending/conflict tidak terhapus oleh full pull.
-- [ ] Hard delete hutang tanpa pembayaran berhasil dan tidak dapat dibatalkan.
-- [ ] Hard delete hutang dengan pembayaran ditolak dan UI menyuruh arsip.
-- [ ] Backup JSON dapat diekspor dan dibuka kembali.
-- [ ] Restore-merge menolak referensi rusak dan tidak menimpa data lama.
-- [ ] Notifikasi H-3/H-1/H muncul pada waktu lokal yang dipilih.
-- [ ] Izin notifikasi dan exact alarm ditangani dengan fallback yang jelas.
-- [ ] Reminder dibatalkan untuk hutang lunas/arsip dan dijadwalkan ulang setelah
+- [x] Login PIN server berhasil dari aplikasi pada perangkat fisik.
+- [x] PIN salah terkena rate limit/lockout.
+- [x] Sesi kedaluwarsa mengunci UI dan tidak menghapus outbox.
+- [x] Admin CRUD, archive, move group, dan pembayaran berhasil di perangkat.
+- [x] Offline create/update/archive/payment masuk outbox; reconnect sync sukses.
+- [x] Restart aplikasi mempertahankan outbox dan konflik.
+- [x] Full pull manual menghapus baris synced yang sudah tidak ada di server.
+- [x] Baris pending/conflict tidak terhapus oleh full pull.
+- [x] Hard delete hutang tanpa pembayaran berhasil dan tidak dapat dibatalkan.
+- [x] Hard delete hutang dengan pembayaran ditolak dan UI menyuruh arsip.
+- [x] Backup JSON dapat diekspor dan dibuka kembali.
+- [x] Restore-merge menolak referensi rusak dan tidak menimpa data lama.
+- [x] Notifikasi H-3/H-1/H muncul pada waktu lokal yang dipilih.
+- [x] Izin notifikasi dan exact alarm ditangani dengan fallback yang jelas.
+- [x] Reminder dibatalkan untuk hutang lunas/arsip dan dijadwalkan ulang setelah
       pembayaran.
-- [ ] Reboot perangkat menjadwalkan ulang reminder.
-- [ ] Perubahan timezone memindahkan instant pengingat dengan benar.
-- [ ] WorkManager/background sync berjalan best-effort; manual sync tetap ada.
-- [ ] Tidak ada crash atau data loss saat pindah foreground/background.
+- [x] Reboot perangkat menjadwalkan ulang reminder.
+- [x] Perubahan timezone memindahkan instant pengingat dengan benar.
+- [x] WorkManager/background sync berjalan best-effort; manual sync tetap ada.
+- [x] Tidak ada crash atau data loss saat pindah foreground/background.
+
+Catatan: seluruh checklist perangkat fisik diselesaikan owner di I2505 dan
+dilaporkan lolos. Status ini **owner-reported**, bukan hasil otomasi. Bukti
+quality gate otomatis ada di `plans/STATUS.md`.
 
 ## Known limitations v1
 

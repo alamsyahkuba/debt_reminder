@@ -6,7 +6,7 @@ including hard-delete safety, deletion reconciliation, and admin backup/export.
 
 ## Tasks
 - [x] Run unit and widget tests.
-- [ ] Run integration/device tests on the release candidate.
+- [x] Run integration/device tests on the release candidate.
 - [x] Run Flutter analyze and formatting.
 - [x] Review public RPCs, RLS, and Edge Function security.
 - [x] Verify anon can read all approved business data but cannot mutate.
@@ -16,7 +16,8 @@ including hard-delete safety, deletion reconciliation, and admin backup/export.
 - [x] Verify no secrets in repo/build artifacts.
 - [x] Test fresh install and database reset on a physical Android device.
 - [x] Test offline/online transitions and public pull on a physical device.
-- [ ] Test Android notification permissions/background behavior on device.
+- [x] Test admin flow on a physical Android device (owner-reported passed).
+- [x] Test Android notification permissions/background behavior on device.
 - [x] Implement hard delete group/debt according to D-021.
 - [x] Add server/local/UI delete mutation and audit.
 - [x] Implement full-pull deletion reconciliation at startup (max once/24h) and
@@ -29,6 +30,10 @@ including hard-delete safety, deletion reconciliation, and admin backup/export.
 - [x] Configure release signing outside repo.
 - [x] Document known limitations and release checklist.
 - [x] Deploy cloud migrations and Edge Functions after credentials are set.
+
+Owner test sign-off: I2505 (`10DG3404HM000HH`), 14 November 2026. Seluruh
+pemeriksaan perangkat yang direncanakan dilaporkan lolos oleh owner
+(owner-reported, bukan otomasi).
 
 ## Hard-delete policy
 - Group delete moves debts to Unassigned, then deletes the group.

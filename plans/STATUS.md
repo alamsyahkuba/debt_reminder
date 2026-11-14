@@ -10,9 +10,9 @@ payments/dashboard, Sprint 06 admin PIN/session, Sprint 07 offline sync, and
 Sprint 08 local reminders are complete. Sprint 09 implementation adds limited
 hard delete, full-pull deletion reconciliation, admin JSON backup/export and
 restore-merge, branding, and release signing. Cloud migrations and Edge
-Functions are deployed, the first PIN is bootstrapped, and signed release
-APK release artifact is built. Physical-device verification remains outstanding.
-AAB/Play Console are out of scope for v1 distribution.
+Functions are deployed, the first PIN is bootstrapped, and the signed release
+APK has been built. The owner completed all planned physical-device tests on
+I2505 with all passing. AAB/Play Console are out of scope for v1 distribution.
 
 ## Sprint status
 
@@ -34,9 +34,10 @@ AAB/Play Console are out of scope for v1 distribution.
       retry/backoff, conflict resolution, sync status, background best-effort)
 - [x] Sprint 08 — Local reminders (H-3/H-1/H, permissions, timezone,
       reconcile, admin UI)
-- [ ] Sprint 09 — QA, hardening & release (hard delete, full-pull
-      reconciliation, backup/export implemented; cloud deployed; signed
-      APK built; physical-device verification pending; AAB out of scope)
+- [x] Sprint 09 — QA, hardening & release (hard delete, full-pull
+      reconciliation, backup/export implemented; cloud deployed; signed APK
+      built; all planned physical-device tests passed owner-reported; AAB out of
+      scope)
 
 ## Implementation status by area
 
@@ -315,14 +316,16 @@ flutter build apk --release                                                     
   - package/version/label verified: com.debtreminder.app / 1.0.0 (1) / Debt Reminder             passed
   - apksigner verify                                                                             passed
   - SHA-256 0909b091f4c64592bdaa62acea2fb3b649f669df74f9d050abff2f05529397ca
-physical device I2505 (10DG3404HM000HH)                                                         partial passed
+physical device I2505 (10DG3404HM000HH)                                                         passed
   - fresh install release APK                                                                   passed
   - branded splash logo + Debt Reminder                                                         passed
   - public pull from remote                                                                     passed
   - dashboard/debt detail/settings read-only UI                                                 passed
-  - admin PIN screen reachable                                                                  passed
-  - offline read then reconnect sync                                                            passed
-  - admin login/mutation, notifications, exact alarm, reboot, timezone, WorkManager              pending
+  - admin PIN login, rate limit/lockout, session expiry                                         owner-reported passed
+  - admin CRUD/archive/move/payment, offline outbox, restart/conflict recovery                    owner-reported passed
+  - full pull manual, pending/conflict preservation, hard delete rules                           owner-reported passed
+  - backup/restore, icon launcher, notifications H-3/H-1/H, permissions/exact alarm              owner-reported passed
+  - reminder cancellation/reschedule, reboot, timezone, WorkManager, crash-free use              owner-reported passed
 ```
 
 ## Blockers / known limitations
@@ -337,11 +340,11 @@ physical device I2505 (10DG3404HM000HH)                                         
 - Local Supabase Docker stack is currently stopped (no containers). Local
   migration files match remote, but local pgTAP/Edge Function serving requires
   starting the stack first.
-- WorkManager/background sync compiles but has not been verified on a physical
-  Android device; foreground/manual sync remains the reliable path.
+- WorkManager/background sync is best-effort and was verified on I2505;
+  foreground/manual sync remains the reliable path.
 - Local notification delivery, notification permission prompts, exact-alarm
-  settings, boot rescheduling, and timezone changes need physical-device
-  verification.
+  settings, boot rescheduling, and timezone changes passed owner testing on
+  I2505; keep testing them on new Android versions/OEMs.
 - The `sync_settings_test.dart` widget test requires explicit empty Supabase
   config and must unmount its ProviderScope before closing Drift; teardown is
   bounded and verified.
@@ -351,11 +354,12 @@ physical device I2505 (10DG3404HM000HH)                                         
 - Group deletion reconciliation and debt deletion reconciliation are performed
   only on a full pull (startup at most once per 24 hours, or manual sync).
 - Background WorkManager may open SQLite while the foreground app is active.
-  SQLite handles concurrent connections, but this needs device verification.
+  SQLite handles concurrent connections; this passed owner testing on I2505 but
+  remains best-effort.
 - Local management controls are read-only when locked, but local UI guards are
   not a substitute for server authorization.
 - Limited hard delete, full-pull deletion reconciliation, and admin backup/export
-  are implemented. Release APK verification is still pending.
+  are implemented. Release APK was built and verified on I2505.
 - Restore-merge is local-first. Added rows enter the outbox; if the server
   already has the same ID but the local row was missing, the create may be
   marked failed while the local copy is preserved.
@@ -364,7 +368,9 @@ physical device I2505 (10DG3404HM000HH)                                         
   upload keystore outside the repository. Keep the keystore and passwords
   outside Git and backed up; losing them prevents future updates with the same
   signing identity.
-- Physical Android verification is still required before release.
+- All planned physical-device tests passed owner testing on I2505. Remaining
+  release risks are operational: protect/back up the upload keystore, review
+  public data visibility, and document the server-side PIN reset runbook.
 - Offline local-only unlock is currently disabled pending owner confirmation. A
   valid server session is required before offline edits can be queued; if it
   expires, local work already in the outbox is preserved.
@@ -435,8 +441,6 @@ restore-merge; no app lock; no PIN recovery UI; public business data final.
 
 ## Next step
 
-Continue physical-device verification on I2505 for admin PIN login, offline
-admin mutations/outbox, hard delete, backup/restore, notifications, exact
-alarms, reboot rescheduling, timezone changes, and WorkManager. Then distribute
-the signed APK directly. AAB and Play Console are not required. Remove or
+Distribute the signed APK directly. AAB and Play Console are not required.
+Keep the upload keystore and passwords backed up outside Git, and remove or
 archive the remote test debt `"tes"` if a clean dataset is desired.
