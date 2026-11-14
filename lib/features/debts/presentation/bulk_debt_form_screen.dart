@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/navigation.dart';
 import '../../../app/providers.dart';
 import '../../../core/errors/app_exception.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/entities/debt_draft.dart';
 import '../../../domain/entities/debt_group.dart';
@@ -22,30 +23,29 @@ class BulkDebtFormScreen extends ConsumerStatefulWidget {
 }
 
 class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
-  final List<_BulkDebtRow> _rows = <_BulkDebtRow>[_BulkDebtRow(id: 0)];
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _installmentController = TextEditingController();
+  final TextEditingController _principalController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
   final TextEditingController _defaultDueDateController =
       TextEditingController();
-  final Map<int, _RowErrors> _rowErrors = <int, _RowErrors>{};
 
-  int _nextRowId = 1;
-  int _lastActiveCount = 0;
   String? _selectedGroupId;
   DateTime? _defaultDueDate;
   bool _monthlyDueDates = false;
-  String? _formError;
   bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _attachRow(_rows.first);
-  }
+  String? _formError;
+  String? _nameError;
+  String? _installmentError;
+  String? _principalError;
+  String? _notesError;
 
   @override
   void dispose() {
-    for (final row in _rows) {
-      row.dispose();
-    }
+    _nameController.dispose();
+    _installmentController.dispose();
+    _principalController.dispose();
+    _notesController.dispose();
     _defaultDueDateController.dispose();
     super.dispose();
   }
@@ -56,7 +56,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
 
     return Scaffold(
       key: const Key('bulk-debt-screen'),
-      appBar: AppBar(title: const Text('Tambah Banyak Hutang')),
+      appBar: AppBar(title: const Text('Bulk Insert Hutang')),
       body: groups.when(
         loading: () => const LoadingState(label: 'Memuat group...'),
         error: (error, stackTrace) => ErrorState(
@@ -70,7 +70,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
               minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: FilledButton.icon(
                 key: const Key('bulk-debt-save-button'),
-                onPressed: _saving || _activeRowCount() == 0 ? null : _save,
+                onPressed: _saving ? null : _save,
                 icon: _saving
                     ? const SizedBox(
                         width: 18,
@@ -81,7 +81,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
                 label: Text(
                   _saving
                       ? 'Menyimpan...'
-                      : 'Simpan ${_activeRowCount()} hutang',
+                      : 'Simpan ${_installmentCount()} hutang',
                 ),
               ),
             )
@@ -91,6 +91,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
 
   Widget _buildForm(BuildContext context, List<DebtGroup> groups) {
     final theme = Theme.of(context);
+    final drafts = _tryBuildDrafts();
     final selectedGroupValue =
         groups.any((group) => group.id == _selectedGroupId)
         ? _selectedGroupId ?? ''
@@ -109,10 +110,67 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
                   children: <Widget>[
                     Icon(Icons.playlist_add, color: theme.colorScheme.primary),
                     const SizedBox(width: 8),
-                    Text('Detail batch', style: theme.textTheme.titleMedium),
+                    Text('Data angsuran', style: theme.textTheme.titleMedium),
                   ],
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'Hutang dibuat otomatis dengan judul Nama 1, Nama 2, dan '
+                  'seterusnya sesuai jumlah angsuran.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
                 const SizedBox(height: 12),
+                TextField(
+                  key: const Key('bulk-debt-name-field'),
+                  controller: _nameController,
+                  maxLength: 190,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Nama hutang',
+                    hintText: 'Contoh: Budi',
+                    border: const OutlineInputBorder(),
+                    errorText: _nameError,
+                  ),
+                  onChanged: (_) => _onFieldChanged(),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  key: const Key('bulk-debt-installment-field'),
+                  controller: _installmentController,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  maxLength: 2,
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  decoration: InputDecoration(
+                    labelText: 'Jumlah angsuran',
+                    hintText: '1-$maxDebtBatchSize',
+                    border: const OutlineInputBorder(),
+                    errorText: _installmentError,
+                  ),
+                  onChanged: (_) => _onFieldChanged(),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  key: const Key('bulk-debt-principal-field'),
+                  controller: _principalController,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: <TextInputFormatter>[
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  decoration: InputDecoration(
+                    labelText: 'Pokok per angsuran',
+                    prefixText: 'Rp ',
+                    border: const OutlineInputBorder(),
+                    errorText: _principalError,
+                  ),
+                  onChanged: (_) => _onFieldChanged(),
+                ),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   key: const Key('bulk-debt-group-field'),
                   initialValue: selectedGroupValue,
@@ -144,7 +202,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
                     });
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 TextField(
                   key: const Key('bulk-debt-default-date'),
                   controller: _defaultDueDateController,
@@ -173,133 +231,159 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Jatuh tempo per bulan'),
                   subtitle: const Text(
-                    'Baris 1 memakai tanggal default, baris berikutnya +1 bulan.',
+                    'Angsuran 1 memakai tanggal default, angsuran berikutnya '
+                    '+1 bulan.',
                   ),
                 ),
-                if (_defaultDueDate != null)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      key: const Key('bulk-debt-apply-default-date'),
-                      onPressed: _applyDefaultDueDate,
-                      icon: const Icon(Icons.event_repeat_outlined),
-                      label: const Text('Terapkan ulang ke semua baris'),
+                const SizedBox(height: 8),
+                TextField(
+                  key: const Key('bulk-debt-notes-field'),
+                  controller: _notesController,
+                  maxLines: 3,
+                  maxLength: 2000,
+                  decoration: InputDecoration(
+                    labelText: 'Catatan (opsional, sama untuk semua)',
+                    border: const OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                    errorText: _notesError,
+                  ),
+                  onChanged: (_) => _onFieldChanged(includeNotes: true),
+                ),
+                if (_formError != null) ...<Widget>[
+                  const SizedBox(height: 4),
+                  Text(
+                    _formError!,
+                    key: const Key('bulk-debt-form-error'),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.error,
                     ),
                   ),
-                const SizedBox(height: 4),
-                Text(
-                  '${_activeRowCount()}/$maxDebtBatchSize hutang siap disimpan. '
-                  'Tanggal default terisi otomatis; checklist per bulan '
-                  'menambah 1 bulan per baris.',
-                  key: const Key('bulk-debt-summary'),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                ],
               ],
             ),
           ),
         ),
-        if (_formError != null) ...<Widget>[
-          const SizedBox(height: 8),
-          Text(
-            _formError!,
-            key: const Key('bulk-debt-form-error'),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.error,
-            ),
-          ),
-        ],
         const SizedBox(height: 12),
-        for (var index = 0; index < _rows.length; index++) ...<Widget>[
-          _BulkDebtRowEditor(
-            key: ValueKey<int>(_rows[index].id),
-            row: _rows[index],
-            index: index,
-            errors: _rowErrors[_rows[index].id] ?? const _RowErrors(),
-            canRemove: _rows.length > 1,
-            onRemove: () => _removeRow(_rows[index]),
-            onPickDate: () => _pickRowDueDate(_rows[index]),
-            onClearDate: () => _clearRowDate(_rows[index]),
-            onChanged: () => _clearRowError(_rows[index].id),
-          ),
-          const SizedBox(height: 8),
-        ],
-        OutlinedButton.icon(
-          key: const Key('bulk-debt-add-row'),
-          onPressed: _rows.length >= maxDebtBatchSize ? null : _addRow,
-          icon: const Icon(Icons.add),
-          label: Text(
-            _rows.length >= maxDebtBatchSize
-                ? 'Batas $maxDebtBatchSize baris tercapai'
-                : 'Tambah baris',
-          ),
-        ),
+        _buildPreview(context, drafts),
       ],
     );
   }
 
-  int _activeRowCount() => _rows.where((row) => !row.isBlank).length;
-
-  void _attachRow(_BulkDebtRow row) {
-    row.titleController.addListener(_handleRowTextChanged);
-    row.principalController.addListener(_handleRowTextChanged);
-    row.notesController.addListener(_handleRowTextChanged);
-  }
-
-  void _detachRow(_BulkDebtRow row) {
-    row.titleController.removeListener(_handleRowTextChanged);
-    row.principalController.removeListener(_handleRowTextChanged);
-    row.notesController.removeListener(_handleRowTextChanged);
-  }
-
-  void _handleRowTextChanged() {
-    final count = _activeRowCount();
-    if (count != _lastActiveCount) {
-      setState(() => _lastActiveCount = count);
-    }
-  }
-
-  void _addRow() {
-    if (_rows.length >= maxDebtBatchSize) {
-      return;
+  Widget _buildPreview(BuildContext context, List<DebtDraft>? drafts) {
+    final theme = Theme.of(context);
+    if (drafts == null || drafts.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: <Widget>[
+              Icon(Icons.preview_outlined, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Isi nama, jumlah angsuran, dan pokok per angsuran untuk '
+                  'melihat pratinjau.',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
-    final row = _BulkDebtRow(id: _nextRowId++);
-    _attachRow(row);
+    final total = drafts.fold<int>(
+      0,
+      (sum, draft) => sum + draft.principalAmount,
+    );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(
+                  Icons.format_list_numbered,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Pratinjau ${drafts.length} hutang',
+                  style: theme.textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            for (var index = 0; index < drafts.length; index++)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: CircleAvatar(radius: 14, child: Text('${index + 1}')),
+                title: Text(drafts[index].title),
+                subtitle: Text(
+                  '${formatRupiah(drafts[index].principalAmount)} • '
+                  '${drafts[index].dueDate == null ? 'Tanpa jatuh tempo' : formatDate(drafts[index].dueDate!)}',
+                ),
+              ),
+            const Divider(),
+            Text(
+              'Total: ${formatRupiah(total)}',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onFieldChanged({bool includeNotes = false}) {
     setState(() {
-      _rows.add(row);
-      _applyDefaultSchedule(force: false);
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        row.titleFocus.requestFocus();
+      _nameError = null;
+      _installmentError = null;
+      _principalError = null;
+      _formError = null;
+      if (includeNotes) {
+        _notesError = null;
       }
     });
   }
 
-  void _removeRow(_BulkDebtRow row) {
-    if (_rows.length == 1) {
-      return;
-    }
-    _detachRow(row);
-    setState(() {
-      _rows.remove(row);
-      _rowErrors.remove(row.id);
-      _formError = null;
-      _applyDefaultSchedule(force: false);
-      _lastActiveCount = _activeRowCount();
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) => row.dispose());
+  int _installmentCount() {
+    return int.tryParse(_installmentController.text.trim()) ?? 0;
   }
 
-  void _clearRowError(int rowId) {
-    if (_rowErrors.containsKey(rowId) || _formError != null) {
-      setState(() {
-        _rowErrors.remove(rowId);
-        _formError = null;
-      });
+  List<DebtDraft>? _tryBuildDrafts() {
+    final name = _nameController.text.trim();
+    final count = _installmentCount();
+    final principal = int.tryParse(_principalController.text.trim());
+    final notes = _notesController.text.trim();
+    if (name.isEmpty ||
+        count < 1 ||
+        count > maxDebtBatchSize ||
+        principal == null ||
+        principal <= 0 ||
+        principal > maxSafeRupiah ||
+        notes.length > 2000) {
+      return null;
     }
+
+    final baseDate = _defaultDueDate;
+    return <DebtDraft>[
+      for (var index = 0; index < count; index++)
+        DebtDraft(
+          title: '$name ${index + 1}',
+          principalAmount: principal,
+          dueDate: baseDate == null
+              ? null
+              : _monthlyDueDates
+              ? addMonthsClamped(baseDate, index)
+              : baseDate,
+          notes: notes.isEmpty ? null : notes,
+        ),
+    ];
   }
 
   Future<void> _pickDefaultDueDate() async {
@@ -310,7 +394,6 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
     setState(() {
       _defaultDueDate = selected;
       _defaultDueDateController.text = formatDate(selected);
-      _applyDefaultSchedule(force: true);
       _formError = null;
     });
   }
@@ -320,13 +403,6 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
       _defaultDueDate = null;
       _monthlyDueDates = false;
       _defaultDueDateController.clear();
-      for (final row in _rows) {
-        if (!row.hasCustomDueDate) {
-          row.dueDate = null;
-          row.dueDateController.clear();
-        }
-      }
-      _lastActiveCount = _activeRowCount();
     });
   }
 
@@ -334,61 +410,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
     if (_defaultDueDate == null) {
       return;
     }
-    setState(() {
-      _monthlyDueDates = value ?? false;
-      _applyDefaultSchedule(force: true);
-    });
-  }
-
-  void _applyDefaultDueDate() {
-    if (_defaultDueDate == null) {
-      return;
-    }
-    setState(() => _applyDefaultSchedule(force: true));
-  }
-
-  void _applyDefaultSchedule({required bool force}) {
-    final base = _defaultDueDate;
-    if (base == null) {
-      return;
-    }
-
-    for (var index = 0; index < _rows.length; index++) {
-      final row = _rows[index];
-      if (!force && row.hasCustomDueDate) {
-        continue;
-      }
-      final date = _monthlyDueDates ? addMonthsClamped(base, index) : base;
-      row.dueDate = date;
-      row.dueDateController.text = formatDate(date);
-      if (force) {
-        row.hasCustomDueDate = false;
-      }
-    }
-    _lastActiveCount = _activeRowCount();
-  }
-
-  Future<void> _pickRowDueDate(_BulkDebtRow row) async {
-    final selected = await _pickDate(row.dueDate ?? _defaultDueDate);
-    if (selected == null || !mounted) {
-      return;
-    }
-    setState(() {
-      row.dueDate = selected;
-      row.dueDateController.text = formatDate(selected);
-      row.hasCustomDueDate = true;
-      _rowErrors.remove(row.id);
-      _lastActiveCount = _activeRowCount();
-    });
-  }
-
-  void _clearRowDate(_BulkDebtRow row) {
-    setState(() {
-      row.dueDate = null;
-      row.dueDateController.clear();
-      row.hasCustomDueDate = true;
-      _lastActiveCount = _activeRowCount();
-    });
+    setState(() => _monthlyDueDates = value ?? false);
   }
 
   Future<DateTime?> _pickDate(DateTime? initialDate) {
@@ -406,12 +428,12 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
   }
 
   Future<void> _save() async {
-    if (_saving) {
+    if (_saving || !_validateFields()) {
       return;
     }
 
-    final drafts = _validateRows();
-    if (drafts == null) {
+    final drafts = _tryBuildDrafts();
+    if (drafts == null || drafts.isEmpty) {
       return;
     }
 
@@ -455,62 +477,49 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
     }
   }
 
-  List<DebtDraft>? _validateRows() {
-    final errors = <int, _RowErrors>{};
-    final drafts = <DebtDraft>[];
+  bool _validateFields() {
+    final name = _nameController.text.trim();
+    final count = _installmentCount();
+    final principal = int.tryParse(_principalController.text.trim());
+    final notes = _notesController.text.trim();
 
-    for (final row in _rows) {
-      if (row.isBlank) {
-        continue;
-      }
-
-      final title = row.titleController.text.trim();
-      final amount = int.tryParse(row.principalController.text.trim());
-      final notes = row.notesController.text.trim();
-      final rowErrors = _RowErrors(
-        title: title.isEmpty
-            ? 'Judul hutang wajib diisi.'
-            : title.length > 200
-            ? 'Judul maksimal 200 karakter.'
-            : null,
-        principal: amount == null || amount <= 0
-            ? 'Pokok hutang harus berupa angka positif.'
-            : amount > maxSafeRupiah
-            ? 'Pokok hutang terlalu besar.'
-            : null,
-        notes: notes.length > 2000 ? 'Catatan maksimal 2000 karakter.' : null,
-      );
-
-      if (rowErrors.hasError) {
-        errors[row.id] = rowErrors;
-        continue;
-      }
-
-      drafts.add(
-        DebtDraft(
-          title: title,
-          principalAmount: amount!,
-          dueDate: row.dueDate,
-          notes: notes.isEmpty ? null : notes,
-        ),
-      );
-    }
+    final nameError = name.isEmpty
+        ? 'Nama hutang wajib diisi.'
+        : count >= 1 && count <= maxDebtBatchSize
+        ? '$name $count'.length > 200
+              ? 'Nama terlalu panjang untuk format Nama 1, Nama 2, ...'
+              : null
+        : null;
+    final installmentError = count < 1 || count > maxDebtBatchSize
+        ? 'Jumlah angsuran harus 1-$maxDebtBatchSize.'
+        : null;
+    final principalError = principal == null || principal <= 0
+        ? 'Pokok per angsuran harus berupa angka positif.'
+        : principal > maxSafeRupiah
+        ? 'Pokok per angsuran terlalu besar.'
+        : null;
+    final notesError = notes.length > 2000
+        ? 'Catatan maksimal 2000 karakter.'
+        : null;
 
     setState(() {
-      _rowErrors
-        ..clear()
-        ..addAll(errors);
-      _formError = errors.isNotEmpty
-          ? 'Periksa ${errors.length} baris yang ditandai.'
-          : drafts.isEmpty
-          ? 'Isi minimal satu hutang.'
+      _nameError = nameError;
+      _installmentError = installmentError;
+      _principalError = principalError;
+      _notesError = notesError;
+      _formError =
+          nameError != null ||
+              installmentError != null ||
+              principalError != null ||
+              notesError != null
+          ? 'Periksa field yang ditandai.'
           : null;
     });
 
-    if (errors.isNotEmpty || drafts.isEmpty) {
-      return null;
-    }
-    return drafts;
+    return nameError == null &&
+        installmentError == null &&
+        principalError == null &&
+        notesError == null;
   }
 
   Future<bool?> _confirmSave(int count) {
@@ -520,8 +529,9 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
         return AlertDialog(
           title: Text('Simpan $count hutang?'),
           content: const Text(
-            'Semua baris akan disimpan sebagai satu batch. Data langsung '
-            'tersedia lokal dan menunggu sinkronisasi admin.',
+            'Hutang akan dibuat otomatis dengan nomor urut pada judul dan '
+            'disimpan sebagai satu batch. Data langsung tersedia lokal dan '
+            'menunggu sinkronisasi admin.',
           ),
           actions: <Widget>[
             TextButton(
@@ -547,161 +557,5 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
-  }
-}
-
-class _BulkDebtRow {
-  _BulkDebtRow({required this.id});
-
-  final int id;
-  final TextEditingController titleController = TextEditingController();
-  final TextEditingController principalController = TextEditingController();
-  final TextEditingController dueDateController = TextEditingController();
-  final TextEditingController notesController = TextEditingController();
-  final FocusNode titleFocus = FocusNode();
-  DateTime? dueDate;
-  bool hasCustomDueDate = false;
-
-  bool get isBlank =>
-      titleController.text.trim().isEmpty &&
-      principalController.text.trim().isEmpty &&
-      notesController.text.trim().isEmpty;
-
-  void dispose() {
-    titleController.dispose();
-    principalController.dispose();
-    dueDateController.dispose();
-    notesController.dispose();
-    titleFocus.dispose();
-  }
-}
-
-class _RowErrors {
-  const _RowErrors({this.title, this.principal, this.notes});
-
-  final String? title;
-  final String? principal;
-  final String? notes;
-
-  bool get hasError => title != null || principal != null || notes != null;
-}
-
-class _BulkDebtRowEditor extends StatelessWidget {
-  const _BulkDebtRowEditor({
-    required this.row,
-    required this.index,
-    required this.errors,
-    required this.canRemove,
-    required this.onRemove,
-    required this.onPickDate,
-    required this.onClearDate,
-    required this.onChanged,
-    super.key,
-  });
-
-  final _BulkDebtRow row;
-  final int index;
-  final _RowErrors errors;
-  final bool canRemove;
-  final VoidCallback onRemove;
-  final VoidCallback onPickDate;
-  final VoidCallback onClearDate;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Text(
-                  'Hutang ${index + 1}',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  key: Key('bulk-debt-remove-${row.id}'),
-                  tooltip: 'Hapus baris',
-                  onPressed: canRemove ? onRemove : null,
-                  icon: const Icon(Icons.delete_outline),
-                ),
-              ],
-            ),
-            TextField(
-              key: Key('bulk-debt-title-${row.id}'),
-              controller: row.titleController,
-              focusNode: row.titleFocus,
-              textInputAction: TextInputAction.next,
-              maxLength: 200,
-              decoration: InputDecoration(
-                labelText: 'Judul hutang',
-                hintText: 'Contoh: Hutang Budi',
-                border: const OutlineInputBorder(),
-                errorText: errors.title,
-              ),
-              onChanged: (_) => onChanged(),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              key: Key('bulk-debt-principal-${row.id}'),
-              controller: row.principalController,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.next,
-              inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.digitsOnly,
-              ],
-              decoration: InputDecoration(
-                labelText: 'Pokok hutang',
-                prefixText: 'Rp ',
-                border: const OutlineInputBorder(),
-                errorText: errors.principal,
-              ),
-              onChanged: (_) => onChanged(),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              key: Key('bulk-debt-due-${row.id}'),
-              controller: row.dueDateController,
-              readOnly: true,
-              onTap: onPickDate,
-              decoration: InputDecoration(
-                labelText: 'Jatuh tempo (opsional)',
-                border: const OutlineInputBorder(),
-                suffixIcon: row.dueDate == null
-                    ? const Icon(Icons.calendar_today_outlined)
-                    : IconButton(
-                        key: Key('bulk-debt-due-clear-${row.id}'),
-                        tooltip: 'Hapus jatuh tempo',
-                        onPressed: onClearDate,
-                        icon: const Icon(Icons.close),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              key: Key('bulk-debt-notes-${row.id}'),
-              controller: row.notesController,
-              maxLines: 2,
-              maxLength: 2000,
-              decoration: InputDecoration(
-                labelText: 'Catatan (opsional)',
-                border: const OutlineInputBorder(),
-                alignLabelWithHint: true,
-                errorText: errors.notes,
-              ),
-              onChanged: (_) => onChanged(),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

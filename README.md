@@ -39,9 +39,10 @@ I2505 dilaporkan lolos oleh owner. GitHub release automation sudah dijalankan:
 dry run dan rilis otomatis pertama `v1.0.0` berhasil. In-app update sudah
 diimplementasikan dan diuji owner: `v1.0.1+2` dan `v1.0.2+3` dipublikasikan
 dengan APK, `.sha256`, dan `latest.json`; alur cek/download/verifikasi/install
-dan preservasi data dilaporkan lolos di I2505. Sprint 12 menambahkan bulk insert
-hutang manual hingga 50 baris dengan satu group per batch dan RPC server atomik;
-implementasi, test, dan deploy cloud sudah selesai, tinggal uji perangkat. Rilis v1 didistribusikan sebagai APK; AAB dan Play Console tidak
+dan preservasi data dilaporkan lolos di I2505. Sprint 12 menambahkan generator
+angsuran otomatis `Nama 1..N` hingga 50 hutang dengan satu group per batch dan
+RPC server atomik; implementasi, test, dan deploy cloud sudah selesai, tinggal
+uji perangkat. Rilis v1 didistribusikan sebagai APK; AAB dan Play Console tidak
 termasuk scope. Lihat [`plans/STATUS.md`](plans/STATUS.md) dan
 [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
@@ -91,18 +92,19 @@ dan [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
 ## Bulk insert hutang
 
-Admin dapat membuka **Semua Hutang → Tambah Banyak** untuk mengisi beberapa
-hutang sekaligus:
+Admin dapat membuka **Semua Hutang → Tambah Banyak** untuk membuat angsuran
+otomatis:
 
-- 1–50 baris per batch, satu group untuk seluruh batch.
-- Jatuh tempo default otomatis mengisi baris; checklist **per bulan** membuat
-  baris 1 = tanggal default, baris berikutnya +1 bulan.
-- Tanggal dapat dioverride per baris.
-- Baris kosong diabaikan; baris terisi sebagian ditolak.
+- Masukkan nama dasar, jumlah angsuran 1–50, dan nominal per angsuran.
+- Aplikasi membuat hutang dengan judul `Nama 1`, `Nama 2`, hingga `Nama N`.
+- Satu group untuk seluruh batch.
+- Jatuh tempo default otomatis diterapkan; checklist **per bulan** membuat
+  angsuran 1 = tanggal default, angsuran berikutnya +1 bulan.
+- Pratinjau menampilkan judul, nominal, tanggal, dan total.
 - Satu transaksi SQLite menyimpan semua hutang dan satu outbox `debt_batch`.
 - Satu RPC server atomik `admin_bulk_create_debts` membuat seluruh batch atau
   rollback semua jika ada satu baris invalid.
-- Dialog konfirmasi muncul untuk batch lebih dari satu hutang.
+- Dialog konfirmasi muncul untuk batch lebih dari satu angsuran.
 
 Detail keputusan, test, dan status implementasi ada di
 [`plans/sprints/SPRINT_12_BULK_DEBT_INSERT.md`](plans/sprints/SPRINT_12_BULK_DEBT_INSERT.md).

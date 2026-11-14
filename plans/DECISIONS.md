@@ -541,12 +541,14 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   per hutang. Aplikasi tetap offline-first dan mutasi admin harus memiliki
   idempotency serta otorisasi server.
 - **Keputusan owner:**
-  - Input manual multi-baris di layar `/debts/bulk`.
+  - Generator angsuran otomatis di `/debts/bulk`: nama dasar, jumlah angsuran,
+    dan nominal per angsuran.
+  - Judul hutang memakai format `Nama 1`, `Nama 2`, dst.
   - Maksimal 50 hutang per batch.
-  - Satu group untuk seluruh batch; tanggal default opsional otomatis mengisi
-    baris dan dapat dioverride per baris.
-  - Checklist **jatuh tempo per bulan**: baris 1 memakai tanggal default,
-    baris berikutnya +1 bulan bertahap.
+  - Satu group untuk seluruh batch; tanggal default opsional otomatis
+    diterapkan.
+  - Checklist **jatuh tempo per bulan**: angsuran 1 memakai tanggal default,
+    angsuran berikutnya +1 bulan bertahap.
   - Satu RPC server atomik untuk seluruh batch.
   - Dialog konfirmasi jika batch berisi lebih dari satu hutang.
 - **Implementasi:**

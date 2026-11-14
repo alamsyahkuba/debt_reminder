@@ -30,7 +30,7 @@ class _Harness {
   );
 
   Future<void> pump(WidgetTester tester, {bool unlocked = true}) async {
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = const Size(800, 1800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -70,69 +70,90 @@ Future<void> _openBulk(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _fillGeneratedBatch(
+  WidgetTester tester, {
+  String name = 'Budi',
+  String count = '3',
+  String principal = '500000',
+}) async {
+  await tester.enterText(find.byKey(const Key('bulk-debt-name-field')), name);
+  await tester.enterText(
+    find.byKey(const Key('bulk-debt-installment-field')),
+    count,
+  );
+  await tester.enterText(
+    find.byKey(const Key('bulk-debt-principal-field')),
+    principal,
+  );
+  await tester.pump();
+}
+
+Future<void> _chooseDay15(WidgetTester tester) async {
+  await tester.tap(find.byKey(const Key('bulk-debt-default-date')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('15').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('OKE').last);
+  await tester.pumpAndSettle();
+}
+
 String _fieldText(WidgetTester tester, Key key) {
   final field = tester.widget<TextField>(find.byKey(key));
   return field.controller?.text ?? '';
 }
 
 void main() {
-  testWidgets('admin dapat menyimpan dua hutang sekaligus', (tester) async {
+  testWidgets('menghasilkan judul Nama 1..N dan menyimpan semua angsuran', (
+    tester,
+  ) async {
     final harness = _Harness(AppDatabase(NativeDatabase.memory()));
     try {
-      await harness.groups.create(name: 'Keluarga');
       await harness.pump(tester);
       await _openDebts(tester);
 
       expect(find.byKey(const Key('debts-bulk-add-button')), findsOneWidget);
       await _openBulk(tester);
-
       expect(find.byKey(const Key('bulk-debt-screen')), findsOneWidget);
-      await tester.enterText(
-        find.byKey(const Key('bulk-debt-title-0')),
-        'Hutang satu',
-      );
-      await tester.enterText(
-        find.byKey(const Key('bulk-debt-principal-0')),
-        '100000',
-      );
 
-      await tester.tap(find.byKey(const Key('bulk-debt-add-row')));
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.byKey(const Key('bulk-debt-title-1')),
-        'Hutang dua',
-      );
-      await tester.enterText(
-        find.byKey(const Key('bulk-debt-principal-1')),
-        '200000',
-      );
-      await tester.pump();
+      await _fillGeneratedBatch(tester);
+
+      expect(find.text('Pratinjau 3 hutang'), findsOneWidget);
+      expect(find.text('Budi 1'), findsOneWidget);
+      expect(find.text('Budi 2'), findsOneWidget);
+      expect(find.text('Budi 3'), findsOneWidget);
+      expect(find.text('Total: Rp 1.500.000'), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('bulk-debt-save-button')));
       await tester.pumpAndSettle();
-      expect(find.text('Simpan 2 hutang?'), findsOneWidget);
+      expect(find.text('Simpan 3 hutang?'), findsOneWidget);
       await tester.tap(find.byKey(const Key('bulk-debt-confirm-save')));
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('debts-screen')), findsOneWidget);
-      expect(find.text('Hutang satu'), findsOneWidget);
-      expect(find.text('Hutang dua'), findsOneWidget);
-
       final stored = await harness.database
           .select(harness.database.debts)
           .get();
-      expect(stored, hasLength(2));
+      expect(stored, hasLength(3));
+      expect(stored.map((row) => row.title).toList()..sort(), <String>[
+        'Budi 1',
+        'Budi 2',
+        'Budi 3',
+      ]);
+      expect(stored.every((row) => row.principalAmount == 500000), isTrue);
+
       final queue = await harness.database
           .select(harness.database.syncQueue)
           .get();
-      final batch = queue.where((row) => row.entityType == 'debt_batch');
-      expect(batch, hasLength(1));
+      expect(
+        queue.where((row) => row.entityType == 'debt_batch'),
+        hasLength(1),
+      );
     } finally {
       await harness.dispose(tester);
     }
   });
 
-  testWidgets('group batch diterapkan ke semua hutang', (tester) async {
+  testWidgets('group batch diterapkan ke semua angsuran', (tester) async {
     final harness = _Harness(AppDatabase(NativeDatabase.memory()));
     try {
       final group = await harness.groups.create(name: 'Keluarga');
@@ -145,15 +166,12 @@ void main() {
       await tester.tap(find.text('Keluarga').last);
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.byKey(const Key('bulk-debt-title-0')),
-        'Hutang keluarga',
+      await _fillGeneratedBatch(
+        tester,
+        name: 'Hutang Keluarga',
+        count: '1',
+        principal: '75000',
       );
-      await tester.enterText(
-        find.byKey(const Key('bulk-debt-principal-0')),
-        '75000',
-      );
-      await tester.pump();
       await tester.tap(find.byKey(const Key('bulk-debt-save-button')));
       await tester.pumpAndSettle();
 
@@ -162,12 +180,13 @@ void main() {
           .get();
       expect(stored, hasLength(1));
       expect(stored.single.groupId, group.id);
+      expect(stored.single.title, 'Hutang Keluarga 1');
     } finally {
       await harness.dispose(tester);
     }
   });
 
-  testWidgets('tanggal default otomatis dan checklist per bulan bertahap', (
+  testWidgets('jatuh tempo default dan checklist per bulan bertahap', (
     tester,
   ) async {
     final harness = _Harness(AppDatabase(NativeDatabase.memory()));
@@ -176,44 +195,15 @@ void main() {
       await _openDebts(tester);
       await _openBulk(tester);
 
-      await tester.tap(find.byKey(const Key('bulk-debt-default-date')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('15').last);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('OKE').last);
-      await tester.pumpAndSettle();
-
+      await _chooseDay15(tester);
       expect(
-        _fieldText(tester, const Key('bulk-debt-due-0')),
+        _fieldText(tester, const Key('bulk-debt-default-date')),
         startsWith('15/'),
       );
-
       await tester.tap(find.byKey(const Key('bulk-debt-monthly-checkbox')));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('bulk-debt-add-row')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('bulk-debt-add-row')));
-      await tester.pumpAndSettle();
-
-      final firstDate = _fieldText(tester, const Key('bulk-debt-due-0'));
-      final secondDate = _fieldText(tester, const Key('bulk-debt-due-1'));
-      final thirdDate = _fieldText(tester, const Key('bulk-debt-due-2'));
-      expect(firstDate, startsWith('15/'));
-      expect(secondDate, isNot(firstDate));
-      expect(thirdDate, isNot(secondDate));
-
-      for (var index = 0; index < 3; index++) {
-        await tester.enterText(
-          find.byKey(Key('bulk-debt-title-$index')),
-          'Hutang bulan ${index + 1}',
-        );
-        await tester.enterText(
-          find.byKey(Key('bulk-debt-principal-$index')),
-          '${100000 * (index + 1)}',
-        );
-      }
-      await tester.pump();
+      await _fillGeneratedBatch(tester);
       await tester.tap(find.byKey(const Key('bulk-debt-save-button')));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('bulk-debt-confirm-save')));
@@ -227,62 +217,17 @@ void main() {
           stored.map((row) => row.dueDate).whereType<DateTime>().toList()
             ..sort();
       expect(dates, hasLength(3));
-      final firstDateOnly = DateTime.utc(
-        dates[0].year,
-        dates[0].month,
-        dates[0].day,
-      );
-      final secondDateOnly = DateTime.utc(
-        dates[1].year,
-        dates[1].month,
-        dates[1].day,
-      );
-      final thirdDateOnly = DateTime.utc(
-        dates[2].year,
-        dates[2].month,
-        dates[2].day,
-      );
-      expect(secondDateOnly, addMonthsClamped(firstDateOnly, 1));
-      expect(thirdDateOnly, addMonthsClamped(firstDateOnly, 2));
+      final first = DateTime.utc(dates[0].year, dates[0].month, dates[0].day);
+      final second = DateTime.utc(dates[1].year, dates[1].month, dates[1].day);
+      final third = DateTime.utc(dates[2].year, dates[2].month, dates[2].day);
+      expect(second, addMonthsClamped(first, 1));
+      expect(third, addMonthsClamped(first, 2));
     } finally {
       await harness.dispose(tester);
     }
   });
 
-  testWidgets('baris kosong di akhir diabaikan', (tester) async {
-    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
-    try {
-      await harness.pump(tester);
-      await _openDebts(tester);
-      await _openBulk(tester);
-
-      await tester.enterText(
-        find.byKey(const Key('bulk-debt-title-0')),
-        'Hutang saja',
-      );
-      await tester.enterText(
-        find.byKey(const Key('bulk-debt-principal-0')),
-        '50000',
-      );
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('bulk-debt-add-row')));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('bulk-debt-save-button')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Simpan 1 hutang?'), findsNothing);
-      expect(find.text('Hutang saja'), findsOneWidget);
-      expect(
-        await harness.database.select(harness.database.debts).get(),
-        hasLength(1),
-      );
-    } finally {
-      await harness.dispose(tester);
-    }
-  });
-
-  testWidgets('baris terisi sebagian menampilkan error tanpa menyimpan', (
+  testWidgets('validasi jumlah angsuran dan nominal menolak simpan', (
     tester,
   ) async {
     final harness = _Harness(AppDatabase(NativeDatabase.memory()));
@@ -292,15 +237,20 @@ void main() {
       await _openBulk(tester);
 
       await tester.enterText(
-        find.byKey(const Key('bulk-debt-title-0')),
-        'Belum ada nominal',
+        find.byKey(const Key('bulk-debt-name-field')),
+        'Tidak valid',
+      );
+      await tester.enterText(
+        find.byKey(const Key('bulk-debt-installment-field')),
+        '51',
       );
       await tester.pump();
       await tester.tap(find.byKey(const Key('bulk-debt-save-button')));
       await tester.pumpAndSettle();
 
+      expect(find.text('Jumlah angsuran harus 1-50.'), findsOneWidget);
       expect(
-        find.text('Pokok hutang harus berupa angka positif.'),
+        find.text('Pokok per angsuran harus berupa angka positif.'),
         findsOneWidget,
       );
       expect(find.byKey(const Key('bulk-debt-screen')), findsOneWidget);

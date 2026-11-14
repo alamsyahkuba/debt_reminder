@@ -14,11 +14,13 @@ satu transaksi lokal, tanpa mengetik satu per satu melalui form hutang biasa.
 
 Hasil yang diharapkan:
 
-- Admin dapat mengisi 1–50 baris hutang, lalu menyimpan semuanya sekaligus.
-- Semua baris masuk database lokal dan outbox dalam satu transaksi atomik.
-- Jika satu baris tidak valid, tidak ada baris yang tersimpan (all-or-nothing
+- Admin memasukkan nama dasar, jumlah angsuran (1–50), dan nominal per
+  angsuran; aplikasi membuat hutang otomatis berjudul `Nama 1`, `Nama 2`, dst.
+- Semua hutang hasil generate masuk database lokal dan outbox dalam satu
+  transaksi atomik.
+- Jika data batch tidak valid, tidak ada hutang yang tersimpan (all-or-nothing
   secara lokal).
-- Data tetap offline-first: baris langsung terlihat dan tetap pending sampai
+- Data tetap offline-first: hutang langsung terlihat dan tetap pending sampai
   sync admin berhasil.
 - Publik tidak memiliki akses ke layar atau aksi bulk insert.
 - Tabel bisnis, RLS, public read RPC, dan format backup tidak berubah.
@@ -28,16 +30,17 @@ Hasil yang diharapkan:
 
 | Topik | Keputusan |
 |---|---|
-| Metode input MVP | Form multi-baris manual di dalam aplikasi |
+| Metode input | Generator angsuran otomatis: nama dasar + jumlah angsuran + nominal per angsuran |
+| Judul hutang | `Nama 1`, `Nama 2`, dst. (angka increment setelah judul) |
 | Import CSV/Excel | Ditunda ke fase berikutnya; tidak termasuk MVP |
 | Group | Satu group untuk seluruh batch, dipilih di header |
-| Jatuh tempo | Default batch opsional; setiap baris dapat override |
+| Jatuh tempo | Default batch opsional; checklist per bulan menambah 1 bulan per angsuran |
 | Batas batch | Maksimal 50 hutang per transaksi |
 | Penyimpanan | Satu transaksi SQLite; satu outbox `debt_batch` per batch |
 | Sync server | Satu RPC atomik `admin_bulk_create_debts` |
 | Server bulk RPC | Ya; seluruh batch commit atau rollback bersama |
 | Duplikat | Tidak ada dedupe otomatis; judul/nominal/tanggal boleh sama |
-| Konfirmasi | Dialog konfirmasi jika jumlah baris > 1 |
+| Konfirmasi | Dialog konfirmasi jika jumlah angsuran > 1 |
 | Undo batch | Tidak termasuk MVP |
 
 Server memakai registry idempotency yang sama dengan operasi lain. Satu
@@ -60,63 +63,54 @@ untuk input satu hutang.
 
 ### 3.2 Struktur layar
 
-Layar **Tambah Banyak Hutang**:
+Layar **Bulk Insert Hutang**:
 
-1. **Header batch**
+1. **Data angsuran**
+   - `Nama hutang` — nama dasar, wajib.
+   - `Jumlah angsuran` — angka 1–50.
+   - `Pokok per angsuran` — nominal rupiah yang sama untuk setiap hutang.
    - Dropdown **Group untuk semua hutang** (termasuk Unassigned).
-   - Pilihan **Jatuh tempo default (opsional)** yang otomatis mengisi tanggal
-     setiap baris saat dipilih.
-   - Checklist **Jatuh tempo per bulan**: baris 1 memakai tanggal default,
-     baris berikutnya +1 bulan, +2 bulan, dan seterusnya.
-   - Tombol **Terapkan ulang ke semua baris** untuk mengulang jadwal setelah
-     override manual.
-   - Info: `0/50 hutang`.
+   - `Jatuh tempo default (opsional)`.
+   - Checklist **Jatuh tempo per bulan**.
+   - `Catatan (opsional)` yang sama untuk semua hutang.
 
-2. **Daftar baris**
-   - Setiap baris berupa card ringkas:
-     - `Judul hutang` — wajib, maksimal 200 karakter.
-     - `Pokok hutang` — wajib, angka rupiah positif.
-     - `Jatuh tempo` — opsional; mengoverride default batch.
-     - `Catatan` — opsional, maksimal 2000 karakter.
-     - Tombol hapus baris.
-   - Tombol **Tambah baris** di bawah daftar.
-   - Baris baru otomatis fokus ke kolom judul.
-   - Baris kosong di bagian bawah diabaikan saat submit.
-   - Baris yang terisi sebagian (misalnya nominal tanpa judul) dianggap tidak
-     valid dan harus diperbaiki.
+2. **Pratinjau otomatis**
+   - Judul dibuat dengan format `Nama 1`, `Nama 2`, hingga `Nama N`.
+   - Setiap baris pratinjau menampilkan judul, nominal, dan jatuh tempo.
+   - Total nominal ditampilkan di bawah daftar.
+   - Tidak ada input judul/nominal manual per baris.
 
 3. **Aksi simpan**
    - Tombol **Simpan N hutang** di bagian bawah.
-   - Jika N > 1, tampilkan dialog konfirmasi berisi jumlah dan group.
+   - Jika N > 1, tampilkan dialog konfirmasi.
    - Saat menyimpan: tombol disabled, label `Menyimpan...`, tidak ada double
      submit.
    - Sukses: kembali ke daftar hutang dan tampilkan SnackBar
      `N hutang ditambahkan dan menunggu sinkronisasi.`
-   - Gagal validasi: tetap di layar, tandai baris yang salah, scroll ke baris
-     pertama yang gagal.
-   - Gagal database: tampilkan error, tidak ada baris yang tersimpan.
+   - Gagal validasi: tetap di layar dan tandai field yang salah.
+   - Gagal database: tampilkan error, tidak ada hutang yang tersimpan.
 
 ### 3.3 Perilaku group dan tanggal
 
-- Group di header berlaku untuk semua baris. Untuk menambah hutang ke group
-  berbeda, admin menyimpan batch lain.
-- Jatuh tempo default hanya dipakai jika baris belum memiliki tanggal.
-- Mengubah default tidak menimpa tanggal yang sudah diisi manual.
+- Group di header berlaku untuk semua angsuran. Untuk group berbeda, simpan
+  batch lain.
+- Jatuh tempo default diterapkan ke seluruh angsuran yang di-generate.
+- Jika **Jatuh tempo per bulan** aktif: angsuran 1 = default, angsuran 2 = +1
+  bulan, angsuran 3 = +2 bulan, dst.
+- Tanggal akhir bulan di-clamp, misalnya 31 Januari + 1 bulan = 28/29 Februari.
 - Tanggal disimpan sebagai tanggal UTC tanpa waktu, mengikuti
-  `normalizeDueDate` yang sudah ada.
-- Rentang date picker mengikuti form hutang saat ini: 2000–2100.
+  `normalizeDueDate`.
+- Rentang date picker: 2000–2100.
 
 ### 3.4 Batas dan pesan
 
-- Minimal 1 baris berisi data.
-- Maksimal 50 baris per batch.
-- Judul 1–200 karakter.
+- Jumlah angsuran 1–50.
+- Judul hasil generate maksimal 200 karakter; nama dasar dibatasi agar suffix
+  angka tetap muat.
 - Catatan maksimal 2000 karakter.
 - Nominal harus integer rupiah positif dan tidak melebihi `maxSafeRupiah`.
-- Error menyebut nomor baris, misalnya
-  `Baris 3: Pokok hutang harus berupa angka positif.`
 - Jika group sudah dihapus saat layar masih terbuka, simpan ditolak dengan
-  pesan `Group tidak ditemukan. Pilih group lain.` dan semua baris tetap utuh.
+  pesan `Group tidak ditemukan. Pilih group lain.` dan input tetap utuh.
 
 ## 4. Model dan repository
 
@@ -239,12 +233,11 @@ Tidak ada perubahan:
 ### 5.3 Pengelolaan state form
 
 - Layar memakai `ConsumerStatefulWidget`.
-- Setiap baris memiliki model UI sendiri yang menyimpan controller judul,
-  nominal, catatan, dan tanggal.
-- Controller di-dispose saat baris dihapus dan saat layar ditutup.
-- Perubahan teks tidak boleh membangun ulang seluruh daftar 50 baris; gunakan
-  widget baris stateful atau listener lokal.
-- Group dan tanggal default disimpan di state header.
+- State menyimpan controller nama dasar, jumlah angsuran, nominal per
+  angsuran, catatan, group, tanggal default, dan checklist per bulan.
+- Pratinjau dihitung dari state tersebut; tidak ada controller per baris.
+- Daftar `DebtDraft` dibentuk saat preview/save dengan judul
+  `Nama 1..N` dan tanggal hasil generate.
 - Validasi bisnis tetap dilakukan lagi di repository; validasi UI hanya untuk
   feedback cepat.
 
@@ -264,19 +257,19 @@ Tidak ada perubahan khusus:
 
 | Kasus | Perilaku |
 |---|---|
-| Tidak ada baris berisi data | Tombol simpan disabled/validasi |
-| Baris terisi sebagian | Tidak ada yang disimpan; error per baris |
-| Judul terlalu panjang | Error baris; tidak ada yang disimpan |
-| Nominal nol/negatif/overflow | Error baris; tidak ada yang disimpan |
-| Catatan terlalu panjang | Error baris; tidak ada yang disimpan |
-| Group tidak ada | Error; semua baris tetap di layar |
+| Nama kosong | Tidak ada yang disimpan; error field |
+| Jumlah angsuran 0/>50 | Tidak ada yang disimpan; error field |
+| Judul hasil generate >200 karakter | Error nama; tidak ada yang disimpan |
+| Nominal nol/negatif/overflow | Error field; tidak ada yang disimpan |
+| Catatan terlalu panjang | Error field; tidak ada yang disimpan |
+| Group tidak ada | Error; input tetap di layar |
 | Double tap simpan | Dicegah dengan state `_saving` |
 | Database penuh/error tulis | Transaksi rollback; error jelas |
 | Offline | Batch tersimpan lokal, outbox pending |
 | Sesi admin expired saat sync | Outbox dipertahankan; minta login ulang |
 | Satu baris gagal di server | Seluruh batch rollback; tidak ada baris server yang tersimpan |
 | App ditutup saat menyimpan | SQLite rollback atau commit utuh, tidak parsial |
-| Batch > 50 | Tombol tambah baris disabled dan validasi repository |
+| Batch > 50 | Validasi field dan repository menolak |
 
 ## 8. Test plan
 
@@ -306,17 +299,16 @@ Tidak ada perubahan khusus:
 
 - Admin melihat tombol **Tambah Banyak**; publik tidak.
 - Route `/debts/bulk` tanpa sesi diarahkan ke PIN dan kembali setelah unlock.
-- Tambah/hapus baris bekerja dan batas 50 ditegakkan.
-- Baris kosong di bagian bawah diabaikan.
-- Baris terisi sebagian menampilkan error dan tidak menyimpan.
-- Default group dan tanggal otomatis diterapkan ke baris.
-- Checklist per bulan menghasilkan baris 1 = default, baris 2 = +1 bulan,
-  baris 3 = +2 bulan.
-- Override tanggal per baris tidak tertimpa default sampai jadwal diterapkan
-  ulang.
-- Simpan tiga baris menutup layar, menampilkan SnackBar, dan daftar hutang
-  menampilkan tiga baris.
-- Dialog konfirmasi muncul untuk lebih dari satu baris.
+- Input nama, jumlah angsuran, dan nominal menghasilkan pratinjau
+  `Nama 1..N`.
+- Total nominal pratinjau dihitung benar.
+- Jumlah angsuran 1, 5, dan 50 menghasilkan jumlah judul yang tepat.
+- Jatuh tempo default otomatis diterapkan; checklist per bulan menghasilkan
+  angsuran 1 = default, angsuran 2 = +1 bulan, dst.
+- Nama terlalu panjang, jumlah angsuran invalid, dan nominal invalid ditolak.
+- Simpan tiga angsuran menutup layar, menampilkan SnackBar, dan daftar hutang
+  menampilkan tiga hutang.
+- Dialog konfirmasi muncul untuk lebih dari satu angsuran.
 - Tombol disabled saat menyimpan.
 - Error group hilang menampilkan pesan dan mempertahankan input.
 
@@ -324,8 +316,8 @@ Tidak ada perubahan khusus:
 
 - Offline: buat batch → pending → reconnect → sync → restart → data tetap ada.
 - Reminder untuk hutang baru dijadwalkan setelah batch masuk.
-- Dashboard dan group summary bertambah sesuai nominal batch.
-- Uji 1, 5, dan 50 baris pada perangkat fisik.
+- Dashboard dan group summary bertambah sesuai total nominal batch.
+- Uji 1, 5, dan 50 angsuran pada perangkat fisik.
 - Uji keyboard, scroll, rotasi, dan kembali tanpa kehilangan input.
 - Uji sesi admin expired saat batch masih pending.
 
@@ -333,10 +325,12 @@ Tidak ada perubahan khusus:
 
 - [x] Admin dapat membuka **Tambah Banyak Hutang** dari layar Semua Hutang.
 - [x] Publik tidak melihat tombol dan tidak dapat membuka route.
-- [x] Admin dapat menambah, menghapus, dan mengisi hingga 50 baris.
+- [x] Admin dapat memasukkan 1–50 angsuran dan aplikasi menghasilkan judul
+      `Nama 1..N`.
+- [x] Nominal per angsuran diterapkan ke semua hutang hasil generate.
 - [x] Group batch dan jatuh tempo default bekerja otomatis; checklist per
-      bulan menambah 1 bulan per baris; override per baris tersedia.
-- [x] Baris kosong diabaikan; baris terisi sebagian ditolak.
+      bulan menambah 1 bulan per angsuran.
+- [x] Nama, jumlah angsuran, nominal, catatan, dan panjang judul divalidasi.
 - [x] Satu transaksi menyimpan semua hutang dan satu outbox batch.
 - [x] Tidak ada data parsial jika validasi/transaksi gagal.
 - [x] Hutang baru langsung terlihat di daftar; dashboard/group summary memakai
@@ -357,20 +351,21 @@ Tidak ada perubahan khusus:
 - Bulk edit, bulk archive, bulk delete, atau bulk payment.
 - Undo satu batch.
 - Deteksi/merge duplikat otomatis.
-- Progress upload per baris di UI; status tetap memakai sync status global.
+- Progress upload per angsuran di UI; status tetap memakai sync status global.
 - Perubahan pada customer (tidak ada customer) atau device enrollment.
 
 RPC bulk insert sudah termasuk dalam scope Sprint 12, bukan di luar scope.
 
 ## 11. Keputusan owner (resolved)
 
-1. **Metode input MVP:** form multi-baris manual.
-2. **Batas batch:** maksimal 50.
+1. **Metode input:** generator angsuran otomatis (nama dasar + jumlah
+   angsuran + nominal per angsuran), bukan input baris manual.
+2. **Batas batch:** maksimal 50 angsuran.
 3. **Group:** satu group per batch.
 4. **Sync:** server bulk RPC atomik.
-5. **Konfirmasi:** dialog untuk batch lebih dari satu baris.
+5. **Konfirmasi:** dialog untuk batch lebih dari satu angsuran.
 
-Import spreadsheet tetap ditunda karena owner memilih input manual.
+Import spreadsheet tetap ditunda.
 
 ## 12. Status implementasi
 
@@ -381,8 +376,8 @@ Selesai dan tervalidasi:
 - [x] Edge Function `debt_batch` + validasi 1–50 baris/ID unik.
 - [x] RPC `admin_bulk_create_debts` dengan idempotency, atomic insert, audit.
 - [x] Dependency sync group → debt_batch → payment.
-- [x] UI multi-baris, group batch, tanggal default otomatis, checklist per
-      bulan, validasi, dan konfirmasi.
+- [x] UI generator angsuran, pratinjau `Nama 1..N`, group batch, tanggal
+      default otomatis, checklist per bulan, validasi, dan konfirmasi.
 - [x] Route admin-only `/debts/bulk` dan tombol **Tambah Banyak**.
 - [x] Test repository, sync, widget, handler Deno, dan pgTAP.
 - [x] Format, analyze, seluruh Flutter test, Deno test, dan pgTAP lulus.
@@ -392,6 +387,6 @@ Selesai dan tervalidasi:
 
 Pending:
 
-- [ ] Uji 1, 5, dan 50 baris pada perangkat fisik.
+- [ ] Uji 1, 5, dan 50 angsuran pada perangkat fisik.
 - [ ] Uji offline → reconnect → sync → restart dan reminder batch.
 - [ ] Verifikasi dashboard/group summary pada perangkat.

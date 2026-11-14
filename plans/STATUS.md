@@ -276,11 +276,12 @@ for v1 distribution.
 
 ### Sprint 12 — Bulk insert hutang (implemented locally)
 
-- Admin-only **Tambah Banyak** screen at `/debts/bulk` supports 1–50 manual
-  rows, one group per batch, optional default due date that auto-fills rows,
-  a monthly checkbox (row 1 = default, following rows +1 month), per-row
-  override, empty-row skipping, inline validation, and a confirmation dialog
-  for >1 row.
+- Admin-only **Bulk Insert Hutang** screen at `/debts/bulk` takes a base name,
+  installment count 1–50, and principal per installment, then generates debts
+  titled `Nama 1..N`. It supports one group per batch, optional default due
+  date, a monthly checkbox (installment 1 = default, following installments +1
+  month), a read-only preview, inline validation, and a confirmation dialog for
+  >1 installment.
 - `DebtRepository.createMany` writes all debts and one `debt_batch` outbox
   operation in one SQLite transaction. Any invalid row rolls back the batch.
 - The sync worker processes `debt_group` → `debt_batch` → `payment`, checks
@@ -505,12 +506,13 @@ Bulk insert hutang (Sprint 12):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 179 tests
+flutter test                                                                                     passed, 178 tests
   - createMany atomic local + one debt_batch outbox tests                                        passed
   - invalid row/group/max batch rollback tests                                                  passed
   - batch sync before payment and failure preservation tests                                    passed
   - admin/public bulk UI, validation, group, confirmation tests                                 passed
-  - default due date auto-fill and +1 month per row tests                                       passed
+  - Nama 1..N title generation and installment preview tests                                    passed
+  - default due date and +1 month per installment tests                                         passed
   - addMonthsClamped end-of-month tests                                                         passed
 deno fmt --check / deno check / deno lint / deno test                                             passed, 68 tests
   - debt_batch validation/duplicate/limit tests                                                  passed
@@ -627,10 +629,11 @@ physical-device bulk insert/sync/restart/reminder                               
   check is manual; downloads verify SHA-256, package, version code, and signing
   certificate before opening the Android installer. No GitHub token is embedded
   in the app.
-- Bulk insert uses manual multi-row entry, one group per batch, max 50 rows, and
-  one atomic server RPC. Local debts plus one `debt_batch` outbox row are
-  written in one SQLite transaction; the server rejects the whole batch if any
-  row is invalid.
+- Bulk insert uses an installment generator: base name, count 1–50, and nominal
+  per installment produce debts titled `Nama 1..N`; one group per batch and one
+  atomic server RPC. Local debts plus one `debt_batch` outbox row are written in
+  one SQLite transaction; the server rejects the whole batch if any row is
+  invalid.
 - See `plans/DECISIONS.md`, especially D-013 through D-026.
 
 ## Owner decisions
@@ -651,8 +654,9 @@ physical-device bulk insert/sync/restart/reminder                               
       device-local and never create business mutations or outbox entries.
 - [x] No offline local-only unlock in v1; offline edits require a valid server
       session and are queued through the outbox.
-- [x] Bulk insert: input manual multi-baris, maksimal 50 hutang, satu group per
-      batch, satu RPC server atomik, dan dialog konfirmasi untuk batch >1.
+- [x] Bulk insert: generator angsuran otomatis `Nama 1..N`, maksimal 50
+      angsuran, nominal per angsuran, satu group per batch, satu RPC server
+      atomik, dan dialog konfirmasi untuk batch >1.
 
 Resolved 12 November 2026: public read all business data, no customers, groups
 retained, admin PIN retained, device enrollment removed, database reset.

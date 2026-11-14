@@ -39,8 +39,9 @@
 
 ### Debt/payment
 - Debt can be created without customer.
-- Bulk insert can create 1–50 debts with one group, optional due dates, and a
-  confirmation for multi-row batches.
+- Bulk insert generates 1–50 debts from a base name and installment count,
+  titled `Nama 1..N`, with the same nominal per installment, one group, optional
+  due dates, and a confirmation for multi-installment batches.
 - Bulk insert is atomic locally and on the server; one invalid row prevents the
   whole batch.
 - Bulk replay with the same operation ID does not duplicate debts.

@@ -58,11 +58,11 @@ kembali ke mode publik/read-only.
 - Sort: due date, latest, outstanding amount, group.
 - Debt row shows title, group, due date, remaining amount, status.
 - Tidak ada kolom customer.
-- Admin-only **Tambah Banyak** membuka form bulk 1–50 baris: satu group batch,
-  judul/nominal wajib, catatan dan jatuh tempo opsional, tanggal default otomatis
-  terisi, checklist **jatuh tempo per bulan** (baris 1 = default, berikutnya
-  +1 bulan), override per baris, validasi inline, dan dialog konfirmasi untuk
-  batch >1.
+- Admin-only **Bulk Insert Hutang** memakai generator angsuran: nama dasar,
+  jumlah angsuran 1–50, nominal per angsuran, satu group batch, catatan
+  opsional, tanggal default, dan checklist **jatuh tempo per bulan** (angsuran
+  1 = default, berikutnya +1 bulan). Pratinjau menampilkan judul `Nama 1..N`,
+  nominal, tanggal, dan total; dialog konfirmasi muncul untuk batch >1.
 - Bulk insert memakai satu transaksi lokal dan satu RPC server atomik; publik
   tidak dapat melihat tombol atau membuka route.
 
