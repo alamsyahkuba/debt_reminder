@@ -11,6 +11,7 @@ import '../../../domain/entities/backup_document.dart';
 import '../../../shared/widgets/local_data_notice.dart';
 import '../../admin/application/admin_providers.dart';
 import '../../sync/application/sync_providers.dart';
+import 'app_update_card.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -188,6 +189,10 @@ class SettingsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: _BackupCard(enabled: isAdmin),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: AppUpdateCard(),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

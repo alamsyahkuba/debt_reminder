@@ -1,6 +1,7 @@
 # Sprint 11 — In-App Update
 
-Status: distribution decision approved (repo public); implementasi belum dimulai.
+Status: implementasi kode dan test otomatis selesai; rilis uji dan verifikasi
+perangkat masih pending.
 Tanggal: 14 November 2026.
 Scope: tombol cek update, download APK dari GitHub Release, verifikasi, dan
 membuka installer Android.
@@ -419,11 +420,46 @@ Tidak ada perubahan pada data bisnis, Supabase schema, RLS, atau reminder.
 
 1. **Distribusi publik:** repo utama `alamsyahkuba/debt_reminder` sudah public.
    Updater memakai GitHub API dan asset Release publik tanpa token.
-2. **Installer:** custom MethodChannel + verifikasi signature (rekomendasi)
-   atau plugin `open_filex`; keputusan final saat implementasi.
-3. **Visibilitas:** tombol update untuk publik dan admin (rekomendasi) atau
-   hanya admin.
-4. **Cek otomatis:** manual saja untuk v1 (rekomendasi) atau cek saat startup.
-5. **Release notes:** teks polos dari manifest atau link ke GitHub Release.
-6. **Minimum Android:** ikuti minSdk existing (24); pastikan perilaku installer
-   diuji pada Android 8–16.
+2. **Installer:** custom MethodChannel + verifikasi signature. Plugin installer
+   pihak ketiga tidak dipakai.
+3. **Visibilitas:** tombol update untuk publik dan admin.
+4. **Cek otomatis:** manual saja untuk v1; tidak ada polling saat startup.
+5. **Release notes:** teks polos dari `latest.json`.
+6. **Minimum Android:** mengikuti minSdk existing (24).
+
+## 17. Status implementasi
+
+Selesai dan tervalidasi otomatis:
+
+- [x] Model domain `AppUpdateInfo`, `AppVersionInfo`, dan state installer.
+- [x] `GitHubReleaseRepository` membaca GitHub Release + `latest.json`,
+      mengabaikan draft/prerelease, dan menolak URL selain HTTPS/GitHub.
+- [x] `AppUpdateService` memeriksa ruang penyimpanan, mengunduh streaming,
+      menampilkan progress, memverifikasi SHA-256 dan ukuran, mendukung
+      pembatalan, serta membersihkan file gagal.
+- [x] `AppUpdateController` menangani checking, available, up-to-date,
+      downloading, permission, installer opened, dan error.
+- [x] Kartu Settings menampilkan versi terpasang, Cek Update, Download & Pasang,
+      progress, Batalkan, pengaturan izin, dan retry. Kartu tersedia untuk
+      publik dan admin.
+- [x] Native Android memverifikasi package, version code, dan sertifikat signing
+      sebelum membuka installer melalui FileProvider.
+- [x] Manifest memuat `REQUEST_INSTALL_PACKAGES` dan FileProvider hanya untuk
+      folder cache `updates/`.
+- [x] Workflow release membuat dan mengunggah `latest.json` bersama APK dan
+      `.sha256`.
+- [x] Test unit/widget untuk parsing manifest, keamanan URL, checksum,
+      ruang penyimpanan, pembatalan, state controller, UI, dan akses publik.
+- [x] `flutter analyze`, seluruh `flutter test`, actionlint, prettier, dan
+      `flutter build apk --debug` lulus.
+
+Belum selesai:
+
+- [ ] Rilis GitHub stabil yang berisi APK + `.sha256` + `latest.json`. Release
+      `v1.0.0` hanya berisi APK + `.sha256` karena dibuat sebelum perubahan
+      workflow Sprint 11.
+- [ ] Uji update nyata di I2505: build lama → build baru, data lokal tetap ada.
+- [ ] Uji negatif di perangkat: checksum salah, signature mismatch, izin
+      unknown sources ditolak, offline/rate limit.
+- [ ] Uji installer pada rentang Android 8–16 sesuai perangkat yang tersedia.
+- [x] Verifikasi ruleset `main` aktif dan `RELEASE_TOKEN` ada di bypass list.

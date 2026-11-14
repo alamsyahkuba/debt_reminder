@@ -35,8 +35,10 @@ reconciliation, backup/export JSON dengan restore-merge, branding **Debt
 Reminder**, package `com.debtreminder.app`, versi `1.0.0+1`, dan release signing.
 Cloud migration/Edge Functions sudah dideploy, PIN admin sudah bootstrap, APK
 release bertanda tangan sudah dibangun, dan seluruh pengujian perangkat di
-I2505 dilaporkan lolos oleh owner. GitHub release automation sudah
-diimplementasikan; dry run dan rilis otomatis pertama masih pending. Rilis v1
+I2505 dilaporkan lolos oleh owner. GitHub release automation sudah dijalankan:
+dry run dan rilis otomatis pertama `v1.0.0` berhasil. In-app update sudah
+diimplementasikan, tetapi rilis stabil berikutnya harus dipublikasikan agar
+memuat `latest.json`; uji update nyata di perangkat masih pending. Rilis v1
 didistribusikan sebagai APK; AAB dan Play Console tidak termasuk scope. Lihat
 [`plans/STATUS.md`](plans/STATUS.md) dan
 [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
@@ -62,6 +64,28 @@ flutter run
 Aplikasi tetap dapat membaca data lokal tanpa konfigurasi Supabase. Login admin
 membutuhkan `SUPABASE_URL`, anon key, dan Edge Function `admin-pin` yang sudah
 dikonfigurasi; lihat [`supabase/README.md`](supabase/README.md).
+
+## Update aplikasi
+
+Pengguna publik dan admin dapat membuka **Pengaturan → Pembaruan aplikasi** lalu
+menekan **Cek Update**. Pemeriksaan berjalan manual dan membaca GitHub Release
+stabil dari `alamsyahkuba/debt_reminder`. Jika build remote lebih baru, aplikasi
+menampilkan versi, ukuran, dan catatan rilis sebagai teks polos.
+
+**Download & Pasang** memeriksa ruang penyimpanan, mengunduh APK dari host
+GitHub yang diizinkan melalui HTTPS, menampilkan progress, memverifikasi
+SHA-256 dan ukuran file, lalu native Android memverifikasi package
+`com.debtreminder.app`, version code, dan sertifikat signing sebelum membuka
+installer sistem. Android tetap meminta
+pengguna menyetujui instalasi dan izin **Install unknown apps**. Aplikasi tidak
+menyimpan token GitHub dan tidak melakukan update diam-diam.
+
+Setiap release stabil wajib memiliki asset APK, `.apk.sha256`, dan `latest.json`.
+Update tidak mengubah data bisnis, database Supabase, outbox, sesi admin, atau
+preferensi reminder. Jika pengecekan gagal atau perangkat offline, aplikasi
+tetap dapat dipakai normal. Detail kontrak manifest dan checklist uji ada di
+[`plans/sprints/SPRINT_11_IN_APP_UPDATE.md`](plans/sprints/SPRINT_11_IN_APP_UPDATE.md)
+dan [`plans/RELEASE_CHECKLIST.md`](plans/RELEASE_CHECKLIST.md).
 
 ## Konfigurasi environment
 
@@ -168,15 +192,18 @@ konfigurasi cloud.
 Workflow release otomatis ada di
 [`.github/workflows/release.yml`](.github/workflows/release.yml). Workflow ini
 menjalankan test, bump versi/build, membuat changelog dengan `git-cliff`,
-membangun APK bertanda tangan, membuat tag, dan menerbitkan GitHub Release.
-AAB dan Play Console tidak termasuk scope.
+membangun APK bertanda tangan, membuat `latest.json`, membuat tag, dan
+menerbitkan GitHub Release berisi APK, `.sha256`, dan manifest update. AAB dan
+Play Console tidak termasuk scope.
 
-Rilis pertama `v1.0.0`:
+Rilis pertama `v1.0.0` sudah dipublikasikan sebelum `latest.json` ditambahkan.
+Rilis stabil berikutnya wajib memuat APK, `.sha256`, dan `latest.json` agar
+in-app update dapat berfungsi:
 
 ```bash
-gh workflow run release.yml -f bump=initial -f dry_run=true
+gh workflow run release.yml -f bump=auto -f dry_run=true
 gh run watch
-gh workflow run release.yml -f bump=initial
+gh workflow run release.yml -f bump=auto
 ```
 
 Release berikutnya:

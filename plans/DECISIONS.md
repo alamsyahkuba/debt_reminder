@@ -500,3 +500,34 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 - **Konsekuensi:** Siapa pun yang memakai perangkat dapat mengubah jadwal
   notifikasi lokal. Ini tidak memberi akses tulis ke data cloud dan tidak
   mengubah otorisasi admin. Preferensi reminder tetap per perangkat.
+
+## D-025 — In-app update dari GitHub Release publik
+
+- **Tanggal:** 14 November 2026
+- **Status:** Disetujui owner; implementasi lokal selesai, verifikasi rilis dan
+  perangkat masih pending
+- **Konteks:** Aplikasi didistribusikan sebagai APK langsung, bukan melalui Play
+  Store. Repo `alamsyahkuba/debt_reminder` sudah public, sehingga updater dapat
+  membaca GitHub Release tanpa token.
+- **Keputusan:**
+  - Tombol **Cek Update** tersedia untuk publik dan admin dan hanya berjalan
+    manual; tidak ada polling startup pada v1.
+  - Sumber update adalah GitHub Release stabil repo utama. Updater mengabaikan
+    draft/prerelease.
+  - Setiap release stabil memuat APK, `.sha256`, dan `latest.json`. Manifest
+    memakai `schema_version` 1 dan `build_number` sebagai pembanding utama.
+  - Download hanya dari HTTPS dengan host allowlist GitHub, memeriksa ruang
+    penyimpanan, memverifikasi SHA-256 dan ukuran, lalu native Android
+    memverifikasi package, version code, dan signing certificate sebelum
+    membuka installer sistem.
+  - Installer memakai custom MethodChannel + FileProvider; plugin installer
+    pihak ketiga tidak dipakai. Android tetap meminta konfirmasi pengguna.
+  - Release notes dirender sebagai teks polos. Tidak ada token GitHub atau
+    `service_role` di aplikasi.
+  - Update tidak mengubah schema bisnis, Supabase, outbox, sesi admin, atau
+    preferensi reminder.
+- **Konsekuensi:** APK harus selalu ditandatangani dengan keystore yang sama.
+  Pengguna harus mengizinkan **Install unknown apps** untuk aplikasi ini. Update
+  tidak dapat dipasang diam-diam dan tidak dapat dilakukan tanpa release stabil
+  yang berisi `latest.json`. Jika update check gagal, aplikasi tetap dapat
+  dipakai normal.

@@ -12,9 +12,13 @@ hard delete, full-pull deletion reconciliation, admin JSON backup/export and
 restore-merge, branding, and release signing. Cloud migrations and Edge
 Functions are deployed, the first PIN is bootstrapped, and the signed release
 APK has been built. The owner completed all planned physical-device tests on
-I2505 with all passing. Sprint 10 release automation is implemented locally;
-GitHub dry run and first automated release are pending. AAB/Play Console are out
-of scope for v1 distribution.
+I2505 with all passing. Sprint 10 dry run and first automated `v1.0.0` release
+succeeded; that release contains APK and `.sha256` but not `latest.json` because
+it was built before the Sprint 11 workflow change. Sprint 11 in-app update is
+implemented locally with automated tests, native installer compilation, and
+manifest validation; a published release containing `latest.json` and a
+physical-device update test are still pending. AAB/Play Console are out of scope
+for v1 distribution.
 
 ## Sprint status
 
@@ -40,10 +44,11 @@ of scope for v1 distribution.
       reconciliation, backup/export implemented; cloud deployed; signed APK
       built; all planned physical-device tests passed owner-reported; AAB out of
       scope)
-- [x] Sprint 10 — GitHub release automation (implemented locally; GitHub dry run
-      and first automated release pending)
-- [ ] Sprint 11 — In-app update (planned; distribution via public GitHub repo
-      decided; implementation not started)
+- [x] Sprint 10 — GitHub release automation (dry run and first automated
+      `v1.0.0` release succeeded; update-manifest assets added afterward)
+- [ ] Sprint 11 — In-app update (implemented locally; automated tests pass,
+      native installer compiles, published update release and physical-device
+      update test pending)
 
 ## Implementation status by area
 
@@ -231,7 +236,36 @@ of scope for v1 distribution.
 - Release workflow builds APK-only with Supabase remote config, uses
   `RELEASE_TOKEN` for protected `main`, and publishes GitHub Release assets.
 - First automated release target is `v1.0.0`; routine releases use `auto`.
-- GitHub dry run and first automated release are still pending.
+- GitHub dry run run `43572390531` succeeded without commit/tag/release.
+- The first automated release run `43573193030` published `v1.0.0` with APK and
+  `.sha256`; it predates the Sprint 11 `latest.json` workflow change.
+- Routine releases after Sprint 11 will include APK, `.sha256`, and
+  `latest.json` (stable releases only).
+
+### Sprint 11 — In-app update (implemented locally)
+
+- Settings exposes **Cek Update** to public and admin users. The check is manual
+  and uses the public GitHub Release API for `alamsyahkuba/debt_reminder`.
+- `latest.json` is the update manifest. It carries version/build, APK asset
+  name, SHA-256, size, release URL, publish time, and plain-text notes.
+- `GitHubReleaseRepository` ignores draft/prerelease releases and validates
+  schema, checksum format, timestamps, asset names, and HTTPS GitHub hosts.
+- `AppUpdateService` checks available cache storage before download, downloads
+  the APK with progress, supports cancel, verifies size and SHA-256, deletes
+  failed/partial files, and exposes cleanup.
+- Native Android verifies package `com.debtreminder.app`, version code, and the
+  signing certificate against the installed app before opening the system
+  installer through a FileProvider. Installation still requires user approval.
+- `REQUEST_INSTALL_PACKAGES` and `${applicationId}.fileprovider` are declared;
+  `file_paths.xml` exposes only `<cache>/updates/`.
+- Release workflow now generates `latest.json` and uploads APK, `.sha256`, and
+  `latest.json` to stable GitHub Releases. No GitHub token is embedded in the
+  app.
+- Automated coverage includes manifest parsing/security, checksum and cancel
+  behavior, controller states, update UI, and public Settings visibility.
+- Debug APK build passes and its merged manifest contains the install permission
+  and FileProvider. A published update release and real update test on I2505
+  remain pending.
 
 ## Required revision work
 
@@ -278,6 +312,7 @@ Local (Sprint 02R/03R) — done:
 - `plans/sprints/SPRINT_08_REMINDERS.md`
 - `plans/sprints/SPRINT_09_QA_RELEASE.md`
 - `plans/sprints/SPRINT_10_RELEASE_AUTOMATION.md`
+- `plans/sprints/SPRINT_11_IN_APP_UPDATE.md`
 - `plans/RELEASE_CHECKLIST.md`
 
 ## Documentation outside plans updated
@@ -291,7 +326,19 @@ Local (Sprint 02R/03R) — done:
   hard delete behavior, append-only grants, token header, and deployment secrets.
 - `.github/workflows/release.yml`, `tool/release/`, `cliff.toml`, `CHANGELOG.md`
   — APK release automation, version bump, changelog, verification, and release
-  publishing.
+  publishing, including `latest.json` update manifest assets.
+- `lib/data/remote/github_release_repository.dart`, `lib/data/updates/`,
+  `lib/domain/entities/app_update.dart`,
+  `lib/domain/repositories/app_update_repository.dart`,
+  `lib/features/settings/application/app_update_providers.dart`, and
+  `lib/features/settings/presentation/app_update_card.dart` — in-app update
+  check, download, verification, and UI.
+- `android/app/src/main/kotlin/com/debtreminder/app/MainActivity.kt`,
+  `android/app/src/main/AndroidManifest.xml`, and
+  `android/app/src/main/res/xml/file_paths.xml` — signed APK verification,
+  install permission, and FileProvider.
+- `README.md` and `plans/RELEASE_CHECKLIST.md` — in-app update usage, release
+  assets, and device verification steps.
 
 ## Test evidence
 
@@ -362,6 +409,37 @@ CLI initial and auto against temporary Git repo                                 
 git-cliff config renders changelog section                                                        passed
 actionlint + prettier YAML validation                                                             passed
 verify_apk.sh against release APK                                                                 passed
+GitHub Actions dry run 43572390531                                                                passed
+  - test/build/verify/artifact upload                                                             passed
+  - no commit, tag, or release created                                                            passed
+GitHub Actions release run 43573193030                                                            passed
+  - v1.0.0 commit/tag/release created                                                             passed
+  - assets: debt-reminder-v1.0.0+1.apk + .sha256                                                  passed
+  - latest.json absent because run predates Sprint 11 workflow change                             known
+Main ruleset 27254580                                                                              active
+  - required PR/status checks enabled; owner bypass actor present                                 passed
+```
+
+In-app update (Sprint 11):
+```text
+dart format --output=none --set-exit-if-changed .                                                passed
+flutter analyze                                                                                  no issues
+flutter test                                                                                     passed, 163 tests
+  - GitHub release + latest.json parsing and allowlist tests                                     passed
+  - download storage/checksum/size/cancel/cleanup tests                                           passed
+  - update controller state tests                                                                passed
+  - update card and public Settings visibility widget tests                                      passed
+actionlint .github/workflows/release.yml                                                         passed
+prettier --check .github/workflows/release.yml                                                    passed
+flutter build apk --debug                                                                        passed
+  - REQUEST_INSTALL_PACKAGES present in merged manifest                                         passed
+  - FileProvider com.debtreminder.app.fileprovider present                                      passed
+  - file_paths exposes cache updates/ only                                                      passed
+flutter build apk --release --dart-define-from-file=config/app_config.local.json                  passed, 68.6 MB
+  - package/version/minSdk verified: com.debtreminder.app / 1.0.0 (1) / 24                         passed
+  - REQUEST_INSTALL_PACKAGES and FileProvider present in release manifest                        passed
+  - apksigner verify                                                                            passed
+published update release + I2505 update flow                                                     pending
 ```
 
 ## Blockers / known limitations
@@ -407,6 +485,16 @@ verify_apk.sh against release APK                                               
 - All planned physical-device tests passed owner testing on I2505. Remaining
   release risks are operational: protect/back up the upload keystore, review
   public data visibility, and document the server-side PIN reset runbook.
+- In-app update needs a published stable GitHub Release containing
+  `latest.json`. `v1.0.0` does not contain it because it predates the Sprint 11
+  workflow change; until a newer release is published, the update card will
+  report that the manifest is unavailable.
+- The real update flow (old build → new build, checksum/signature/negative
+  permission tests, data preservation) has not been exercised on I2505.
+- Sprint 11 changes are local/uncommitted at the time of this status update;
+  they must be committed and pushed before the release workflow can build them.
+- In-app update checks are manual only in v1; there is no startup polling or
+  background update check.
 - Offline local-only unlock is currently disabled pending owner confirmation. A
   valid server session is required before offline edits can be queued; if it
   expires, local work already in the outbox is preserved.
@@ -449,7 +537,11 @@ verify_apk.sh against release APK                                               
   Hard delete is limited to groups and debts without payments; full pull
   reconciles deleted rows. Backup/export is admin-only JSON with safe
   restore-merge. No app lock or PIN recovery UI in v1.
-- See `plans/DECISIONS.md`, especially D-013 through D-024.
+- In-app update uses public GitHub Releases and a `latest.json` manifest. The
+  check is manual; downloads verify SHA-256, package, version code, and signing
+  certificate before opening the Android installer. No GitHub token is embedded
+  in the app.
+- See `plans/DECISIONS.md`, especially D-013 through D-025.
 
 ## Owner decisions
 
@@ -479,8 +571,11 @@ restore-merge; no app lock; no PIN recovery UI; public business data final.
 
 ## Next step
 
-Configure GitHub Secrets (`RELEASE_TOKEN`, Android signing secrets, Supabase
-URL/anon key), then run the release workflow dry run and first automated
-`v1.0.0` release. After that, use `bump=auto` for routine releases. AAB and Play
-Console are not required. Remove or archive the remote test debt `"tes"` if a
-clean dataset is desired.
+Review and commit the Sprint 11 changes, then push to `main`. Run the release
+workflow dry run with `bump=auto` to confirm APK, `.sha256`, and `latest.json`
+are generated, then publish the next stable release (for example `v1.0.1`).
+Install that build on I2505, publish one more build with `bump=auto`, and
+complete the in-app update test (check → download → checksum/signature
+verification → installer → data preserved). After that, use `bump=auto` for
+routine releases. AAB and Play Console are not required. Remove or archive the
+remote test debt `"tes"` if a clean dataset is desired.

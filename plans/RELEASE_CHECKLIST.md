@@ -23,7 +23,8 @@ Jangan mengubah application ID setelah rilis pertama.
 
 - Tanggal: 14 November 2026
 - Perangkat: I2505 (`10DG3404HM000HH`), Android 16 / API 36
-- Status: seluruh checklist owner-reported passed
+- Status: checklist baseline v1 owner-reported passed; verifikasi in-app update
+  belum dijalankan dan masih pending
 - Distribusi: APK bertanda tangan langsung; AAB/Play Console tidak dipakai
 
 ## Wajib sebelum rilis
@@ -109,11 +110,53 @@ Pastikan output menunjukkan `package name='com.debtreminder.app'`,
 
 ## GitHub Release automation
 
-- [ ] GitHub Secrets release sudah dibuat dan `RELEASE_TOKEN` dapat bypass
+- [x] GitHub Secrets release sudah dibuat dan `RELEASE_TOKEN` dapat bypass
       ruleset `main`.
-- [ ] Dry run workflow `bump=initial` berhasil tanpa commit/tag/release.
-- [ ] Rilis otomatis pertama `v1.0.0` berhasil dan APK+checksum tersedia.
-- [ ] Rilis rutin `bump=auto` menaikkan versi/build dan changelog.
+- [x] Ruleset `main` berstatus Active dan mengizinkan bypass actor yang dipakai
+      `RELEASE_TOKEN`.
+- [x] Dry run workflow `bump=initial` berhasil tanpa commit/tag/release.
+- [x] Rilis otomatis pertama `v1.0.0` berhasil dan APK+checksum tersedia.
+- [ ] Rilis stabil berikutnya memiliki tiga asset: APK, `.apk.sha256`, dan
+      `latest.json`. Release `v1.0.0` belum memilikinya karena dibuat sebelum
+      perubahan Sprint 11.
+- [ ] `latest.json` berisi `schema_version: 1`, versi/build yang sama dengan
+      APK, checksum SHA-256 yang cocok, ukuran byte, URL release, dan notes teks
+      polos.
+- [ ] Rilis rutin `bump=auto` menaikkan versi/build dan changelog tanpa
+      menurunkan build number.
+
+## Verifikasi in-app update
+
+Uji minimal dua build bertanda tangan dengan keystore yang sama:
+
+1. Pasang build lama pada perangkat.
+2. Publikasikan build baru sebagai release stabil yang berisi `latest.json`.
+3. Buka **Pengaturan → Pembaruan aplikasi → Cek Update**.
+4. Pastikan versi, ukuran, dan catatan rilis tampil sebagai teks polos.
+5. Tekan **Download & Pasang**, amati progress, dan pastikan checksum valid.
+6. Setujui installer Android; pastikan update terpasang dan data lokal, sesi
+   admin, serta preferensi reminder tetap ada.
+7. Uji **Install unknown apps** ditolak: aplikasi harus membuka pengaturan izin
+   dan tidak memaksa install.
+8. Uji negatif: checksum salah, signature berbeda, manifest hilang/rusak, dan
+   URL di luar allowlist harus ditolak tanpa membuka installer.
+9. Uji offline/rate limit: tampilkan error yang jelas dan tombol retry; aplikasi
+   tetap dapat dipakai.
+10. Uji pembatalan download: file parsial dihapus dan state kembali ke update
+    tersedia.
+
+Checklist perangkat tambahan:
+
+- [ ] Cek Update terlihat dan berfungsi tanpa PIN admin.
+- [ ] Download menampilkan progress dan dapat dibatalkan.
+- [ ] Ruang penyimpanan diperiksa sebelum download; penyimpanan penuh
+      menampilkan error tanpa file parsial.
+- [ ] SHA-256, package, version code, dan signature diverifikasi sebelum
+      installer dibuka.
+- [ ] Update dari build lama ke build baru mempertahankan database lokal.
+- [ ] Checksum salah/signature mismatch ditolak.
+- [ ] Izin unknown sources ditolak/diizinkan berperilaku benar.
+- [ ] Offline dan rate limit menampilkan retry tanpa crash.
 
 ## Checklist perangkat fisik
 
@@ -178,6 +221,14 @@ quality gate otomatis ada di `plans/STATUS.md`.
   atas rekomendasi. Toolchain harus diuji ulang sebelum upgrade.
 - Application ID berubah menjadi `com.debtreminder.app`; instalasi lama tidak
   dimigrasikan otomatis dan harus dianggap fresh install.
+- Update aplikasi hanya diperiksa manual dari Pengaturan; tidak ada polling
+  startup atau update background pada v1.
+- Update membutuhkan release stabil yang berisi `latest.json`, APK, dan
+  `.sha256`. APK harus ditandatangani dengan keystore yang sama.
+- Android mewajibkan pengguna mengizinkan **Install unknown apps** dan
+  menyetujui installer. Aplikasi tidak dapat memasang update secara diam-diam.
+- Verifikasi update nyata pada perangkat fisik masih pending sampai release
+  stabil pertama dengan `latest.json` dipublikasikan.
 
 ## PIN reset runbook (operator)
 

@@ -67,8 +67,12 @@ Sprint 09 QA/release verification is complete. Cloud migrations and Edge
 Functions are deployed, the first PIN is bootstrapped, and a signed release APK
 is built. All planned physical-device tests passed owner testing on I2505. AAB
 and Play Console are not part of the v1 distribution scope; distribute the APK
-directly. Sprint 10 GitHub release automation is implemented locally; GitHub
-dry run and the first automated release are pending.
+directly. Sprint 10 GitHub release automation is implemented; its dry run and
+the first automated `v1.0.0` release succeeded, but that release predates the
+`latest.json` asset and contains only APK plus `.sha256`. Sprint 11 in-app update
+is implemented locally with SHA-256/package/version/signature verification and a
+public Settings card; a newer release containing `latest.json` and a
+physical-device update test are pending.
 
 If a task conflicts with these decisions, stop and ask the project owner. Do not
 silently reinterpret the product.

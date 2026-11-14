@@ -50,5 +50,6 @@ pengelolaan hutang menggunakan Flutter dan Supabase.
 - `sprints/` — sprint planning per file.
 - `sprints/SPRINT_10_RELEASE_AUTOMATION.md` — rencana GitHub Release
   automation (changelog, version bump, tag, APK release).
-- `sprints/SPRINT_11_IN_APP_UPDATE.md` — rencana cek update, download APK
-  GitHub Release, verifikasi, dan installer Android.
+- `sprints/SPRINT_11_IN_APP_UPDATE.md` — cek update, download APK GitHub
+  Release, verifikasi checksum/package/signature, dan installer Android
+  (implementasi lokal selesai; rilis uji dan verifikasi perangkat pending).

@@ -193,6 +193,32 @@ jobs:
           set -euo pipefail
           grep -Fq "## [${{ steps.version.outputs.version_name }}]" CHANGELOG.md
 
+      - name: Prepare release notes
+        if: steps.version.outputs.tag != ''
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["VERSION_NAME"]
+          source = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          match = re.search(
+              rf"(?ms)^## \[{re.escape(version)}\].*?(?=^## \[|\Z)",
+              source,
+          )
+          if match is None:
+              raise SystemExit(f"Bagian changelog untuk {version} tidak ditemukan")
+          Path("release-notes.md").write_text(
+              match.group(0).strip() + "\n",
+              encoding="utf-8",
+          )
+          PY
+          test -s release-notes.md
+
       - name: Prepare signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -235,6 +261,50 @@ jobs:
           cp "$APK" "$ASSET"
           sha256sum "$ASSET" > "$ASSET.sha256"
 
+      - name: Generate update manifest
+        if: inputs.prerelease != true && steps.version.outputs.tag != ''
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version_name }}
+          BUILD_NUMBER: ${{ steps.version.outputs.build_number }}
+          TAG: ${{ steps.version.outputs.tag }}
+          GITHUB_RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import datetime as dt
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["VERSION_NAME"]
+          build = int(os.environ["BUILD_NUMBER"])
+          tag = os.environ["TAG"]
+          asset = f"debt-reminder-v{version}+{build}.apk"
+          sha = Path(f"{asset}.sha256").read_text(encoding="utf-8").split()[0]
+          if not re.fullmatch(r"[0-9a-fA-F]{64}", sha):
+              raise SystemExit("Checksum APK tidak valid")
+          notes_path = Path("release-notes.md")
+          notes = notes_path.read_text(encoding="utf-8").strip() if notes_path.exists() else ""
+          manifest = {
+              "schema_version": 1,
+              "version_name": version,
+              "build_number": build,
+              "tag": tag,
+              "apk_asset": asset,
+              "apk_sha256": sha.lower(),
+              "apk_size_bytes": Path(asset).stat().st_size,
+              "release_url": os.environ["GITHUB_RELEASE_URL"],
+              "published_at": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              "notes": notes,
+          }
+          Path("latest.json").write_text(
+              json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          test -s latest.json
+
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
@@ -242,34 +312,9 @@ jobs:
           path: |
             debt-reminder-*.apk
             debt-reminder-*.apk.sha256
+            latest.json
           if-no-files-found: error
           retention-days: 30
-
-      - name: Prepare release notes
-        if: inputs.dry_run == false && steps.version.outputs.tag != ''
-        env:
-          VERSION_NAME: ${{ steps.version.outputs.version_name }}
-        run: |
-          set -euo pipefail
-          python3 - "$VERSION_NAME" <<'PY'
-          import re
-          import sys
-          from pathlib import Path
-
-          version = sys.argv[1]
-          source = Path("CHANGELOG.md").read_text(encoding="utf-8")
-          match = re.search(
-              rf"(?ms)^## \[{re.escape(version)}\].*?(?=^## \[|\Z)",
-              source,
-          )
-          if match is None:
-              raise SystemExit(f"Bagian changelog untuk {version} tidak ditemukan")
-          Path("release-notes.md").write_text(
-              match.group(0).strip() + "\n",
-              encoding="utf-8",
-          )
-          PY
-          test -s release-notes.md
 
       - name: Commit, tag, and publish release
         if: inputs.dry_run == false && steps.version.outputs.tag != ''
@@ -300,13 +345,19 @@ jobs:
           git tag -a "$TAG" -m "Debt Reminder ${VERSION_NAME} (build ${BUILD_NUMBER})"
           git push origin "$TAG"
 
+          ASSETS=("$ASSET" "$ASSET.sha256")
+          if [ "$PRERELEASE" != "true" ]; then
+            test -s latest.json
+            ASSETS+=(latest.json)
+          fi
+
           if [ "$PRERELEASE" = "true" ]; then
-            gh release create "$TAG" "$ASSET" "$ASSET.sha256" \
+            gh release create "$TAG" "${ASSETS[@]}" \
               --title "Debt Reminder ${VERSION_NAME} (build ${BUILD_NUMBER})" \
               --notes-file release-notes.md \
               --prerelease
           else
-            gh release create "$TAG" "$ASSET" "$ASSET.sha256" \
+            gh release create "$TAG" "${ASSETS[@]}" \
               --title "Debt Reminder ${VERSION_NAME} (build ${BUILD_NUMBER})" \
               --notes-file release-notes.md
           fi
