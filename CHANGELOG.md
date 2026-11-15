@@ -5,6 +5,13 @@ Format mengikuti Keep a Changelog dan Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-11-15
+
+### Changed
+
+- Auto-check updates and show dashboard banner
+- Merge branch 'main' of https://github.com/alamsyahkuba/debt_reminder
+
 ## [1.0.6] - 2026-11-14
 
 ### Changed
