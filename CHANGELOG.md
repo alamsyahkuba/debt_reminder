@@ -5,6 +5,12 @@ Format mengikuti Keep a Changelog dan Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-11-15
+
+### Changed
+
+- Move local data notice above update card
+
 ## [1.0.9] - 2026-11-15
 
 ### Changed
