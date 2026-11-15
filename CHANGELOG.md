@@ -5,6 +5,12 @@ Format mengikuti Keep a Changelog dan Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-11-15
+
+### Changed
+
+- Move update card to top of settings
+
 ## [1.0.8] - 2026-11-15
 
 ### Changed
