@@ -46,6 +46,7 @@
   whole batch.
 - Bulk replay with the same operation ID does not duplicate debts.
 - Payment amount must be positive.
+- Tombol **Bayar Lunas** membuat pembayaran tepat sebesar sisa hutang.
 - Overpayment rejected by default.
 - Duplicate sync retry does not duplicate payment.
 - Paid/outstanding totals are correct.

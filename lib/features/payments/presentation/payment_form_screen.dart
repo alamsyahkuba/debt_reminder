@@ -161,6 +161,15 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
             ),
           ),
           const SizedBox(height: 20),
+          if (!paidOff) ...<Widget>[
+            FilledButton.tonalIcon(
+              key: const Key('payment-pay-full-button'),
+              onPressed: _saving ? null : () => _payFull(outstanding),
+              icon: const Icon(Icons.done_all),
+              label: Text('Bayar Lunas (${formatRupiah(outstanding)})'),
+            ),
+            const SizedBox(height: 8),
+          ],
           FilledButton.icon(
             key: const Key('payment-save-button'),
             onPressed: _saving || paidOff ? null : _submit,
@@ -200,14 +209,28 @@ class _PaymentFormScreenState extends ConsumerState<PaymentFormScreen> {
     }
 
     final amount = int.parse(_amountController.text.trim());
+    await _confirmAndSave(amount: amount, fullPayment: false);
+  }
+
+  Future<void> _payFull(int outstanding) async {
+    if (outstanding <= 0 || _saving) {
+      return;
+    }
+    await _confirmAndSave(amount: outstanding, fullPayment: true);
+  }
+
+  Future<void> _confirmAndSave({
+    required int amount,
+    required bool fullPayment,
+  }) async {
     final confirmed = await showConfirmDialog(
       context,
-      title: 'Catat pembayaran?',
+      title: fullPayment ? 'Bayar lunas?' : 'Catat pembayaran?',
       message:
-          'Pembayaran ${formatRupiah(amount)} pada '
-          '${formatDate(_paidAt)} akan disimpan permanen dan tidak dapat '
-          'diubah.',
-      confirmLabel: 'Simpan',
+          '${fullPayment ? 'Pembayaran lunas' : 'Pembayaran'} '
+          '${formatRupiah(amount)} pada ${formatDate(_paidAt)} akan disimpan '
+          'permanen dan tidak dapat diubah.',
+      confirmLabel: fullPayment ? 'Bayar Lunas' : 'Simpan',
     );
     if (!confirmed || !mounted) {
       return;

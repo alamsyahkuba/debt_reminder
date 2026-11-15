@@ -178,6 +178,8 @@ di-reset.
   admin; group → debt → payment, lalu group delete.
 - Pembayaran bersifat append-only, termasuk trigger SQLite yang menolak
   perubahan field finansial. Metadata sync tetap boleh diperbarui.
+- Form pembayaran menyediakan **Bayar Lunas** untuk membuat pembayaran tepat
+  sebesar sisa hutang setelah konfirmasi; overpayment tetap ditolak.
 - Hard delete debt hanya untuk hutang tanpa payment; hutang dengan payment harus
   diarsipkan. Backup/export JSON admin-only dan restore-merge tersedia dari
   Pengaturan.

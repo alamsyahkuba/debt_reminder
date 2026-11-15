@@ -111,7 +111,8 @@ for v1 distribution.
 ### Sprint 05 — Payments & dashboard (complete)
 
 - Payment form from debt detail with amount, payment date, notes, and
-  confirmation before saving.
+  confirmation before saving. **Bayar Lunas** langsung membuat pembayaran
+  sebesar seluruh sisa hutang setelah konfirmasi.
 - Payment creation is append-only, writes the entity and outbox entry in one
   SQLite transaction, and keeps a stable `operation_id`.
 - Overpayment is rejected in the repository inside the transaction and by form
@@ -479,12 +480,13 @@ In-app update (Sprint 11):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 181 tests (current full suite)
+flutter test                                                                                     passed, 182 tests (current full suite)
   - GitHub release + latest.json parsing and allowlist tests                                     passed
   - download storage/checksum/size/cancel/cleanup tests                                           passed
   - update controller state tests                                                                passed
   - update card and public Settings visibility widget tests                                      passed
   - auto-check on app open and dashboard update banner tests                                     passed
+  - Bayar Lunas widget test                                                                      passed
 actionlint .github/workflows/release.yml                                                         passed
 prettier --check .github/workflows/release.yml                                                    passed
 flutter build apk --debug                                                                        passed
@@ -514,7 +516,7 @@ Bulk insert hutang (Sprint 12):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 181 tests
+flutter test                                                                                     passed, 182 tests
   - createMany atomic local + one debt_batch outbox tests                                        passed
   - invalid row/group/max batch rollback tests                                                  passed
   - batch sync before payment and failure preservation tests                                    passed
@@ -620,7 +622,8 @@ physical-device bulk insert/sync/restart/reminder                               
 - Database reset is approved because the app is pre-release.
 - Debt paid/outstanding/status is derived from payments and due date.
 - Payments are append-only; overpayment is rejected by default in repository
-  and form validation.
+  and form validation. **Bayar Lunas** creates one full-remaining payment after
+  confirmation.
 - Dashboard totals, counts, group summaries, and upcoming debts are derived from
   the same debt overviews as the debt list.
 - Admin PIN is 6 digits, 5 failed attempts lock verification for 15 minutes, and

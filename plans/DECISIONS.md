@@ -585,3 +585,23 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
 - **Konsekuensi:** Setiap pembukaan aplikasi memakai satu request GitHub
   (rate limit anonim 60/jam per IP). Offline/error tidak menampilkan banner,
   tetapi status error tetap tersedia di Pengaturan untuk retry manual.
+
+## D-028 — Tombol Bayar Lunas pada form pembayaran
+
+- **Tanggal:** 15 November 2026
+- **Status:** Disetujui owner; implementasi dan test otomatis selesai,
+  verifikasi perangkat mengikuti jadwal berikutnya
+- **Konteks:** Pengguna perlu melunasi sisa hutang tanpa menghitung/mengetik
+  nominal secara manual, tetapi pembayaran tetap append-only dan overpayment
+  harus ditolak.
+- **Keputusan:**
+  - Form pembayaran menampilkan tombol **Bayar Lunas** hanya jika sisa hutang
+    lebih dari nol.
+  - Tombol memakai nominal tepat sebesar `outstandingAmount` dan tetap meminta
+    konfirmasi.
+  - Pembayaran resultan tetap membuat satu payment record dan satu outbox
+    `payment_create`; tidak ada edit/delete.
+  - Jika sisa hutang berubah sebelum transaksi, repository tetap menolak
+    overpayment.
+- **Konsekuensi:** Tidak ada perubahan schema/server. Tombol ini hanya shortcut
+  UI menuju pembayaran penuh yang sudah didukung repository.

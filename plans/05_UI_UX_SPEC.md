@@ -79,6 +79,8 @@ kembali ke mode publik/read-only.
 
 ### Payment form
 - Amount, paid_at, notes.
+- Tombol **Bayar Lunas** mengisi/membuat pembayaran sebesar seluruh sisa
+  hutang setelah konfirmasi.
 - Validate positive amount and no overpayment by default.
 - Confirmation before saving.
 - Show offline/pending-sync status.

@@ -211,6 +211,7 @@ Checklist:
 - [x] PIN salah terkena rate limit/lockout.
 - [x] Sesi kedaluwarsa mengunci UI dan tidak menghapus outbox.
 - [x] Admin CRUD, archive, move group, dan pembayaran berhasil di perangkat.
+- [ ] Tombol **Bayar Lunas** membuat pembayaran tepat sebesar sisa hutang.
 - [x] Offline create/update/archive/payment masuk outbox; reconnect sync sukses.
 - [x] Restart aplikasi mempertahankan outbox dan konflik.
 - [x] Full pull manual menghapus baris synced yang sudah tidak ada di server.
