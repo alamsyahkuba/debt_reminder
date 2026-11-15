@@ -33,11 +33,11 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 48),
         children: <Widget>[
+          const LocalDataNotice(),
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: AppUpdateCard(),
           ),
-          const LocalDataNotice(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Card(
