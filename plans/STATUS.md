@@ -283,10 +283,11 @@ for v1 distribution.
 
 - Admin-only **Bulk Insert Hutang** screen at `/debts/bulk` takes a base name,
   installment count 1–50, and principal per installment, then generates debts
-  titled `Nama 1..N`. It supports one group per batch, optional default due
-  date, a monthly checkbox (installment 1 = default, following installments +1
-  month), a read-only preview, inline validation, and a confirmation dialog for
-  >1 installment.
+  titled `Nama 1..N`. Each generated row can be edited (title, principal, due
+  date, notes) before saving; header changes affect only unedited rows. It
+  supports one group per batch, optional default due date, a monthly checkbox
+  (installment 1 = default, following installments +1 month), inline
+  validation, and a confirmation dialog for >1 installment.
 - `DebtRepository.createMany` writes all debts and one `debt_batch` outbox
   operation in one SQLite transaction. Any invalid row rolls back the batch.
 - The sync worker processes `debt_group` → `debt_batch` → `payment`, checks
@@ -480,7 +481,7 @@ In-app update (Sprint 11):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 182 tests (current full suite)
+flutter test                                                                                     passed, 183 tests (current full suite)
   - GitHub release + latest.json parsing and allowlist tests                                     passed
   - download storage/checksum/size/cancel/cleanup tests                                           passed
   - update controller state tests                                                                passed
@@ -516,12 +517,13 @@ Bulk insert hutang (Sprint 12):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 182 tests
+flutter test                                                                                     passed, 183 tests
   - createMany atomic local + one debt_batch outbox tests                                        passed
   - invalid row/group/max batch rollback tests                                                  passed
   - batch sync before payment and failure preservation tests                                    passed
   - admin/public bulk UI, validation, group, confirmation tests                                 passed
-  - Nama 1..N title generation and installment preview tests                                    passed
+  - Nama 1..N title generation and editable generated rows tests                                passed
+  - edit generated debt then save with overrides tests                                           passed
   - default due date and +1 month per installment tests                                         passed
   - addMonthsClamped end-of-month tests                                                         passed
 deno fmt --check / deno check / deno lint / deno test                                             passed, 68 tests

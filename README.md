@@ -100,6 +100,8 @@ otomatis:
 
 - Masukkan nama dasar, jumlah angsuran 1–50, dan nominal per angsuran.
 - Aplikasi membuat hutang dengan judul `Nama 1`, `Nama 2`, hingga `Nama N`.
+- Setiap hutang hasil generate dapat diedit judul, nominal, tanggal, dan
+  catatannya sebelum disimpan.
 - Satu group untuk seluruh batch.
 - Jatuh tempo default otomatis diterapkan; checklist **per bulan** membuat
   angsuran 1 = tanggal default, angsuran berikutnya +1 bulan.

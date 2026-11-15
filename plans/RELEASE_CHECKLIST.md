@@ -178,6 +178,8 @@ pengujian langsung.
 3. Simpan 1, 5, dan 50 angsuran dengan satu group; pastikan judul menjadi
    `Nama 1..N`, nominal per angsuran benar, dan uji jatuh tempo default serta
    checklist per bulan (angsuran 1 = default, berikutnya +1 bulan).
+4. Edit satu atau beberapa baris hasil generate (judul/nominal/tanggal/catatan)
+   sebelum simpan; pastikan baris lain tetap memakai default.
 4. Pastikan daftar hutang, dashboard, dan group summary langsung bertambah.
 5. Offline: simpan batch, restart aplikasi, reconnect; pastikan satu outbox
    `debt_batch` terkirim dan semua baris menjadi synced.
@@ -191,6 +193,7 @@ Checklist:
 
 - [ ] Admin-only bulk screen dan route guard.
 - [ ] 1, 5, dan 50 angsuran tersimpan dengan judul `Nama 1..N`.
+- [ ] Edit baris hasil generate tersimpan tanpa menimpa baris lain.
 - [ ] Nominal per angsuran, group batch, tanggal default, dan jadwal per bulan
       benar.
 - [ ] Satu transaksi lokal + satu outbox `debt_batch`.

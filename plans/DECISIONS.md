@@ -552,6 +552,8 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
   - Satu RPC server atomik untuk seluruh batch.
   - Dialog konfirmasi jika batch berisi lebih dari satu hutang.
 - **Implementasi:**
+  - Pratinjau hasil generate dapat diedit per hutang (judul, pokok, tanggal,
+    catatan); perubahan header hanya memengaruhi baris yang belum diedit.
   - `DebtRepository.createMany` menulis semua hutang dan satu outbox
     `debt_batch` dalam satu transaksi SQLite.
   - Worker sync mengirim satu operation ID untuk batch; server memakai

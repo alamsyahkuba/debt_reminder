@@ -14,6 +14,7 @@ import '../../../domain/validation/entity_validation.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_state.dart';
 import '../application/debt_providers.dart';
+import 'widgets/generated_debt_edit_dialog.dart';
 
 class BulkDebtFormScreen extends ConsumerStatefulWidget {
   const BulkDebtFormScreen({super.key});
@@ -33,6 +34,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
   String? _selectedGroupId;
   DateTime? _defaultDueDate;
   bool _monthlyDueDates = false;
+  final Map<int, DebtDraft> _overrides = <int, DebtDraft>{};
   bool _saving = false;
   String? _formError;
   String? _nameError;
@@ -91,7 +93,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
 
   Widget _buildForm(BuildContext context, List<DebtGroup> groups) {
     final theme = Theme.of(context);
-    final drafts = _tryBuildDrafts();
+    final drafts = _effectiveDrafts();
     final selectedGroupValue =
         groups.any((group) => group.id == _selectedGroupId)
         ? _selectedGroupId ?? ''
@@ -317,13 +319,21 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
             const SizedBox(height: 8),
             for (var index = 0; index < drafts.length; index++)
               ListTile(
+                key: Key('bulk-debt-preview-$index'),
                 dense: true,
                 contentPadding: EdgeInsets.zero,
+                onTap: () => _editDraft(index, drafts[index]),
                 leading: CircleAvatar(radius: 14, child: Text('${index + 1}')),
                 title: Text(drafts[index].title),
                 subtitle: Text(
                   '${formatRupiah(drafts[index].principalAmount)} • '
                   '${drafts[index].dueDate == null ? 'Tanpa jatuh tempo' : formatDate(drafts[index].dueDate!)}',
+                ),
+                trailing: IconButton(
+                  key: Key('bulk-debt-edit-$index'),
+                  tooltip: 'Edit hutang ${index + 1}',
+                  onPressed: () => _editDraft(index, drafts[index]),
+                  icon: const Icon(Icons.edit_outlined),
                 ),
               ),
             const Divider(),
@@ -348,14 +358,32 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
       if (includeNotes) {
         _notesError = null;
       }
+      final count = _installmentCount();
+      _overrides.removeWhere((index, _) => count < 1 || index >= count);
     });
+  }
+
+  Future<void> _editDraft(int index, DebtDraft initial) async {
+    final edited = await showGeneratedDebtEditDialog(
+      context: context,
+      index: index,
+      initial: initial,
+    );
+    if (!mounted || edited == null) {
+      return;
+    }
+    final count = _installmentCount();
+    if (index >= count) {
+      return;
+    }
+    setState(() => _overrides[index] = edited);
   }
 
   int _installmentCount() {
     return int.tryParse(_installmentController.text.trim()) ?? 0;
   }
 
-  List<DebtDraft>? _tryBuildDrafts() {
+  List<DebtDraft>? _defaultDrafts() {
     final name = _nameController.text.trim();
     final count = _installmentCount();
     final principal = int.tryParse(_principalController.text.trim());
@@ -383,6 +411,18 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
               : baseDate,
           notes: notes.isEmpty ? null : notes,
         ),
+    ];
+  }
+
+  List<DebtDraft>? _effectiveDrafts() {
+    final defaults = _defaultDrafts();
+    if (defaults == null) {
+      return null;
+    }
+
+    return <DebtDraft>[
+      for (var index = 0; index < defaults.length; index++)
+        _overrides[index] ?? defaults[index],
     ];
   }
 
@@ -419,7 +459,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
       context: context,
       initialDate: initialDate ?? now,
       firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      lastDate: DateTime(2300),
     ).then(
       (selected) => selected == null
           ? null
@@ -432,7 +472,7 @@ class _BulkDebtFormScreenState extends ConsumerState<BulkDebtFormScreen> {
       return;
     }
 
-    final drafts = _tryBuildDrafts();
+    final drafts = _effectiveDrafts();
     if (drafts == null || drafts.isEmpty) {
       return;
     }

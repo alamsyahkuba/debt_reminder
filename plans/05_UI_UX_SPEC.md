@@ -64,7 +64,8 @@ kembali ke mode publik/read-only.
   jumlah angsuran 1–50, nominal per angsuran, satu group batch, catatan
   opsional, tanggal default, dan checklist **jatuh tempo per bulan** (angsuran
   1 = default, berikutnya +1 bulan). Pratinjau menampilkan judul `Nama 1..N`,
-  nominal, tanggal, dan total; dialog konfirmasi muncul untuk batch >1.
+  nominal, tanggal, dan total; setiap baris dapat diedit judul/nominal/tanggal/
+  catatan tanpa menimpa baris lain. Dialog konfirmasi muncul untuk batch >1.
 - Bulk insert memakai satu transaksi lokal dan satu RPC server atomik; publik
   tidak dapat melihat tombol atau membuka route.
 

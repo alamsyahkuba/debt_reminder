@@ -40,6 +40,7 @@ Hasil yang diharapkan:
 | Sync server | Satu RPC atomik `admin_bulk_create_debts` |
 | Server bulk RPC | Ya; seluruh batch commit atau rollback bersama |
 | Duplikat | Tidak ada dedupe otomatis; judul/nominal/tanggal boleh sama |
+| Edit hasil generate | Setiap hutang dapat diedit judul/nominal/tanggal/catatan sebelum disimpan |
 | Konfirmasi | Dialog konfirmasi jika jumlah angsuran > 1 |
 | Undo batch | Tidak termasuk MVP |
 
@@ -74,11 +75,14 @@ Layar **Bulk Insert Hutang**:
    - Checklist **Jatuh tempo per bulan**.
    - `Catatan (opsional)` yang sama untuk semua hutang.
 
-2. **Pratinjau otomatis**
+2. **Pratinjau otomatis dan dapat diedit**
    - Judul dibuat dengan format `Nama 1`, `Nama 2`, hingga `Nama N`.
    - Setiap baris pratinjau menampilkan judul, nominal, dan jatuh tempo.
+   - Setiap baris memiliki aksi **Edit** untuk mengubah judul, pokok, jatuh
+     tempo, dan catatan.
+   - Perubahan header hanya memengaruhi baris yang belum diedit; baris yang
+     sudah diedit mempertahankan nilainya.
    - Total nominal ditampilkan di bawah daftar.
-   - Tidak ada input judul/nominal manual per baris.
 
 3. **Aksi simpan**
    - Tombol **Simpan N hutang** di bagian bawah.
@@ -235,9 +239,11 @@ Tidak ada perubahan:
 - Layar memakai `ConsumerStatefulWidget`.
 - State menyimpan controller nama dasar, jumlah angsuran, nominal per
   angsuran, catatan, group, tanggal default, dan checklist per bulan.
-- Pratinjau dihitung dari state tersebut; tidak ada controller per baris.
-- Daftar `DebtDraft` dibentuk saat preview/save dengan judul
-  `Nama 1..N` dan tanggal hasil generate.
+- Daftar default dihitung dari state tersebut, dengan judul `Nama 1..N`.
+- Edit per baris disimpan sebagai override per indeks; default hanya dipakai
+  untuk baris yang belum diedit.
+- Saat jumlah angsuran turun, override di luar jumlah baru dibuang.
+- Daftar `DebtDraft` final dibentuk dari default + override saat preview/save.
 - Validasi bisnis tetap dilakukan lagi di repository; validasi UI hanya untuk
   feedback cepat.
 
@@ -302,6 +308,8 @@ Tidak ada perubahan khusus:
 - Input nama, jumlah angsuran, dan nominal menghasilkan pratinjau
   `Nama 1..N`.
 - Total nominal pratinjau dihitung benar.
+- Edit satu baris mengubah judul/nominal/tanggal/catatan pada pratinjau dan
+  hasil simpan; baris lain tetap memakai default.
 - Jumlah angsuran 1, 5, dan 50 menghasilkan jumlah judul yang tepat.
 - Jatuh tempo default otomatis diterapkan; checklist per bulan menghasilkan
   angsuran 1 = default, angsuran 2 = +1 bulan, dst.
@@ -331,6 +339,7 @@ Tidak ada perubahan khusus:
 - [x] Group batch dan jatuh tempo default bekerja otomatis; checklist per
       bulan menambah 1 bulan per angsuran.
 - [x] Nama, jumlah angsuran, nominal, catatan, dan panjang judul divalidasi.
+- [x] Setiap hutang hasil generate dapat diedit sebelum disimpan.
 - [x] Satu transaksi menyimpan semua hutang dan satu outbox batch.
 - [x] Tidak ada data parsial jika validasi/transaksi gagal.
 - [x] Hutang baru langsung terlihat di daftar; dashboard/group summary memakai
@@ -376,8 +385,9 @@ Selesai dan tervalidasi:
 - [x] Edge Function `debt_batch` + validasi 1–50 baris/ID unik.
 - [x] RPC `admin_bulk_create_debts` dengan idempotency, atomic insert, audit.
 - [x] Dependency sync group → debt_batch → payment.
-- [x] UI generator angsuran, pratinjau `Nama 1..N`, group batch, tanggal
-      default otomatis, checklist per bulan, validasi, dan konfirmasi.
+- [x] UI generator angsuran, pratinjau `Nama 1..N` yang dapat diedit, group
+      batch, tanggal default otomatis, checklist per bulan, validasi, dan
+      konfirmasi.
 - [x] Route admin-only `/debts/bulk` dan tombol **Tambah Banyak**.
 - [x] Test repository, sync, widget, handler Deno, dan pgTAP.
 - [x] Format, analyze, seluruh Flutter test, Deno test, dan pgTAP lulus.

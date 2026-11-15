@@ -153,6 +153,55 @@ void main() {
     }
   });
 
+  testWidgets('hutang hasil generate dapat diedit sebelum disimpan', (
+    tester,
+  ) async {
+    final harness = _Harness(AppDatabase(NativeDatabase.memory()));
+    try {
+      await harness.pump(tester);
+      await _openDebts(tester);
+      await _openBulk(tester);
+      await _fillGeneratedBatch(tester);
+
+      await tester.tap(find.byKey(const Key('bulk-debt-edit-1')));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit Hutang 2'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('bulk-debt-edit-title')),
+        'Budi spesial',
+      );
+      await tester.enterText(
+        find.byKey(const Key('bulk-debt-edit-principal')),
+        '750000',
+      );
+      await tester.tap(find.byKey(const Key('bulk-debt-edit-save')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Budi spesial'), findsOneWidget);
+      expect(find.text('Total: Rp 1.750.000'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('bulk-debt-save-button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('bulk-debt-confirm-save')));
+      await tester.pumpAndSettle();
+
+      final stored = await harness.database
+          .select(harness.database.debts)
+          .get();
+      expect(stored, hasLength(3));
+      final edited = stored.singleWhere((row) => row.title == 'Budi spesial');
+      expect(edited.principalAmount, 750000);
+      expect(stored.map((row) => row.title).toList()..sort(), <String>[
+        'Budi 1',
+        'Budi 3',
+        'Budi spesial',
+      ]);
+    } finally {
+      await harness.dispose(tester);
+    }
+  });
+
   testWidgets('group batch diterapkan ke semua angsuran', (tester) async {
     final harness = _Harness(AppDatabase(NativeDatabase.memory()));
     try {
