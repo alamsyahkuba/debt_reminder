@@ -5,6 +5,13 @@ Format mengikuti Keep a Changelog dan Semantic Versioning.
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-11-15
+
+### Changed
+
+- Add Bayar Lunas button to payment form
+- Allow editing generated rows in bulk debt form
+
 ## [1.0.7] - 2026-11-15
 
 ### Changed
