@@ -21,6 +21,7 @@ import '../../debt_groups/presentation/group_visuals.dart';
 import '../../debts/application/debt_providers.dart';
 import '../../debts/presentation/widgets/debt_status_chip.dart';
 import '../../sync/presentation/sync_status_banner.dart';
+import 'widgets/app_update_banner.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -92,6 +93,7 @@ class _DashboardContent extends StatelessWidget {
         const LocalDataNotice(),
         const AdminLockedBanner(),
         const SyncStatusBanner(),
+        const DashboardUpdateBanner(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Column(

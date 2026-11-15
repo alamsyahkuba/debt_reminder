@@ -561,4 +561,27 @@ keamanan yang berdampak luas tetap memerlukan persetujuan owner.
     dengan status failed.
 - **Konsekuensi:** Tidak ada partial server insert. Kesalahan satu baris
   menggagalkan seluruh batch dan memerlukan perbaikan/retry. Import CSV/Excel
-  belum termasuk; input masih manual.
+  belum termasuk; input memakai generator angsuran, bukan baris manual.
+
+## D-027 — Cek update otomatis saat aplikasi dibuka + banner dashboard
+
+- **Tanggal:** 15 November 2026
+- **Status:** Disetujui owner; implementasi selesai, verifikasi perangkat
+  mengikuti jadwal update berikutnya
+- **Konteks:** Pengecekan update sebelumnya hanya manual dari Pengaturan,
+  sehingga pengguna bisa melewatkan versi baru. Owner meminta pengecekan saat
+  aplikasi dibuka dan indikator di dashboard.
+- **Keputusan:**
+  - Aplikasi memeriksa update sekali saat dibuka.
+  - Pada resume, pengecekan diulang setelah cooldown 30 menit, kecuali update
+    sudah tersedia atau sedang diunduh/dipasang.
+  - Jika ada build yang lebih baru, dashboard menampilkan banner di bagian atas
+    dengan versi/build, ringkasan notes, dan tombol **Lihat Update** ke
+    Pengaturan.
+  - Banner terlihat untuk publik dan admin; update adalah operasi aplikasi,
+    bukan mutasi data bisnis.
+  - Cek manual **Cek Update** tetap tersedia untuk retry.
+  - Tidak ada polling periodik atau pengecekan background.
+- **Konsekuensi:** Setiap pembukaan aplikasi memakai satu request GitHub
+  (rate limit anonim 60/jam per IP). Offline/error tidak menampilkan banner,
+  tetapi status error tetap tersedia di Pengaturan untuk retry manual.

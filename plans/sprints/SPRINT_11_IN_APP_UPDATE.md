@@ -1,8 +1,9 @@
 # Sprint 11 — In-App Update
 
 Status: selesai; test otomatis, rilis stabil, dan verifikasi perangkat
-owner-reported passed pada 14 November 2026.
-Tanggal: 14 November 2026.
+owner-reported passed. Auto-check saat aplikasi dibuka dan banner dashboard
+sudah diimplementasikan; verifikasi perangkat untuk perilaku baru ini pending.
+Tanggal: 15 November 2026.
 Scope: tombol cek update, download APK dari GitHub Release, verifikasi, dan
 membuka installer Android.
 
@@ -111,7 +112,9 @@ Hasil:
 | manifest tidak ada/invalid | tampilkan error, jangan install |
 
 GitHub API unauthenticated memiliki rate limit rendah (60 request/jam per IP).
-Karena pengecekan manual, ini cukup. Jangan melakukan polling otomatis pada v1.
+Aplikasi melakukan satu pengecekan otomatis saat dibuka dan pada resume setelah
+cooldown 30 menit; tidak ada polling berkala. Cek manual di Pengaturan tetap
+tersedia.
 
 ## 5. Download dan verifikasi
 
@@ -274,6 +277,24 @@ Update card tersedia untuk publik dan admin karena tidak mengubah data bisnis.
 Jangan menambahkan update kontrol ke mode publik yang sedang membaca data;
 ini adalah operasi aplikasi, bukan operasi bisnis.
 
+### Banner dashboard
+
+Jika hasil cek otomatis menemukan build yang lebih baru, dashboard menampilkan
+banner di bagian atas:
+
+```text
+Update tersedia: 1.1.0 (build 2)
+Catatan rilis (ringkas)
+[ Lihat Update ]
+```
+
+- Banner tampil untuk publik dan admin.
+- **Lihat Update** membuka Pengaturan → Pembaruan aplikasi.
+- Banner tidak muncul saat checking, up-to-date, downloading, atau error.
+- Auto-check berjalan sekali saat aplikasi dibuka; resume memakai cooldown dan
+  tidak menimpa update yang sudah tersedia/sedang diunduh.
+- Manual **Cek Update** tetap tersedia untuk retry.
+
 ## 9. Release workflow yang harus disesuaikan
 
 Workflow release yang ada (`SPRINT_10_RELEASE_AUTOMATION`) harus:
@@ -335,9 +356,10 @@ sudah public.
 
 ## 12. Test plan
 
-Status: **owner-reported passed** pada I2505, 14 November 2026. Bukti rilis:
-`v1.0.1+2` dan `v1.0.2+3`, keduanya memiliki APK, `.sha256`, dan
-`latest.json`. Hasil ini bukan hasil otomasi perangkat.
+Status: alur update lama **owner-reported passed** pada I2505, 14 November
+2026. Bukti rilis: `v1.0.1+2` dan `v1.0.2+3`, keduanya memiliki APK,
+`.sha256`, dan `latest.json`. Auto-check/banner dashboard baru diuji otomatis;
+verifikasi perangkatnya masih pending. Hasil perangkat bukan otomasi.
 
 Unit:
 
@@ -359,6 +381,9 @@ Widget:
 - [x] Error/retry.
 - [x] Permission required.
 - [x] Public mode tetap dapat melihat update card.
+- [x] Auto-check saat aplikasi dibuka dan banner dashboard muncul saat update tersedia.
+- [x] Banner membuka Pengaturan dan tidak muncul saat up-to-date.
+- [x] Auto-check tidak berjalan pada widget test default.
 
 Device I2505:
 
@@ -371,6 +396,7 @@ Device I2505:
 - [x] Uji checksum rusak/signature mismatch untuk memastikan update ditolak.
 - [x] Uji offline dan rate limit/error.
 - [x] Uji update dari build lama ke build baru tanpa kehilangan database.
+- [ ] Uji banner auto-check saat aplikasi dibuka dan resume setelah cooldown.
 
 ## 13. File yang akan diubah saat implementasi
 
@@ -427,7 +453,8 @@ Tidak ada perubahan pada data bisnis, Supabase schema, RLS, atau reminder.
 2. **Installer:** custom MethodChannel + verifikasi signature. Plugin installer
    pihak ketiga tidak dipakai.
 3. **Visibilitas:** tombol update untuk publik dan admin.
-4. **Cek otomatis:** manual saja untuk v1; tidak ada polling saat startup.
+4. **Cek otomatis:** saat aplikasi dibuka dan pada resume dengan cooldown 30
+   menit; tidak ada polling berkala. Cek manual tetap tersedia.
 5. **Release notes:** teks polos dari `latest.json`.
 6. **Minimum Android:** mengikuti minSdk existing (24).
 
@@ -454,6 +481,7 @@ Selesai dan tervalidasi otomatis:
       `.sha256`.
 - [x] Test unit/widget untuk parsing manifest, keamanan URL, checksum,
       ruang penyimpanan, pembatalan, state controller, UI, dan akses publik.
+- [x] Auto-check saat aplikasi dibuka, cooldown resume, dan banner dashboard.
 - [x] `flutter analyze`, seluruh `flutter test`, actionlint, prettier, dan
       `flutter build apk --debug` lulus.
 

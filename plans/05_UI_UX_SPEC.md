@@ -37,6 +37,8 @@ kembali ke mode publik/read-only.
 - Group summary.
 - Upcoming due debts.
 - Sync indicator.
+- Banner update di bagian atas jika cek otomatis menemukan build lebih baru;
+  tombol **Lihat Update** membuka Pengaturan.
 
 ### Group list
 - Active groups ordered by `sort_order`.

@@ -7,6 +7,7 @@ import 'app/providers.dart';
 import 'core/config/app_config.dart';
 import 'core/logging/app_logger.dart';
 import 'data/sync/background_sync.dart';
+import 'features/settings/application/app_update_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,7 +25,10 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: [appConfigProvider.overrideWithValue(config)],
+      overrides: [
+        appConfigProvider.overrideWithValue(config),
+        appUpdateAutoCheckProvider.overrideWithValue(true),
+      ],
       child: const AppBootstrap(),
     ),
   );

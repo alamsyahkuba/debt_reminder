@@ -23,8 +23,9 @@ Jangan mengubah application ID setelah rilis pertama.
 
 - Tanggal: 14 November 2026
 - Perangkat: I2505 (`10DG3404HM000HH`), Android 16 / API 36
-- Status: baseline v1 dan in-app update owner-reported passed; verifikasi bulk
-  insert Sprint 12 masih pending (bukan hasil otomasi perangkat)
+- Status: baseline v1 dan alur update lama owner-reported passed; verifikasi
+  auto-check/banner dashboard dan bulk insert Sprint 12 masih pending (bukan
+  hasil otomasi perangkat)
 - Distribusi: APK bertanda tangan langsung; AAB/Play Console tidak dipakai
 
 ## Wajib sebelum rilis
@@ -134,7 +135,8 @@ Uji minimal dua build bertanda tangan dengan keystore yang sama:
 
 1. Pasang build lama pada perangkat.
 2. Publikasikan build baru sebagai release stabil yang berisi `latest.json`.
-3. Buka **Pengaturan → Pembaruan aplikasi → Cek Update**.
+3. Buka aplikasi; pastikan banner update muncul di dashboard, lalu buka
+   **Pengaturan → Pembaruan aplikasi** atau gunakan **Cek Update** manual.
 4. Pastikan versi, ukuran, dan catatan rilis tampil sebagai teks polos.
 5. Tekan **Download & Pasang**, amati progress, dan pastikan checksum valid.
 6. Setujui installer Android; pastikan update terpasang dan data lokal, sesi
@@ -151,6 +153,8 @@ Uji minimal dua build bertanda tangan dengan keystore yang sama:
 Checklist perangkat tambahan:
 
 - [x] Cek Update terlihat dan berfungsi tanpa PIN admin.
+- [ ] Cek otomatis saat aplikasi dibuka dan banner update muncul di dashboard.
+- [ ] Banner membuka Pengaturan; update tidak menimpa download yang sedang berjalan.
 - [x] Download menampilkan progress dan dapat dibatalkan.
 - [x] Ruang penyimpanan diperiksa sebelum download; penyimpanan penuh
       menampilkan error tanpa file parsial.
@@ -161,8 +165,9 @@ Checklist perangkat tambahan:
 - [x] Izin unknown sources ditolak/diizinkan berperilaku benar.
 - [x] Offline dan rate limit menampilkan retry tanpa crash.
 
-Catatan: seluruh checklist in-app update diselesaikan owner di I2505
-(Android 16) dan dilaporkan lolos. Perangkat Android 8–15 belum tersedia untuk
+Catatan: checklist in-app update lama diselesaikan owner di I2505 (Android 16).
+Auto-check saat aplikasi dibuka dan banner dashboard adalah perilaku baru dan
+masih perlu diverifikasi perangkat. Perangkat Android 8–15 belum tersedia untuk
 pengujian langsung.
 
 ## Verifikasi bulk insert
@@ -257,8 +262,9 @@ quality gate otomatis ada di `plans/STATUS.md`.
   atas rekomendasi. Toolchain harus diuji ulang sebelum upgrade.
 - Application ID berubah menjadi `com.debtreminder.app`; instalasi lama tidak
   dimigrasikan otomatis dan harus dianggap fresh install.
-- Update aplikasi hanya diperiksa manual dari Pengaturan; tidak ada polling
-  startup atau update background pada v1.
+- Update aplikasi diperiksa saat aplikasi dibuka dan pada resume dengan cooldown
+  30 menit; tidak ada polling berkala atau update background. Pemeriksaan manual
+  tetap tersedia di Pengaturan.
 - Update membutuhkan release stabil yang berisi `latest.json`, APK, dan
   `.sha256`. APK harus ditandatangani dengan keystore yang sama.
 - Android mewajibkan pengguna mengizinkan **Install unknown apps** dan

@@ -71,6 +71,10 @@ final class AppUpdateState {
   }
 }
 
+/// Auto-check is enabled by the production entry point. Widget tests keep the
+/// default false so they never make unexpected network requests.
+final appUpdateAutoCheckProvider = Provider<bool>((ref) => false);
+
 final appVersionServiceProvider = Provider<AppVersionService>(
   (ref) => const AppVersionService(),
 );

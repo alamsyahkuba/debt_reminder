@@ -273,6 +273,10 @@ for v1 distribution.
   The owner reports the complete update flow passed on I2505: check, download,
   checksum/signature verification, installer, data preservation, and negative
   cases.
+- The app checks for updates when opened and on resume with a 30-minute
+  cooldown. If a newer build exists, the dashboard shows an update banner with
+  a link to Settings. Auto-check never interrupts a downloaded update or a
+  running download; manual retry remains available in Settings.
 
 ### Sprint 12 — Bulk insert hutang (implemented locally)
 
@@ -369,6 +373,9 @@ Local (Sprint 02R/03R) — done:
   `android/app/src/main/AndroidManifest.xml`, and
   `android/app/src/main/res/xml/file_paths.xml` — signed APK verification,
   install permission, and FileProvider.
+- `lib/features/settings/application/app_update_lifecycle.dart`,
+  `lib/features/dashboard/presentation/widgets/app_update_banner.dart`, and
+  `lib/main.dart` — auto-check on app open/resume and dashboard update banner.
 - `README.md` and `plans/RELEASE_CHECKLIST.md` — in-app update usage, release
   assets, and device verification steps.
 - `lib/domain/entities/debt_draft.dart`,
@@ -472,11 +479,12 @@ In-app update (Sprint 11):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 163 tests
+flutter test                                                                                     passed, 181 tests (current full suite)
   - GitHub release + latest.json parsing and allowlist tests                                     passed
   - download storage/checksum/size/cancel/cleanup tests                                           passed
   - update controller state tests                                                                passed
   - update card and public Settings visibility widget tests                                      passed
+  - auto-check on app open and dashboard update banner tests                                     passed
 actionlint .github/workflows/release.yml                                                         passed
 prettier --check .github/workflows/release.yml                                                    passed
 flutter build apk --debug                                                                        passed
@@ -506,7 +514,7 @@ Bulk insert hutang (Sprint 12):
 ```text
 dart format --output=none --set-exit-if-changed .                                                passed
 flutter analyze                                                                                  no issues
-flutter test                                                                                     passed, 178 tests
+flutter test                                                                                     passed, 181 tests
   - createMany atomic local + one debt_batch outbox tests                                        passed
   - invalid row/group/max batch rollback tests                                                  passed
   - batch sync before payment and failure preservation tests                                    passed
@@ -575,8 +583,9 @@ physical-device bulk insert/sync/restart/reminder                               
   requires testing when suitable devices/emulators are available.
 - Use `v1.0.1+2` or newer for updater testing. `v1.0.0` does not contain
   `latest.json` because it predates the Sprint 11 workflow change.
-- In-app update checks are manual only in v1; there is no startup polling or
-  background update check.
+- In-app update checks run once on app open and on resume after a 30-minute
+  cooldown; there is no periodic background polling. Offline/rate-limit errors
+  remain visible in Settings for manual retry.
 - Bulk insert is implemented, deployed, and covered by automated/backend tests
   but has not been exercised on a physical device. The server RPC is atomic:
   one invalid row rejects the entire batch.
@@ -626,9 +635,10 @@ physical-device bulk insert/sync/restart/reminder                               
   reconciles deleted rows. Backup/export is admin-only JSON with safe
   restore-merge. No app lock or PIN recovery UI in v1.
 - In-app update uses public GitHub Releases and a `latest.json` manifest. The
-  check is manual; downloads verify SHA-256, package, version code, and signing
-  certificate before opening the Android installer. No GitHub token is embedded
-  in the app.
+  app checks on open/resume with a cooldown and shows a dashboard banner;
+  manual retry remains in Settings. Downloads verify SHA-256, package, version
+  code, and signing certificate before opening the Android installer. No GitHub
+  token is embedded in the app.
 - Bulk insert uses an installment generator: base name, count 1–50, and nominal
   per installment produce debts titled `Nama 1..N`; one group per batch and one
   atomic server RPC. Local debts plus one `debt_batch` outbox row are written in

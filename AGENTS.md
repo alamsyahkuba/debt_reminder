@@ -71,7 +71,8 @@ directly. Sprint 10 GitHub release automation is implemented; its dry run and
 the first automated `v1.0.0` release succeeded, but that release predates the
 `latest.json` asset and contains only APK plus `.sha256`. Sprint 11 in-app update
 is complete: `v1.0.1+2` and `v1.0.2+3` include APK, `.sha256`, and `latest.json`,
-and the owner reports the full update flow passed on I2505. Sprint 12 bulk
+and the owner reports the full update flow passed on I2505. The app now
+auto-checks on open/resume and shows a dashboard update banner. Sprint 12 bulk
 insert hutang is implemented locally with an installment generator (base name,
 count, nominal per installment -> `Nama 1..N`), max 50 installments, one group
 per batch, one atomic `debt_batch` server RPC, and Flutter/Deno/pgTAP

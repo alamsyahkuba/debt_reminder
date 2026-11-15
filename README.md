@@ -70,10 +70,13 @@ dikonfigurasi; lihat [`supabase/README.md`](supabase/README.md).
 
 ## Update aplikasi
 
-Pengguna publik dan admin dapat membuka **Pengaturan → Pembaruan aplikasi** lalu
-menekan **Cek Update**. Pemeriksaan berjalan manual dan membaca GitHub Release
-stabil dari `alamsyahkuba/debt_reminder`. Jika build remote lebih baru, aplikasi
-menampilkan versi, ukuran, dan catatan rilis sebagai teks polos.
+Aplikasi memeriksa update otomatis sekali saat dibuka dan pada resume setelah
+cooldown 30 menit. Jika build remote lebih baru, dashboard menampilkan banner
+**Update tersedia** di bagian atas; tombol **Lihat Update** membuka Pengaturan.
+Pengguna publik dan admin juga dapat membuka **Pengaturan → Pembaruan aplikasi**
+dan menekan **Cek Update** secara manual. Pemeriksaan membaca GitHub Release
+stabil dari `alamsyahkuba/debt_reminder` dan menampilkan versi, ukuran, serta
+catatan rilis sebagai teks polos.
 
 **Download & Pasang** memeriksa ruang penyimpanan, mengunduh APK dari host
 GitHub yang diizinkan melalui HTTPS, menampilkan progress, memverifikasi
