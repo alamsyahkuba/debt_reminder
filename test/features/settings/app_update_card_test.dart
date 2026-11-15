@@ -270,6 +270,10 @@ void main() {
     expect(find.text('Mode baca'), findsOneWidget);
     expect(find.byKey(const Key('app-update-card')), findsOneWidget);
     expect(find.byKey(const Key('app-update-check')), findsOneWidget);
+    expect(
+      tester.getTopLeft(find.byKey(const Key('app-update-card'))).dy,
+      lessThan(tester.getTopLeft(find.text('Sinkronisasi')).dy),
+    );
 
     await cleanup();
   });

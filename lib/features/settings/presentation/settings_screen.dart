@@ -33,6 +33,10 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.only(bottom: 48),
         children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: AppUpdateCard(),
+          ),
           const LocalDataNotice(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -189,10 +193,6 @@ class SettingsScreen extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: _BackupCard(enabled: isAdmin),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: AppUpdateCard(),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

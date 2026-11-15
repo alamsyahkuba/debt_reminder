@@ -249,8 +249,10 @@ for v1 distribution.
 
 ### Sprint 11 — In-app update (complete, owner-reported device verification)
 
-- Settings exposes **Cek Update** to public and admin users. The check is manual
-  and uses the public GitHub Release API for `alamsyahkuba/debt_reminder`.
+- Settings exposes the **Pembaruan aplikasi** card at the very top to public and
+  admin users. Auto-check runs on open/resume; manual **Cek Update** remains.
+  The check uses the public GitHub Release API for
+  `alamsyahkuba/debt_reminder`.
 - `latest.json` is the update manifest. It carries version/build, APK asset
   name, SHA-256, size, release URL, publish time, and plain-text notes.
 - `GitHubReleaseRepository` ignores draft/prerelease releases and validates

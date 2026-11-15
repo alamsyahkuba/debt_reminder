@@ -96,6 +96,7 @@ kembali ke mode publik/read-only.
 - Sesi aktif membuka aksi mutasi; tanpa sesi aplikasi bersifat read-only.
 
 ### Settings
+- Kartu **Pembaruan aplikasi** di paling atas, tersedia untuk publik dan admin.
 - Reminder schedule (device-local; dapat diakses publik dan admin).
 - Admin PIN change (tanpa recovery UI).
 - Sync now.
